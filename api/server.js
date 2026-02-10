@@ -12,7 +12,15 @@ const app = express();
 
 // --- 2. CONFIGURAÇÃO DO CORS (A MÁGICA ACONTECE AQUI) ---
 // Isso libera o acesso para QUALQUER site (localhost:5500, 127.0.0.1, etc)
-app.use(cors()); 
+app.use(cors({
+    origin: '*', // Permite QUALQUER site acessar (Vercel, Localhost, etc)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
+    allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
+    credentials: true
+}));
+
+// Garante que requisições OPTIONS (preflight) sejam respondidas com status 200
+app.options('*', cors());
 app.use(bodyParser.json());
 
 const JWT_SECRET = "sua_chave_secreta_super_segura_123";
