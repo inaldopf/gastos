@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:3000"; 
+const API_URL = "https://financeiro-api.onrender.com";
 
 export const store = {
     transactions: [],
