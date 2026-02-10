@@ -1,14 +1,16 @@
+// ✅ URL correta do seu Render
 const API_URL = "https://financeiro-app-okjm.onrender.com";
 
 export const store = {
     transactions: [],
+    debtors: [], // <--- Faltava isso (Lista de Dívidas)
     meta: 0,
 
     getToken() {
         return localStorage.getItem('inf_auth_token');
     },
 
-    // --- CARREGAR DADOS (COM CORREÇÃO DE MAPEAMENTO) ---
+    // --- CARREGAR DADOS ---
     async init() {
         const token = this.getToken();
         if (!token) return;
@@ -25,28 +27,32 @@ export const store = {
 
             const rawData = await resTrans.json();
             
-            console.log("📦 Dados brutos do Banco:", rawData);
-
-            // AQUI ESTÁ O PULO DO GATO: Traduzir do "Banquês" para o "Javascriptês"
+            // Traduzir do "Banquês" para o "Javascriptês"
             this.transactions = rawData.map(dbItem => ({
                 id: dbItem.id,
-                desc: dbItem.description,       // Banco: description -> App: desc
-                amount: parseFloat(dbItem.amount), // Banco: "10.00" (String) -> App: 10.00 (Number)
+                desc: dbItem.description,       
+                amount: parseFloat(dbItem.amount), 
                 type: dbItem.type,
                 category: dbItem.category,
-                date: dbItem.transaction_date,  // Banco: transaction_date -> App: date
+                date: dbItem.transaction_date,  
                 month: dbItem.month
             }));
 
-            console.log("✅ Dados traduzidos para o App:", this.transactions);
+            // 2. Pega Dívidas (Faltava isso)
+            const resDebt = await fetch(`${API_URL}/debtors`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            this.debtors = await resDebt.json();
 
-            // 2. Pega Meta
+            // 3. Pega Meta
             const resMeta = await fetch(`${API_URL}/meta`, { 
                 headers: { 'Authorization': `Bearer ${token}` } 
             });
             const metaData = await resMeta.json();
             this.meta = parseFloat(metaData.meta) || 0;
             
+            console.log("✅ Dados carregados com sucesso!");
+
         } catch (error) {
             console.error("❌ Erro ao carregar dados:", error);
             if (error.message.includes("403") || error.message.includes("401")) {
@@ -57,10 +63,9 @@ export const store = {
         }
     },
 
-    // --- ADICIONAR (MANDA PRO BANCO E ATUALIZA LOCAL) ---
+    // --- TRANSAÇÕES ---
     async addTransaction(data) {
         const token = this.getToken();
-        
         try {
             const res = await fetch(`${API_URL}/transactions`, {
                 method: 'POST',
@@ -68,9 +73,6 @@ export const store = {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                // O backend espera 'desc', 'date' etc, conforme configuramos na rota POST do server.js
-                // Se o seu server.js estiver esperando nomes diferentes, ajuste aqui.
-                // Baseado no ultimo server.js que te passei, ele aceita o body direto.
                 body: JSON.stringify(data)
             });
 
@@ -78,7 +80,6 @@ export const store = {
 
             const newDbItem = await res.json();
             
-            // Traduz o item recém criado também
             const newItemFormatted = {
                 id: newDbItem.id,
                 desc: newDbItem.description,
@@ -89,12 +90,11 @@ export const store = {
                 month: newDbItem.month
             };
             
-            // Adiciona no topo da lista
             this.transactions.unshift(newItemFormatted); 
             
         } catch (error) {
             console.error(error);
-            alert("Erro ao salvar no banco. Verifique a conexão.");
+            alert("Erro ao salvar no banco.");
         }
     },
 
@@ -107,6 +107,7 @@ export const store = {
         this.transactions = this.transactions.filter(t => t.id !== id);
     },
 
+    // --- META ---
     async setMeta(valor) {
         const token = this.getToken();
         this.meta = valor;
@@ -122,5 +123,38 @@ export const store = {
 
     getMeta() {
         return this.meta;
+    },
+
+    // --- DÍVIDAS (Faltava tudo isso abaixo) ---
+    async addDebt(name, amount) {
+        const token = this.getToken();
+        const res = await fetch(`${API_URL}/debtors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ name, amount })
+        });
+        const newItem = await res.json();
+        this.debtors.unshift(newItem);
+    },
+
+    async toggleDebt(id) {
+        const token = this.getToken();
+        const res = await fetch(`${API_URL}/debtors/${id}/toggle`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const updated = await res.json();
+        
+        const index = this.debtors.findIndex(d => d.id === id);
+        if(index !== -1) this.debtors[index].paid = updated.paid;
+    },
+
+    async removeDebt(id) {
+        const token = this.getToken();
+        await fetch(`${API_URL}/debtors/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        this.debtors = this.debtors.filter(d => d.id !== id);
     }
 };
