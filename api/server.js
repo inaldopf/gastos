@@ -1,38 +1,39 @@
-// --- 1. IGNORAR ERRO DE SSL (Para o banco Aiven) ---
+// EM api/server.js
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const express = require('express');
 const { Pool } = require('pg');
-const cors = require('cors'); // <--- O PACOTE DE SEGURANÇA
+const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 
 const app = express();
 
-// --- 2. CONFIGURAÇÃO DO CORS (A MÁGICA ACONTECE AQUI) ---
-// Isso libera o acesso para QUALQUER site (localhost:5500, 127.0.0.1, etc)
+// --- CONFIGURAÇÃO CORS CORRIGIDA ---
+// Removemos o app.options('*') que dava erro.
+// Esta configuração global abaixo já gerencia tudo.
 app.use(cors({
-    origin: '*', // Permite QUALQUER site acessar (Vercel, Localhost, etc)
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Métodos permitidos
-    allowedHeaders: ['Content-Type', 'Authorization'], // Cabeçalhos permitidos
-    credentials: true
+    origin: '*', 
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204
 }));
 
-// Garante que requisições OPTIONS (preflight) sejam respondidas com status 200
-app.options('*', cors());
 app.use(bodyParser.json());
 
 const JWT_SECRET = "sua_chave_secreta_super_segura_123";
 
-// --- 3. CONEXÃO COM O BANCO ---
+// --- CONEXÃO COM O BANCO ---
 const pool = new Pool({
-    // Note: Removi parâmetros extras da URL para evitar conflitos
     connectionString: "postgres://avnadmin:AVNS_tHRnfzTKgOv5_yTnCfh@gastos-inaldofreitasjr-95a2.c.aivencloud.com:16334/defaultdb",
     ssl: { rejectUnauthorized: false }
 });
 
-// --- 4. MIDDLEWARE DE AUTENTICAÇÃO ---
+// --- MIDDLEWARE DE AUTENTICAÇÃO ---
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -45,7 +46,7 @@ function authenticateToken(req, res, next) {
     });
 }
 
-// --- 5. ROTAS DE AUTH ---
+// --- ROTAS DE AUTH ---
 app.post('/register', async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -67,7 +68,6 @@ app.post('/login', async (req, res) => {
         const user = result.rows[0];
         if (await bcrypt.compare(password, user.password)) {
             const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET);
-            // Retorna também a meta para já carregar na hora
             res.json({ success: true, token, email: user.email, meta: user.meta_sobra });
         } else {
             res.status(401).json({ success: false, message: "Senha incorreta" });
@@ -78,7 +78,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// --- 6. ROTAS DE TRANSAÇÕES ---
+// --- ROTAS DE TRANSAÇÕES ---
 app.get('/transactions', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
@@ -107,62 +107,7 @@ app.delete('/transactions/:id', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- 7. ROTAS DE DÍVIDAS ---
+// --- ROTAS DE DÍVIDAS ---
 app.get('/debtors', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM debtors WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
-        res.json(result.rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/debtors', authenticateToken, async (req, res) => {
-    const { name, amount } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO debtors (user_id, name, amount) VALUES ($1, $2, $3) RETURNING *',
-            [req.user.id, name, amount]
-        );
-        res.json(result.rows[0]);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.put('/debtors/:id/toggle', authenticateToken, async (req, res) => {
-    try {
-        const current = await pool.query('SELECT paid FROM debtors WHERE id = $1', [req.params.id]);
-        const newStatus = !current.rows[0].paid;
-        const result = await pool.query(
-            'UPDATE debtors SET paid = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
-            [newStatus, req.params.id, req.user.id]
-        );
-        res.json(result.rows[0]);
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.delete('/debtors/:id', authenticateToken, async (req, res) => {
-    try {
-        await pool.query('DELETE FROM debtors WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// --- 8. ROTAS DE META ---
-app.post('/meta', authenticateToken, async (req, res) => {
-    const { meta } = req.body;
-    try {
-        await pool.query('UPDATE users SET meta_sobra = $1 WHERE id = $2', [meta, req.user.id]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/meta', authenticateToken, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT meta_sobra FROM users WHERE id = $1', [req.user.id]);
-        res.json({ meta: result.rows[0].meta_sobra });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// --- 9. INICIAR O SERVIDOR ---
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`✅ Servidor rodando na porta ${PORT} com CORS ativado!`);
-});
+        const result =
