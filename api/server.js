@@ -12,12 +12,10 @@ const app = express();
 
 // --- 2. CORS (PERMISSÕES DE ACESSO) ---
 app.use(cors({
-    origin: '*', // Permite Vercel, Localhost, etc.
+    origin: '*', // Libera para Vercel, Localhost, etc.
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204
+    allowedHeaders: ['Content-Type', 'Authorization']
+    // REMOVI A LINHA 'credentials: true' QUE CAUSAVA O CONFLITO
 }));
 
 app.use(bodyParser.json());
