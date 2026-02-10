@@ -1,4 +1,4 @@
-const API_URL = "https://financeiro-api.onrender.com";
+const API_URL = "https://financeiro-app-okjm.onrender.com";
 
 export const store = {
     transactions: [],
