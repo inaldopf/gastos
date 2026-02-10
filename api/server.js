@@ -1,5 +1,4 @@
-// EM api/server.js
-
+// --- 1. CONFIGURAÇÕES INICIAIS ---
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const express = require('express');
@@ -11,11 +10,9 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
-// --- CONFIGURAÇÃO CORS CORRIGIDA ---
-// Removemos o app.options('*') que dava erro.
-// Esta configuração global abaixo já gerencia tudo.
+// --- 2. CORS (PERMISSÕES DE ACESSO) ---
 app.use(cors({
-    origin: '*', 
+    origin: '*', // Permite Vercel, Localhost, etc.
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -27,13 +24,13 @@ app.use(bodyParser.json());
 
 const JWT_SECRET = "sua_chave_secreta_super_segura_123";
 
-// --- CONEXÃO COM O BANCO ---
+// --- 3. BANCO DE DADOS ---
 const pool = new Pool({
     connectionString: "postgres://avnadmin:AVNS_tHRnfzTKgOv5_yTnCfh@gastos-inaldofreitasjr-95a2.c.aivencloud.com:16334/defaultdb",
     ssl: { rejectUnauthorized: false }
 });
 
-// --- MIDDLEWARE DE AUTENTICAÇÃO ---
+// --- 4. MIDDLEWARE DE AUTENTICAÇÃO ---
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -46,7 +43,7 @@ function authenticateToken(req, res, next) {
     });
 }
 
-// --- ROTAS DE AUTH ---
+// --- 5. ROTAS DE LOGIN/REGISTRO ---
 app.post('/register', async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -78,7 +75,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// --- ROTAS DE TRANSAÇÕES ---
+// --- 6. ROTAS DE TRANSAÇÕES ---
 app.get('/transactions', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
@@ -107,7 +104,62 @@ app.delete('/transactions/:id', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- ROTAS DE DÍVIDAS ---
+// --- 7. ROTAS DE DÍVIDAS ---
 app.get('/debtors', authenticateToken, async (req, res) => {
     try {
-        const result =
+        const result = await pool.query('SELECT * FROM debtors WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/debtors', authenticateToken, async (req, res) => {
+    const { name, amount } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO debtors (user_id, name, amount) VALUES ($1, $2, $3) RETURNING *',
+            [req.user.id, name, amount]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/debtors/:id/toggle', authenticateToken, async (req, res) => {
+    try {
+        const current = await pool.query('SELECT paid FROM debtors WHERE id = $1', [req.params.id]);
+        const newStatus = !current.rows[0].paid;
+        const result = await pool.query(
+            'UPDATE debtors SET paid = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+            [newStatus, req.params.id, req.user.id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/debtors/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM debtors WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- 8. ROTAS DE META ---
+app.post('/meta', authenticateToken, async (req, res) => {
+    const { meta } = req.body;
+    try {
+        await pool.query('UPDATE users SET meta_sobra = $1 WHERE id = $2', [meta, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/meta', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT meta_sobra FROM users WHERE id = $1', [req.user.id]);
+        res.json({ meta: result.rows[0].meta_sobra });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- 9. INICIAR O SERVIDOR ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`✅ Servidor rodando na porta ${PORT}`);
+});
