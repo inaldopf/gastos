@@ -1,106 +1,131 @@
 import { store } from './store.js';
-import { formatCurrency, categoriesList } from './utils.js';
-
-let chartInstance = null;
 
 export const UI = {
+    // Lista completa baseada no seu Excel
+    categories: [
+        // Rendas
+        { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600' },
+        { id: 'Investimento', icon: 'fa-chart-line', color: 'text-emerald-600' },
+        { id: 'Renda Extra', icon: 'fa-plus-circle', color: 'text-emerald-500' },
+
+        // Moradia / Contas Fixas
+        { id: 'Aluguel', icon: 'fa-home', color: 'text-indigo-600' },
+        { id: 'Condomínio', icon: 'fa-building', color: 'text-indigo-500' },
+        { id: 'Luz', icon: 'fa-bolt', color: 'text-yellow-500' },
+        { id: 'Água', icon: 'fa-tint', color: 'text-blue-400' },
+        { id: 'Internet / TV', icon: 'fa-wifi', color: 'text-cyan-500' },
+        { id: 'Gás', icon: 'fa-fire', color: 'text-orange-500' },
+        { id: 'Telefone / Celular', icon: 'fa-mobile-alt', color: 'text-slate-600' },
+
+        // Alimentação
+        { id: 'Supermercado', icon: 'fa-shopping-cart', color: 'text-red-500' },
+        { id: 'Feira / Padaria', icon: 'fa-bread-slice', color: 'text-orange-400' },
+        { id: 'Restaurantes / Bares', icon: 'fa-utensils', color: 'text-red-600' },
+        { id: 'Comida (iFood)', icon: 'fa-pizza-slice', color: 'text-red-400' },
+
+        // Transporte
+        { id: 'Combustível', icon: 'fa-gas-pump', color: 'text-slate-700' },
+        { id: 'Uber / Táxi', icon: 'fa-car', color: 'text-slate-800' },
+        { id: 'Ônibus / Metrô', icon: 'fa-bus', color: 'text-blue-600' },
+        { id: 'Estacionamento', icon: 'fa-parking', color: 'text-slate-500' },
+        { id: 'Manutenção Carro', icon: 'fa-tools', color: 'text-slate-600' },
+
+        // Lazer e Pessoal
+        { id: 'Viagens / Passeios', icon: 'fa-plane', color: 'text-sky-500' },
+        { id: 'Cinema / Teatro', icon: 'fa-film', color: 'text-purple-500' },
+        { id: 'Clube / Academia', icon: 'fa-dumbbell', color: 'text-rose-500' },
+        { id: 'Presentes', icon: 'fa-gift', color: 'text-pink-500' },
+        { id: 'Compras', icon: 'fa-shopping-bag', color: 'text-purple-600' },
+
+        // Saúde e Educação
+        { id: 'Médico / Hospital', icon: 'fa-hospital', color: 'text-green-500' },
+        { id: 'Farmácia', icon: 'fa-capsules', color: 'text-green-600' },
+        { id: 'Material Escolar', icon: 'fa-book', color: 'text-yellow-600' },
+        { id: 'Educação / Cursos', icon: 'fa-graduation-cap', color: 'text-blue-800' },
+
+        // Outros
+        { id: 'Impostos', icon: 'fa-file-invoice-dollar', color: 'text-slate-500' },
+        { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400' }
+    ],
+
     initCategories() {
         const select = document.getElementById('inputCategory');
-        categoriesList.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c; opt.innerText = c; select.appendChild(opt);
+        if (!select) return;
+
+        select.innerHTML = '';
+        this.categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.id; // Mostra o nome bonitinho
+            select.appendChild(option);
         });
     },
 
-    renderApp(monthFilter) {
+    renderApp(filterMonth) {
         const list = document.getElementById('transactionList');
+        const balanceEl = document.getElementById('kpiBalance');
+        const investEl = document.getElementById('kpiInvest');
+        const expenseEl = document.getElementById('kpiExpense');
+
+        if (!list) return;
+
         list.innerHTML = '';
-        
-        const filtered = monthFilter === 'Todos' ? store.transactions : store.transactions.filter(t => t.month === monthFilter);
-        
-        let income = 0, expense = 0, invest = 0, catTotals = {};
+
+        // Filtra por Mês
+        const filtered = filterMonth === 'Todos' 
+            ? store.transactions 
+            : store.transactions.filter(t => t.month && t.month.toUpperCase() === filterMonth.toUpperCase());
+
+        let totalReceita = 0;
+        let totalInvestido = 0;
+        let totalDespesa = 0;
 
         filtered.forEach(t => {
-            if (t.type === 'Receita') income += t.amount;
-            if (t.type === 'Despesa') { 
-                expense += t.amount; 
-                catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; 
-            }
-            if (t.type === 'Investimento') invest += t.amount;
+            if (t.type === 'Receita') totalReceita += t.amount;
+            else if (t.type === 'Investimento') totalInvestido += t.amount;
+            else totalDespesa += t.amount;
 
-            // Render Row
-            const row = document.createElement('tr');
-            row.className = "hover:bg-slate-50 transition";
-            const color = t.type === 'Receita' ? 'text-emerald-600' : (t.type === 'Investimento' ? 'text-indigo-600' : 'text-red-500');
-            const sign = t.type === 'Receita' ? '+' : (t.type === 'Despesa' ? '-' : '');
-            
-            row.innerHTML = `
-                <td class="px-4 py-3 text-xs text-slate-500">${t.date}</td>
-                <td class="px-4 py-3 font-medium">${t.desc}</td>
-                <td class="px-4 py-3"><span class="bg-slate-100 px-2 py-1 rounded text-xs text-slate-600">${t.category}</span></td>
-                <td class="px-4 py-3 text-right font-bold ${color}">${sign}${formatCurrency(t.amount)}</td>
-                <td class="px-4 py-3 text-center cursor-pointer text-slate-300 hover:text-red-500" data-id="${t.id}"><i class="fas fa-trash"></i></td>
+            // Busca o ícone e cor correspondente
+            const catData = this.categories.find(c => c.id === t.category) || { icon: 'fa-tag', color: 'text-slate-400' };
+
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50 transition";
+            tr.innerHTML = `
+                <td class="px-4 py-3 font-medium text-slate-600">${t.date || '-'}</td>
+                <td class="px-4 py-3 text-slate-800 font-bold">${t.desc}</td>
+                <td class="px-4 py-3">
+                    <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${catData.color}">
+                        <i class="fas ${catData.icon}"></i> ${t.category}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-right font-bold ${t.type === 'Despesa' ? 'text-red-500' : (t.type === 'Investimento' ? 'text-emerald-600' : 'text-indigo-600')}">
+                    ${t.type === 'Despesa' ? '-' : ''} R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="window.removeTransaction(${t.id})" class="text-slate-400 hover:text-red-500 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
             `;
-            
-            // Event listener direto no elemento para evitar erro de escopo
-            row.querySelector('[data-id]').addEventListener('click', () => {
-                if(confirm('Apagar?')) {
-                    store.removeTransaction(t.id);
-                    UI.renderApp(monthFilter);
-                }
-            });
-
-            list.prepend(row);
+            list.appendChild(tr);
         });
 
-        // KPIs
-        document.getElementById('kpiBalance').innerText = formatCurrency(income - expense - invest);
-        document.getElementById('kpiInvest').innerText = formatCurrency(invest);
-        document.getElementById('kpiExpense').innerText = formatCurrency(expense);
+        // Atualiza KPIs
+        const saldo = totalReceita - totalDespesa - totalInvestido;
+        balanceEl.innerText = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        investEl.innerText = `R$ ${totalInvestido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        expenseEl.innerText = `R$ ${totalDespesa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        
+        // Cores dinâmicas do Saldo
+        balanceEl.className = `text-2xl font-bold ${saldo >= 0 ? 'text-indigo-900' : 'text-red-600'}`;
+    }
+};
 
-        this.updateChart(catTotals);
-    },
-
-    updateChart(data) {
-        const ctx = document.getElementById('categoryChart').getContext('2d');
-        if (chartInstance) chartInstance.destroy();
-        chartInstance = new Chart(ctx, {
-            type: 'doughnut',
-            data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899'], borderWidth: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '70%' }
-        });
-    },
-
-    renderDebtors() {
-        const el = document.getElementById('debtorsList');
-        el.innerHTML = '';
-        store.debtors.forEach((d, i) => {
-            const div = document.createElement('div');
-            div.className = "flex justify-between items-center bg-slate-50 p-2 rounded";
-            
-            // HTML do Devedor
-            div.innerHTML = `
-                <div>
-                    <p class="text-xs font-bold">${d.name}</p>
-                    <input type="number" value="${d.amount}" class="debt-input w-16 bg-transparent text-xs text-orange-600 font-bold outline-none" data-index="${i}">
-                </div>
-                <button class="debt-toggle text-[10px] px-2 py-1 rounded ${d.paid ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}" data-index="${i}">
-                    ${d.paid ? 'Pago' : 'Pendente'}
-                </button>
-            `;
-            
-            // Listeners
-            div.querySelector('.debt-input').addEventListener('change', (e) => {
-                store.debtors[i].amount = parseFloat(e.target.value);
-                store.saveDebtors();
-            });
-            div.querySelector('.debt-toggle').addEventListener('click', () => {
-                store.debtors[i].paid = !store.debtors[i].paid;
-                store.saveDebtors();
-                UI.renderDebtors();
-            });
-
-            el.appendChild(div);
-        });
+// Torna a função de remover global para o HTML acessar
+window.removeTransaction = async (id) => {
+    if(confirm("Tem certeza que deseja apagar?")) {
+        await store.removeTransaction(id);
+        const monthFilter = document.getElementById('monthFilter').value;
+        UI.renderApp(monthFilter);
     }
 };
