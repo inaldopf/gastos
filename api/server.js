@@ -8,7 +8,11 @@ const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: '*', // Permite que qualquer site acesse (Vercel, Localhost, etc)
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));;
 app.use(bodyParser.json());
 
 const JWT_SECRET = "sua_chave_secreta_super_segura_123"; // Em produção, use variável de ambiente
