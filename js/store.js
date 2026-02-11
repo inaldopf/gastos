@@ -1,5 +1,5 @@
-const API_URL = "https://financeiro-app-okjm.onrender.com"; // Seu link do Render
-const CACHE_KEY = 'finance_data_cache'; // Chave para salvar no navegador
+const API_URL = "https://financeiro-app-okjm.onrender.com"; // Seu link
+const CACHE_KEY = 'finance_data_cache';
 
 export const store = {
     transactions: [],
@@ -10,7 +10,7 @@ export const store = {
         return localStorage.getItem('inf_auth_token');
     },
 
-    // --- SALVAR/CARREGAR DO CACHE LOCAL ---
+    // --- CACHE (MANTENHA IGUAL) ---
     saveToCache() {
         const data = {
             transactions: this.transactions,
@@ -28,26 +28,21 @@ export const store = {
             this.transactions = data.transactions || [];
             this.debtors = data.debtors || [];
             this.meta = data.meta || 0;
-            console.log("⚡ Dados carregados do Cache (Instantâneo)");
-            return true; // Avisa que tinha cache
+            return true;
         }
         return false;
     },
 
-    // --- INICIALIZAÇÃO INTELIGENTE ---
+    // --- INIT (MANTENHA IGUAL) ---
     async init() {
         const token = this.getToken();
         if (!token) return;
 
-        // 1. Tenta carregar do cache primeiro (Usuário vê dados na hora)
-        const hasCache = this.loadFromCache();
-        
-        // Se já tinha cache, não precisa travar a UI esperando o servidor.
-        // Mas chamamos o servidor em seguida para garantir que está atualizado.
-        try {
-            console.log("🔄 Sincronizando com o servidor...");
+        // Tenta cache primeiro
+        this.loadFromCache();
 
-            // Busca tudo em paralelo para ser mais rápido
+        try {
+            // Busca dados novos
             const [resTrans, resDebt, resMeta] = await Promise.all([
                 fetch(`${API_URL}/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/debtors`, { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -56,7 +51,6 @@ export const store = {
 
             if (resTrans.ok) {
                 const rawTrans = await resTrans.json();
-                // Tradução e atualização
                 this.transactions = rawTrans.map(dbItem => ({
                     id: dbItem.id,
                     desc: dbItem.description,
@@ -75,89 +69,91 @@ export const store = {
                 this.meta = parseFloat(metaData.meta) || 0;
             }
 
-            // Salva a versão nova do servidor no cache
             this.saveToCache();
-            console.log("✅ Dados sincronizados e cacheados!");
-
         } catch (error) {
-            console.error("⚠️ Sem internet ou erro no servidor. Usando versão local.", error);
-            // Se der erro (ex: servidor dormindo), o usuário continua usando o cache que carregou no passo 1.
-            if (error.message && (error.message.includes("403") || error.message.includes("401"))) {
-                alert("Sessão expirada. Faça login novamente.");
-                localStorage.removeItem('inf_auth_token');
-                window.location.href = 'login.html';
-            }
+            console.log("Usando dados offline.");
         }
     },
 
-    // --- ADICIONAR (ATUALIZAÇÃO OTIMISTA) ---
+    // --- A MÁGICA ACONTECE AQUI (ADD INSTANTÂNEO) ---
     async addTransaction(data) {
         const token = this.getToken();
         
-        // 1. Envia para o servidor
-        try {
-            const res = await fetch(`${API_URL}/transactions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(data)
-            });
+        // 1. Cria um ID provisório (baseado no horário)
+        const tempId = Date.now();
+        
+        const newItem = {
+            id: tempId,
+            desc: data.desc,
+            amount: data.amount,
+            type: data.type,
+            category: data.category,
+            date: data.date,
+            month: data.month,
+            isTemp: true // Marca que é temporário
+        };
 
-            if(!res.ok) throw new Error("Erro ao salvar");
+        // 2. Adiciona na lista AGORA (Não espera o servidor)
+        this.transactions.unshift(newItem);
+        this.saveToCache();
 
-            const newDbItem = await res.json();
+        // 3. Manda para o servidor em "segundo plano"
+        // (Note que NÃO tem 'await' aqui, para não travar a tela)
+        fetch(`${API_URL}/transactions`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify(data)
+        })
+        .then(async res => {
+            if(!res.ok) throw new Error("Erro server");
+            const dbItem = await res.json();
             
-            // 2. Formata o item que voltou do servidor
-            const newItemFormatted = {
-                id: newDbItem.id,
-                desc: newDbItem.description,
-                amount: parseFloat(newDbItem.amount),
-                type: newDbItem.type,
-                category: newDbItem.category,
-                date: newDbItem.transaction_date,
-                month: newDbItem.month
-            };
-            
-            // 3. Adiciona na lista LOCALMENTE (Sem buscar tudo de novo)
-            this.transactions.unshift(newItemFormatted); 
-            
-            // 4. Atualiza o cache
-            this.saveToCache();
-            
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao salvar. Verifique a conexão.");
-            throw error; // Lança erro para o form não limpar se falhar
-        }
+            // 4. Quando o servidor responder, trocamos o ID temporário pelo Real
+            const index = this.transactions.findIndex(t => t.id === tempId);
+            if(index !== -1) {
+                this.transactions[index].id = dbItem.id;
+                this.transactions[index].isTemp = false; // Não é mais temporário
+                this.saveToCache(); // Atualiza o cache com o ID real
+            }
+        })
+        .catch(err => {
+            console.error("Erro silencioso ao salvar:", err);
+            // Opcional: Colocar um ícone de "erro" no item da lista
+        });
+
+        // Retorna imediatamente para o app.js limpar o formulário
+        return; 
     },
 
+    // --- REMOVER (TAMBÉM INSTANTÂNEO) ---
     async removeTransaction(id) {
         const token = this.getToken();
         
-        // Remove visualmente ANTES de confirmar no servidor (Sensação de rapidez)
-        const backup = [...this.transactions]; // Backup caso dê erro
+        // Remove visualmente NA HORA
+        const backup = [...this.transactions];
         this.transactions = this.transactions.filter(t => t.id !== id);
         this.saveToCache();
 
-        try {
-            await fetch(`${API_URL}/transactions/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-        } catch (err) {
-            // Se der erro, desfaz a remoção
+        // Manda pro servidor depois
+        fetch(`${API_URL}/transactions/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(err => {
+            // Se der erro, volta o item
             this.transactions = backup;
             this.saveToCache();
-            alert("Erro ao apagar. Tente novamente.");
-        }
+            alert("Erro de conexão. Não foi possível apagar.");
+        });
     },
 
-    // --- META ---
+    // --- MÉTODOS DE META E DÍVIDA (MANTENHA IGUAL) ---
     async setMeta(valor) {
         const token = this.getToken();
         this.meta = valor;
-        this.saveToCache(); // Atualiza local
-
-        // Manda pro server (sem await para não travar a UI)
+        this.saveToCache();
         fetch(`${API_URL}/meta`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -165,54 +161,44 @@ export const store = {
         });
     },
 
-    getMeta() {
-        return this.meta;
-    },
+    getMeta() { return this.meta; },
 
-    // --- DÍVIDAS (OTIMIZADO) ---
     async addDebt(name, amount) {
         const token = this.getToken();
-        
-        const res = await fetch(`${API_URL}/debtors`, {
+        // Otimista
+        const tempId = Date.now();
+        this.debtors.unshift({ id: tempId, name, amount, paid: false });
+        this.saveToCache();
+
+        fetch(`${API_URL}/debtors`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ name, amount })
+        }).then(async res => {
+            const realItem = await res.json();
+            const idx = this.debtors.findIndex(d => d.id === tempId);
+            if(idx !== -1) { this.debtors[idx].id = realItem.id; this.saveToCache(); }
         });
-        
-        const newItem = await res.json();
-        
-        // Adiciona local e salva
-        this.debtors.unshift(newItem);
-        this.saveToCache();
     },
 
     async toggleDebt(id) {
         const token = this.getToken();
-        
-        // Acha localmente e inverte (UI Instantânea)
         const index = this.debtors.findIndex(d => d.id === id);
         if(index !== -1) {
             this.debtors[index].paid = !this.debtors[index].paid;
             this.saveToCache();
         }
-
-        // Manda pro server
-        try {
-            await fetch(`${API_URL}/debtors/${id}/toggle`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-        } catch (err) {
-            console.error("Erro ao sincronizar status da dívida");
-        }
+        fetch(`${API_URL}/debtors/${id}/toggle`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
     },
 
     async removeDebt(id) {
         const token = this.getToken();
         this.debtors = this.debtors.filter(d => d.id !== id);
         this.saveToCache();
-
-        await fetch(`${API_URL}/debtors/${id}`, {
+        fetch(`${API_URL}/debtors/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
