@@ -22,29 +22,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("DOM Pronto. Iniciando aplicação...");
 
     try {
-        // 1. Inicia Categorias (Visual)
         UI.initCategories();
 
-        // 2. BUSCA DADOS NO BANCO (Aqui estava o problema?)
-        console.log("Chamando store.init()...");
-        await store.init();
-        console.log("store.init() finalizado.");
+        // 1. Renderiza IMEDIATAMENTE se tiver cache
+        if (store.loadFromCache()) {
+            updateAllViews('Todos');
+        }
 
-        // 3. Renderiza a tela com os dados que chegaram
+        // 2. Busca atualização do servidor em background
+        await store.init();
+        
+        // 3. Renderiza DE NOVO com os dados frescos do servidor
         updateAllViews('Todos');
 
-        // 4. Configura a Meta visualmente
+        // Resto das configurações...
         const inputMeta = document.getElementById('inputMeta');
         if(inputMeta) inputMeta.value = store.getMeta();
-
-        // 5. Ativa os botões
         setupEvents();
 
     } catch (error) {
         console.error("ERRO CRÍTICO NA INICIALIZAÇÃO:", error);
     }
 });
-
 function setupEvents() {
     // --- LOGOUT ---
     const btnLogout = document.getElementById('btnLogout');
