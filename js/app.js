@@ -12,185 +12,118 @@ import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado com sucesso!");
 
-// Função auxiliar para atualizar TUDO
+// --- 1. FUNÇÕES AUXILIARES DE RENDERIZAÇÃO ---
 function updateAllViews(monthFilter) {
     UI.renderApp(monthFilter);
     Dashboard.render(); 
+    renderDebts(); // Atualiza a lista de dívidas
 }
 
+// --- 2. RENDERIZAÇÃO DE DÍVIDAS (Estava faltando ou perdida) ---
+function renderDebts() {
+    const list = document.getElementById('debtList');
+    const totalEl = document.getElementById('totalDebtAmount');
+    if(!list) return;
+
+    list.innerHTML = '';
+    let totalReceber = 0;
+
+    store.debtors.forEach(d => {
+        const tr = document.createElement('tr');
+        
+        // Visual: Pago vs Pendente
+        const opacityClass = d.paid ? "opacity-50" : "";
+        const statusBadge = d.paid 
+            ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">PAGO</span>`
+            : `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">PENDENTE</span>`;
+
+        if(!d.paid) totalReceber += parseFloat(d.amount);
+
+        tr.className = `hover:bg-slate-50 transition ${opacityClass}`;
+        tr.innerHTML = `
+            <td class="px-6 py-4 font-medium text-slate-900">${d.name}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-600">R$ ${parseFloat(d.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td class="px-6 py-4 text-center">${statusBadge}</td>
+            <td class="px-6 py-4 text-center flex justify-center gap-2">
+                <button onclick="window.toggleDebt(${d.id})" class="text-indigo-600 hover:text-indigo-900" title="Mudar Status">
+                    <i class="fas fa-check-circle"></i>
+                </button>
+                <button onclick="window.deleteDebt(${d.id})" class="text-red-400 hover:text-red-600" title="Apagar">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        list.appendChild(tr);
+    });
+
+    if(totalEl) totalEl.innerText = `R$ ${totalReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+}
+
+// --- 3. FUNÇÕES GLOBAIS (O QUE FAZ OS BOTÕES FUNCIONAREM) ---
+// Precisamos definir isso no 'window' para o HTML enxergar
+
+window.removeTransaction = async (id) => {
+    if(confirm("Tem certeza que deseja apagar essa transação?")) {
+        await store.removeTransaction(id);
+        const monthFilter = document.getElementById('monthFilter').value;
+        updateAllViews(monthFilter);
+    }
+};
+
+window.toggleDebt = async (id) => {
+    await store.toggleDebt(id);
+    renderDebts();
+};
+
+window.deleteDebt = async (id) => {
+    if(confirm("Apagar esta dívida?")) {
+        await store.removeDebt(id);
+        renderDebts();
+    }
+};
+
+// --- 4. INICIALIZAÇÃO INTELIGENTE (CACHE + REDE) ---
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("DOM Pronto. Iniciando aplicação...");
+    console.log("DOM Pronto. Iniciando...");
 
     try {
         UI.initCategories();
 
-        // 1. Renderiza IMEDIATAMENTE se tiver cache
+        // A) Tenta carregar do Cache primeiro (Instantâneo)
         if (store.loadFromCache()) {
+            console.log("⚡ Exibindo versão em cache...");
             updateAllViews('Todos');
         }
 
-        // 2. Busca atualização do servidor em background
+        // B) Configura os eventos dos botões (Submit, Tabs, etc)
+        // Importante fazer isso logo para os botões funcionarem
+        setupEvents();
+
+        // C) Busca atualização do servidor em background
         await store.init();
         
-        // 3. Renderiza DE NOVO com os dados frescos do servidor
+        // D) Renderiza de novo com os dados frescos
         updateAllViews('Todos');
 
-        // Resto das configurações...
+        // Configura Meta visual
         const inputMeta = document.getElementById('inputMeta');
         if(inputMeta) inputMeta.value = store.getMeta();
-        setupEvents();
 
     } catch (error) {
         console.error("ERRO CRÍTICO NA INICIALIZAÇÃO:", error);
     }
 });
+
+// --- 5. CONFIGURAÇÃO DE EVENTOS (FORMULÁRIOS, ABAS, IMPORTAÇÃO) ---
 function setupEvents() {
-    // --- LOGOUT ---
-    const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            if(confirm("Sair do sistema?")) {
-                localStorage.removeItem('inf_auth_token');
-                window.location.href = 'login.html';
-            }
-        });
-    }
-
-    // --- NAVEGAÇÃO ---
-    const tabHome = document.getElementById('tabHome');
-    const tabDash = document.getElementById('tabDash');
-    const viewHome = document.getElementById('viewHome');
-    const viewDashboard = document.getElementById('viewDashboard');
-
-    if(tabHome && tabDash) {
-        tabHome.addEventListener('click', () => {
-            tabHome.className = "px-4 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-indigo-600 transition";
-            tabDash.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition";
-            viewHome.classList.remove('hidden');
-            viewDashboard.classList.add('hidden');
-        });
-
-        tabDash.addEventListener('click', () => {
-            tabDash.className = "px-4 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-indigo-600 transition";
-            tabHome.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition";
-            viewDashboard.classList.remove('hidden');
-            viewHome.classList.add('hidden');
-            Dashboard.render(); 
-        });
-    }
-
-    // --- SALVAR META ---
-    const inputMeta = document.getElementById('inputMeta');
-    const btnSaveMeta = document.getElementById('btnSaveMeta');
-
-    if (btnSaveMeta && inputMeta) {
-        btnSaveMeta.addEventListener('click', () => {
-            const valor = parseFloat(inputMeta.value);
-            if (!isNaN(valor)) {
-                store.setMeta(valor);
-                Dashboard.render();
-                alert("Meta Salva!");
-            }
-        });
-    }
-
-    // --- FORM MANUAL ---
-    const form = document.getElementById('transactionForm');
-    if (form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const desc = document.getElementById('inputDesc').value;
-            const amount = parseFloat(document.getElementById('inputAmount').value);
-            const type = document.getElementById('inputType').value;
-            const category = document.getElementById('inputCategory').value;
-            
-            if (!desc || isNaN(amount)) return alert("Preencha corretamente.");
-
-            const filterMonth = document.getElementById('monthFilter').value;
-            const monthToSave = filterMonth === 'Todos' ? getMonthName(new Date().getMonth() + 1) : filterMonth;
-
-            // Envia para o banco através da Store
-            await store.addTransaction({
-                desc, amount, type, category,
-                date: new Date().toLocaleDateString('pt-BR'),
-                month: monthToSave
-            });
-
-            updateAllViews(filterMonth);
-            form.reset();
-        });
-    }
-
-    // --- IMPORTAÇÃO ---
-    const btnImport = document.getElementById('btnImport');
-    const modal = document.getElementById('importModal');
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const loading = document.getElementById('loadingStatus');
-
-    if(btnImport) {
-        btnImport.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-            dropZone.classList.remove('hidden');
-            loading.classList.add('hidden');
-        });
-
-        document.getElementById('btnCloseModal').addEventListener('click', () => modal.classList.add('hidden'));
-        dropZone.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            try {
-                dropZone.classList.add('hidden');
-                loading.classList.remove('hidden');
-                document.getElementById('statusText').innerText = "Processando PDF...";
-
-                const text = await readPdfText(file);
-                const apiKey = localStorage.getItem('gemini_api_key');
-                const transactions = await categorizeWithGemini(text, apiKey);
-
-                for (const t of transactions) {
-                    let monthCode = "01";
-                    if(t.date && t.date.includes('/')) monthCode = t.date.split('/')[1];
-                    
-                    await store.addTransaction({
-                        desc: t.desc,
-                        amount: t.amount,
-                        type: t.type,
-                        category: t.category,
-                        date: t.date,
-                        month: getMonthName(monthCode)
-                    });
-                }
-
-                alert("Importação concluída!");
-                updateAllViews('Todos');
-                modal.classList.add('hidden');
-            } catch (err) {
-                alert("Erro: " + err.message);
-            } finally {
-                loading.classList.add('hidden');
-                dropZone.classList.remove('hidden');
-            }
-        });
-    }
-
-    // --- GERAIS ---
-    const monthFilter = document.getElementById('monthFilter');
-    if(monthFilter) monthFilter.addEventListener('change', (e) => updateAllViews(e.target.value));
-
-    const btnSettings = document.getElementById('btnSettings');
-    if(btnSettings) btnSettings.addEventListener('click', () => {
-        const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || '');
-        if (key) localStorage.setItem('gemini_api_key', key);
-    });
-
-    const btnReport = document.getElementById('btnGenerateReport');
-    if (btnReport) btnReport.addEventListener('click', () => Dashboard.generateAIReport());
     
-    // Reset (Limpar Meta e Dados Visuais, mas não apaga do banco neste exemplo simples)
-    const btnReset = document.getElementById('btnReset');
-    if(btnReset) btnReset.addEventListener('click', () => location.reload());
-}
+    // --- NAVEGAÇÃO ENTRE ABAS ---
+    const tabs = {
+        home: document.getElementById('tabHome'),
+        debts: document.getElementById('tabDebts'), // Botão Dívidas
+        dash: document.getElementById('tabDash')
+    };
+    const views = {
+        home: document.getElementById('viewHome'),
+        debts: document.getElementById('viewDebts'), // Tela Dívidas
+        dash: document.getElementById('view
