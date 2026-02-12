@@ -24,7 +24,7 @@ export const UI = {
         { id: 'Supermercado', icon: 'fa-shopping-cart', color: 'text-red-500', hex: '#EF4444' },
         { id: 'Feira / Padaria', icon: 'fa-bread-slice', color: 'text-orange-400', hex: '#FB923C' },
         { id: 'Restaurantes / Bares', icon: 'fa-utensils', color: 'text-red-600', hex: '#DC2626' },
-        { id: 'Comida (iFood)', icon: 'fa-pizza-slice', color: 'text-red-400', hex: '#F87171' },
+        { id: 'Comida', icon: 'fa-pizza-slice', color: 'text-red-400', hex: '#F87171' },
 
         // Transporte (Cinzas/Escuros)
         { id: 'Combustível', icon: 'fa-gas-pump', color: 'text-slate-700', hex: '#334155' },
