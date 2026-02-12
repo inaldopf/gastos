@@ -2,6 +2,12 @@ import { store } from './store.js';
 
 let evolutionChart = null;
 
+const token = localStorage.getItem('token'); // ou o nome da sua chave
+if (!token) {
+    console.warn("🚫 Usuário não logado. Redirecionando...");
+    window.location.href = '/login.html'; // Ajuste para o nome da sua página de login
+}
+
 export const Dashboard = {
     render() {
         const view = document.getElementById('viewDashboard');
