@@ -1,7 +1,6 @@
 // --- PROTEÇÃO DE ROTA ---
-if (!localStorage.getItem('inf_auth_token')) {
-    window.location.href = 'login.html';
-}
+const token = localStorage.getItem('token');
+const path = window.location.pathname
 
 import { store } from './store.js';
 import { UI } from './ui.js';
@@ -11,6 +10,14 @@ import { categorizeWithGemini } from './ai.js';
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado com sucesso!");
+
+
+const isLoginPage = path.includes('login.html');
+
+if (!token && !isLoginPage && !isRegisterPage) {
+    console.warn("🚫 Acesso negado. Redirecionando para login...");
+    window.location.href = 'login.html';
+}
 
 // --- 1. FUNÇÕES AUXILIARES ---
 function updateAllViews(monthFilter) {
