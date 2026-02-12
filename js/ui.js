@@ -1,10 +1,10 @@
 import { store } from './store.js';
 
-// Variável para guardar a instância do gráfico
+// Variável segura para o gráfico
 let chartInstance = null;
 
 export const UI = {
-    // --- 1. LISTA DE CATEGORIAS ---
+    // Lista de Categorias
     categories: [
         { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600', hex: '#059669' },
         { id: 'Investimento', icon: 'fa-chart-line', color: 'text-emerald-600', hex: '#10B981' },
@@ -38,10 +38,13 @@ export const UI = {
         { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8' }
     ],
 
-    // --- 2. PREENCHE O DROPDOWN ---
+    // --- 1. PREENCHE O DROPDOWN (CATEGORIAS) ---
     initCategories() {
         const select = document.getElementById('inputCategory');
-        if (!select) return;
+        if (!select) {
+            console.error("ERRO: Não encontrei o <select id='inputCategory'> no HTML.");
+            return;
+        }
 
         select.innerHTML = '';
         this.categories.forEach(cat => {
@@ -50,131 +53,95 @@ export const UI = {
             option.textContent = cat.id;
             select.appendChild(option);
         });
+        console.log("✅ Categorias carregadas com sucesso!");
     },
 
-    // --- 3. RENDERIZA A TELA ---
+    // --- 2. RENDERIZA A LISTA ---
     renderApp(filterMonth) {
         const list = document.getElementById('transactionList');
-        const balanceEl = document.getElementById('kpiBalance');
-        const investEl = document.getElementById('kpiInvest');
-        const expenseEl = document.getElementById('kpiExpense');
-
-        if (!list) return; // Se não achar a lista, aborta (segurança)
+        if (!list) return;
 
         list.innerHTML = '';
 
-        // Filtra por Mês
-        const filtered = filterMonth === 'Todos' 
-            ? store.transactions 
-            : store.transactions.filter(t => t.month && t.month.toUpperCase() === filterMonth.toUpperCase());
+        // Filtro seguro
+        let filtered = store.transactions || [];
+        if (filterMonth !== 'Todos') {
+            filtered = filtered.filter(t => t.month && t.month.toUpperCase() === filterMonth.toUpperCase());
+        }
 
-        let totalReceita = 0;
-        let totalInvestido = 0;
-        let totalDespesa = 0;
+        // Se não tiver transações, mostra aviso
+        if (filtered.length === 0) {
+            list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">Nenhum lançamento neste período.</td></tr>';
+            this.updateKPIs(0, 0, 0); // Zera KPIs
+            this.updateChart([]); // Zera Gráfico
+            return;
+        }
+
+        let totalRec = 0, totalInv = 0, totalDesp = 0;
 
         filtered.forEach(t => {
-            if (t.type === 'Receita') totalReceita += t.amount;
-            else if (t.type === 'Investimento') totalInvestido += t.amount;
-            else totalDespesa += t.amount;
+            if (t.type === 'Receita') totalRec += t.amount;
+            else if (t.type === 'Investimento') totalInv += t.amount;
+            else totalDesp += t.amount;
 
-            // Busca visual da categoria
             const catData = this.categories.find(c => c.id === t.category) || { icon: 'fa-tag', color: 'text-slate-400' };
 
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 transition border-b border-slate-50";
-            
-            // Ícone de Remover com segurança (chama window.removeTransaction)
             tr.innerHTML = `
-                <td class="px-4 py-3 font-medium text-slate-600 text-xs">${t.date || '-'}</td>
-                <td class="px-4 py-3 text-slate-800 font-bold text-sm">${t.desc}</td>
-                <td class="px-4 py-3">
-                    <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider ${catData.color}">
-                        <i class="fas ${catData.icon}"></i> ${t.category}
-                    </span>
-                </td>
-                <td class="px-4 py-3 text-right font-bold text-sm ${t.type === 'Despesa' ? 'text-red-500' : (t.type === 'Investimento' ? 'text-emerald-600' : 'text-indigo-600')}">
-                    ${t.type === 'Despesa' ? '-' : ''} R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                </td>
-                <td class="px-4 py-3 text-center">
-                    <button onclick="window.removeTransaction(${t.id})" class="text-slate-300 hover:text-red-500 transition px-2 py-1 rounded hover:bg-red-50">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
+                <td class="px-4 py-3 text-xs text-slate-500">${t.date}</td>
+                <td class="px-4 py-3 text-sm font-bold text-slate-700">${t.desc}</td>
+                <td class="px-4 py-3"><span class="${catData.color} text-xs font-bold uppercase"><i class="fas ${catData.icon}"></i> ${t.category}</span></td>
+                <td class="px-4 py-3 text-right font-bold text-sm ${t.type === 'Despesa' ? 'text-red-500' : 'text-emerald-600'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td class="px-4 py-3 text-center"><button onclick="window.removeTransaction(${t.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td>
             `;
             list.appendChild(tr);
         });
 
-        // KPIs com verificação de existência (Proteção contra erro)
-        if(balanceEl) {
-            const saldo = totalReceita - totalDespesa - totalInvestido;
-            balanceEl.innerText = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            balanceEl.className = `text-2xl font-bold ${saldo >= 0 ? 'text-indigo-900' : 'text-red-600'}`;
-        }
-        if(investEl) investEl.innerText = `R$ ${totalInvestido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        if(expenseEl) expenseEl.innerText = `R$ ${totalDespesa.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
-        // Tenta atualizar o gráfico com segurança
+        this.updateKPIs(totalRec, totalDesp, totalInv);
         this.updateChart(filtered);
     },
 
-    // --- 4. GRÁFICO (AGORA BLINDADO 🛡️) ---
-    updateChart(transactions) {
-        // SEGURANÇA MÁXIMA: Se o Chart.js não carregou ainda, espera e tenta de novo
-        if (typeof Chart === 'undefined') {
-            console.log("⏳ Aguardando biblioteca de gráficos...");
-            setTimeout(() => this.updateChart(transactions), 500);
-            return;
+    // --- 3. ATUALIZA NÚMEROS (KPIs) ---
+    updateKPIs(rec, desp, inv) {
+        const saldo = rec - desp - inv;
+        const balEl = document.getElementById('kpiBalance');
+        if(balEl) {
+            balEl.innerText = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+            balEl.className = `text-2xl font-bold ${saldo >= 0 ? 'text-indigo-900' : 'text-red-600'}`;
         }
+        const invEl = document.getElementById('kpiInvest');
+        if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        
+        const expEl = document.getElementById('kpiExpense');
+        if(expEl) expEl.innerText = `R$ ${desp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    },
+
+    // --- 4. GRÁFICO SEGURO ---
+    updateChart(transactions) {
+        // Se Chart não existe (erro de carregamento), não faz nada para não travar o resto
+        if (typeof Chart === 'undefined') return;
 
         const ctx = document.getElementById('categoryChart');
         if (!ctx) return;
 
         const expenses = transactions.filter(t => t.type === 'Despesa');
         const totals = {};
-        expenses.forEach(t => {
-            totals[t.category] = (totals[t.category] || 0) + t.amount;
-        });
+        expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + t.amount);
 
-        const labels = Object.keys(totals);
-        const dataValues = Object.values(totals);
-        
-        const backgroundColors = labels.map(catName => {
-            const found = this.categories.find(c => c.id === catName);
-            return found ? found.hex : '#cbd5e1';
-        });
-
-        if (chartInstance) {
-            chartInstance.destroy();
-        }
-
-        if (dataValues.length === 0) return;
+        if (chartInstance) chartInstance.destroy();
 
         chartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: labels,
+                labels: Object.keys(totals),
                 datasets: [{
-                    data: dataValues,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 0,
-                    hoverOffset: 4
+                    data: Object.values(totals),
+                    backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6'],
+                    borderWidth: 0
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right', // Mudei para direita para caber melhor na lateral
-                        labels: { 
-                            font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" },
-                            usePointStyle: true,
-                            boxWidth: 8
-                        }
-                    }
-                },
-                cutout: '70%'
-            }
+            options: { responsive: true, maintainAspectRatio: false, cutout: '75%' }
         });
     }
 };
