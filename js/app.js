@@ -1,30 +1,37 @@
-// --- IMPORTAÇÕES ---
+// ==========================================
+// ARQUIVO: app.js
+// ==========================================
+
 import { store } from './store.js';
 import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
 import { readPdfText } from './pdf.js';
 import { categorizeWithGemini } from './ai.js';
-import { getMonthName } from './utils.js'; // Certifique-se que utils.js existe
+import { getMonthName } from './utils.js';
 
-console.log("🚀 app.js carregado com sucesso!");
+console.log("🚀 app.js carregado!");
 
-// --- PROTEÇÃO DE ROTA (CORRIGIDA) ---
-const token = localStorage.getItem('token');
-const path = window.location.pathname;
+// --- 1. PROTEÇÃO DE ROTA (Anti-Loop Infinito) ---
+(function checkAuth() {
+    const token = localStorage.getItem('token');
+    // Converte para minúsculo para garantir que /Login e /login sejam iguais
+    const path = window.location.pathname.toLowerCase(); 
 
-// Define se estamos nas páginas liberadas
-const isLoginPage = path.includes('login.html');
-const isRegisterPage = path.includes('register.html'); // Adicione se tiver página de cadastro
+    // Define se estamos numa página pública (Login ou Cadastro)
+    // A verificação .includes('login') resolve o problema da Vercel (URLs sem .html)
+    const isPublicPage = path.includes('login') || path.includes('register') || path.includes('cadastro');
 
-// Se NÃO tem token E NÃO estou nas páginas liberadas -> Redireciona
-if (!token && !isLoginPage && !isRegisterPage) {
-    console.warn("🚫 Acesso negado. Redirecionando para login...");
-    window.location.href = 'login.html';
-}
+    // Se NÃO tem token E NÃO estamos numa página pública -> TCHAU!
+    if (!token && !isPublicPage) {
+        console.warn("🚫 Sem token. Redirecionando para login...");
+        // .replace() é melhor que .href pois não salva no histórico (evita loop ao voltar)
+        window.location.replace('login.html'); 
+    }
+})();
 
-// --- 1. FUNÇÕES AUXILIARES ---
+// --- 2. FUNÇÕES AUXILIARES DE RENDERIZAÇÃO ---
 function updateAllViews(monthFilter) {
-    // Verifica se os módulos existem antes de chamar
+    // Verifica se os módulos existem antes de chamar para evitar crash
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(monthFilter);
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(); 
     renderDebts();
@@ -34,13 +41,13 @@ function renderDebts() {
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
     
-    // Se não tiver a lista de dívidas na tela, sai sem dar erro
+    // Se não tiver a lista de dívidas na tela (ex: estamos no login), sai sem dar erro
     if(!list) return;
 
     list.innerHTML = '';
     let totalReceber = 0;
 
-    // Garante que debtors é um array
+    // Garante que debtors é um array antes de rodar o loop
     const debtors = Array.isArray(store.debtors) ? store.debtors : [];
 
     debtors.forEach(d => {
@@ -68,7 +75,7 @@ function renderDebts() {
     if(totalEl) totalEl.innerText = `R$ ${totalReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 }
 
-// --- 2. FUNÇÕES GLOBAIS (Para onclick no HTML) ---
+// --- 3. FUNÇÕES GLOBAIS (Necessárias para o onclick="" no HTML) ---
 window.removeTransaction = async (id) => {
     if(confirm("Tem certeza que deseja apagar?")) {
         await store.removeTransaction(id);
@@ -79,51 +86,43 @@ window.removeTransaction = async (id) => {
 };
 
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
-window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
+window.deleteDebt = async (id) => { if(confirm("Apagar permanentemente?")) { await store.removeDebt(id); renderDebts(); }};
 
-// --- 3. CONFIGURAÇÃO DE EVENTOS ---
+// --- 4. CONFIGURAÇÃO DE EVENTOS (SETUP) ---
 function setupEvents() {
     console.log("🛠️ Configurando eventos...");
 
-    // NAVEGAÇÃO ENTRE ABAS
+    // --- NAVEGAÇÃO (ABAS) ---
     const tabHome = document.getElementById('tabHome');
     const tabDebts = document.getElementById('tabDebts');
     const tabDash = document.getElementById('tabDash');
     
-    const viewHome = document.getElementById('viewHome');
-    const viewDebts = document.getElementById('viewDebts');
-    const viewDashboard = document.getElementById('viewDashboard');
-
-    // Função auxiliar para trocar aba com segurança
+    // Função para trocar abas
     const switchTab = (activeId) => {
-        // Esconde todas
-        [viewHome, viewDebts, viewDashboard].forEach(el => {
+        ['viewHome', 'viewDebts', 'viewDashboard'].forEach(id => {
+            const el = document.getElementById(id);
             if(el) el.classList.add('hidden');
         });
         
-        // Mostra a ativa
         const activeEl = document.getElementById(activeId);
         if(activeEl) {
             activeEl.classList.remove('hidden');
-            // Remove classe animate-fade-in para reiniciar animação se quiser, ou deixa
-            activeEl.classList.remove('animate-fade-in');
-            void activeEl.offsetWidth; // Trigger reflow
+            activeEl.classList.remove('animate-fade-in'); 
+            void activeEl.offsetWidth; // Trigger reflow para reiniciar animação
             activeEl.classList.add('animate-fade-in');
         }
 
-        // Estilo dos botões (Reset)
+        // Resetar botões
         [tabHome, tabDebts, tabDash].forEach(btn => {
             if(btn) btn.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition";
         });
         
-        // Estilo Ativo
+        // Ativar botão atual
         const activeBtnClass = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-indigo-600 transition";
-
         if(activeId === 'viewHome' && tabHome) tabHome.className = activeBtnClass;
         if(activeId === 'viewDebts' && tabDebts) tabDebts.className = activeBtnClass;
         if(activeId === 'viewDashboard' && tabDash) tabDash.className = activeBtnClass;
 
-        // Renderiza conteúdo específico se necessário
         if(activeId === 'viewDashboard' && Dashboard) Dashboard.render();
         if(activeId === 'viewDebts') renderDebts();
     };
@@ -132,37 +131,38 @@ function setupEvents() {
     if(tabDebts) tabDebts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabDash) tabDash.addEventListener('click', () => switchTab('viewDashboard'));
 
-    // FORMULÁRIO DE TRANSAÇÃO
+    // --- FORMULÁRIO DE TRANSAÇÃO ---
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
             const descInput = document.getElementById('inputDesc');
             const amountInput = document.getElementById('inputAmount');
             const typeInput = document.getElementById('inputType');
             const catInput = document.getElementById('inputCategory');
             const btn = transForm.querySelector('button[type="submit"]');
-            
+
             if (!descInput || !amountInput) return;
 
             const desc = descInput.value;
             const amount = parseFloat(amountInput.value);
-            const type = typeInput.value;
-            const category = catInput.value;
+            const type = typeInput ? typeInput.value : 'Despesa';
+            const category = catInput ? catInput.value : 'Outros';
 
-            if (!desc || isNaN(amount)) return alert("Preencha a descrição e o valor.");
+            if (!desc || isNaN(amount)) return alert("Preencha descrição e valor corretamente.");
 
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btn.disabled = true;
 
+            // Define o mês correto para salvar
             const filterEl = document.getElementById('monthFilter');
             const filterMonth = filterEl ? filterEl.value : 'Todos';
-            
-            // Se estiver filtrando "Todos", usa o mês atual para salvar. Se estiver filtrando um mês, usa aquele.
             let monthToSave = filterMonth;
+            
+            // Se o filtro for "Todos", salva no mês atual do sistema
             if (monthToSave === 'Todos') {
-                 // Função simples para pegar nome do mês atual se getMonthName falhar
                  const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
                  monthToSave = meses[new Date().getMonth()];
             }
@@ -176,7 +176,8 @@ function setupEvents() {
                 
                 updateAllViews(filterMonth);
                 transForm.reset();
-                // Mantém o tipo e categoria se quiser UX melhor, ou reseta tudo
+                // Opcional: manter o foco no campo de descrição
+                descInput.focus();
                 
             } catch (err) { 
                 console.error(err); 
@@ -188,38 +189,40 @@ function setupEvents() {
         });
     }
 
-    // FORMULÁRIO DE DÍVIDAS
+    // --- FORMULÁRIO DE DÍVIDAS ---
     const debtForm = document.getElementById('debtForm');
     if(debtForm) {
         debtForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const nameInput = document.getElementById('debtName');
-            const amountInput = document.getElementById('debtAmount');
+            const nameEl = document.getElementById('debtName');
+            const amountEl = document.getElementById('debtAmount');
             
-            if(!nameInput || !amountInput) return;
-
-            const name = nameInput.value;
-            const amount = parseFloat(amountInput.value);
-            
-            if(name && amount) {
-                await store.addDebt(name, amount);
+            if(nameEl && amountEl && nameEl.value && amountEl.value) {
+                await store.addDebt(nameEl.value, parseFloat(amountEl.value));
                 renderDebts();
                 debtForm.reset();
             }
         });
     }
 
-    // BOTÕES DE AÇÃO
+    // --- FILTRO DE MÊS ---
+    const monthFilter = document.getElementById('monthFilter');
+    if(monthFilter) {
+        monthFilter.addEventListener('change', (e) => updateAllViews(e.target.value));
+    }
+
+    // --- LOGOUT ---
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             if(confirm("Deseja realmente sair?")) { 
-                localStorage.removeItem('token'); // Use o nome correto da chave
+                localStorage.removeItem('token'); 
                 window.location.href = 'login.html'; 
             }
         });
     }
 
+    // --- META MENSAL ---
     const btnSaveMeta = document.getElementById('btnSaveMeta');
     if (btnSaveMeta) {
         btnSaveMeta.addEventListener('click', () => {
@@ -227,24 +230,18 @@ function setupEvents() {
             if(input) {
                 store.setMeta(parseFloat(input.value));
                 if(Dashboard && Dashboard.render) Dashboard.render();
-                alert("Meta Salva com Sucesso!");
+                alert("Meta salva!");
             }
         });
     }
 
-    const monthFilter = document.getElementById('monthFilter');
-    if(monthFilter) {
-        monthFilter.addEventListener('change', (e) => updateAllViews(e.target.value));
-    }
-
-    // IMPORTAÇÃO DE PDF
+    // --- IMPORTAÇÃO DE PDF ---
     const btnImport = document.getElementById('btnImport');
     const modal = document.getElementById('importModal');
-    // Se você tiver um botão de fechar com ID específico, adicione aqui. 
-    // No HTML anterior usei onclick inline, mas é bom ter listener.
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
 
+    // Abrir Modal
     if(btnImport && modal) {
         btnImport.addEventListener('click', () => {
             modal.classList.remove('hidden');
@@ -253,16 +250,18 @@ function setupEvents() {
             if(loading) loading.classList.add('hidden');
         });
     }
-    
-    // Fecha modal clicando fora (Opcional)
+
+    // Fechar Modal (clicando fora)
     if(modal) {
         modal.addEventListener('click', (e) => {
             if(e.target === modal) modal.classList.add('hidden');
         });
     }
 
+    // Upload
     if(dropZone && fileInput) {
         dropZone.addEventListener('click', () => fileInput.click());
+        
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -276,27 +275,30 @@ function setupEvents() {
                 const apiKey = localStorage.getItem('gemini_api_key');
                 
                 let transactions = [];
+                // Chama a IA se disponível
                 if (typeof categorizeWithGemini === 'function') {
                      transactions = await categorizeWithGemini(text, apiKey);
                 } else {
-                    console.warn("Módulo AI não carregado, simulando...");
+                    console.warn("Módulo AI não carregado.");
                 }
 
+                // Salva cada transação
                 for (const t of transactions) {
-                    let monthCode = "01";
-                    // Extrai mês da data (DD/MM/AAAA)
-                    if(t.date && t.date.includes('/')) monthCode = t.date.split('/')[1];
+                    let monthName = "JANEIRO"; // Padrão
                     
-                    // Converte número do mês para nome (01 -> JANEIRO)
-                    const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
-                    const monthName = meses[parseInt(monthCode) - 1] || "JANEIRO";
+                    if(t.date && t.date.includes('/')) {
+                        const monthCode = parseInt(t.date.split('/')[1]);
+                        const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+                        monthName = meses[monthCode - 1] || "JANEIRO";
+                    }
 
                     await store.addTransaction({
                         desc: t.desc, amount: t.amount, type: t.type, category: t.category,
                         date: t.date, month: monthName
                     });
                 }
-                alert("Importação concluída com sucesso!");
+                
+                alert(`Sucesso! ${transactions.length} transações importadas.`);
                 updateAllViews('Todos');
                 if(modal) modal.classList.add('hidden');
                 
@@ -306,12 +308,12 @@ function setupEvents() {
             } finally { 
                 if(loading) loading.classList.add('hidden'); 
                 if(dropZone) dropZone.classList.remove('hidden'); 
-                fileInput.value = ''; // Limpa input para permitir selecionar mesmo arquivo
+                fileInput.value = ''; // Limpa o input
             }
         });
     }
 
-    // DASHBOARD AI REPORT
+    // --- DASHBOARD AI & CONFIGS ---
     const btnReport = document.getElementById('btnGenerateReport');
     if (btnReport) {
         btnReport.addEventListener('click', () => {
@@ -322,7 +324,7 @@ function setupEvents() {
     const btnSettings = document.getElementById('btnSettings');
     if(btnSettings) {
         btnSettings.addEventListener('click', () => {
-            const key = prompt("API Key Gemini (Google AI):", localStorage.getItem('gemini_api_key') || '');
+            const key = prompt("Insira sua API Key do Gemini (Google AI):", localStorage.getItem('gemini_api_key') || '');
             if (key !== null) localStorage.setItem('gemini_api_key', key);
         });
     }
@@ -331,29 +333,30 @@ function setupEvents() {
     if(btnReset) btnReset.addEventListener('click', () => location.reload());
 }
 
-// --- 4. INICIALIZAÇÃO (PONTO DE PARTIDA) ---
+// --- 5. INICIALIZAÇÃO (PONTO DE PARTIDA) ---
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("DOM Pronto. Iniciando aplicação...");
+    console.log("🎬 DOM Pronto. Iniciando...");
 
     try {
-        // Inicializa UI (Categorias)
+        // Inicializa Categorias na UI
         if(UI && UI.initCategories) UI.initCategories();
 
-        // 1. Tenta carregar do Cache primeiro (para ser rápido)
+        // 1. Carrega do Cache (Rápido)
         const hasCache = store.loadFromCache();
         
         if (hasCache) {
             updateAllViews('Todos');
         } else {
-            // Loading State na lista se não tiver cache
+            // Mostra loading apenas se não tiver cache
             const list = document.getElementById('transactionList');
-            if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i><p class="text-slate-500 mt-2">Sincronizando dados...</p></td></tr>';
+            if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i><p class="text-slate-500 mt-2">Sincronizando...</p></td></tr>';
         }
 
-        // 2. Configura os cliques dos botões
+        // 2. Configura botões (IMPORTANTE: Fazer isso antes do await store.init)
         setupEvents();
 
-        // 3. Se tiver token, busca dados atualizados do servidor
+        // 3. Se tiver logado, busca dados novos do servidor
+        const token = localStorage.getItem('token');
         if (token) {
             await store.init();
             updateAllViews('Todos');
@@ -363,6 +366,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
     } catch (error) {
-        console.error("Erro fatal na inicialização:", error);
+        console.error("☠️ Erro fatal na inicialização:", error);
     }
 });
