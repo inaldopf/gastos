@@ -36,7 +36,7 @@ export const store = {
         const token = this.getToken();
         if (!token) return;
 
-        this.loadFromCache(); // Carrega o que tem
+        this.loadFromCache();
 
         try {
             console.log("🔄 Sincronizando com o banco...");
@@ -48,17 +48,30 @@ export const store = {
 
             if (resTrans.ok) {
                 const rawTrans = await resTrans.json();
-                this.transactions = rawTrans.map(dbItem => ({
-                    id: dbItem.id,
-                    desc: dbItem.description,
-                    amount: parseFloat(dbItem.amount),
-                    type: dbItem.type,
-                    category: dbItem.category,
-                    date: dbItem.transaction_date,
-                    month: dbItem.month
-                }));
+                this.transactions = rawTrans.map(dbItem => {
+                    // CORREÇÃO AQUI: Garante que a data vira DD/MM/AAAA
+                    let dateStr = dbItem.transaction_date;
+                    
+                    // Se vier no formato ISO (2026-02-12) ou Objeto, converte para PT-BR
+                    if (dateStr && !dateStr.includes('/')) {
+                        const dataObj = new Date(dateStr);
+                        dateStr = dataObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                    }
+
+                    return {
+                        id: dbItem.id,
+                        desc: dbItem.description,
+                        amount: parseFloat(dbItem.amount),
+                        type: dbItem.type,
+                        category: dbItem.category,
+                        date: dateStr, // Agora sempre será dd/mm/aaaa
+                        month: dbItem.month
+                    };
+                });
             }
+            
             if (resDebt.ok) this.debtors = await resDebt.json();
+            
             if (resMeta.ok) {
                 const d = await resMeta.json();
                 this.meta = parseFloat(d.meta) || 0;
@@ -66,6 +79,7 @@ export const store = {
 
             this.saveToCache();
             console.log("✅ Banco sincronizado!");
+            
         } catch (error) {
             console.error("⚠️ Usando dados offline:", error);
         }
