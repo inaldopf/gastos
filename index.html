@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infinity Finance | AI Dashboard</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +15,7 @@
     <script type="importmap">
       { "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } }
     </script>
-    </head>
+</head>
 <body class="text-slate-800 h-screen flex flex-col overflow-hidden bg-slate-50 font-sans">
 
     <nav class="bg-white border-b border-slate-200 h-16 flex-none z-40 shadow-sm">
@@ -197,7 +198,7 @@
                                 </tr>
                             </thead>
                             <tbody id="debtList" class="divide-y divide-slate-100 bg-white">
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -229,7 +230,7 @@
                     <div class="glass p-5 rounded-xl border border-slate-100 shadow-sm">
                         <h3 class="font-bold text-slate-800 mb-4 text-sm">Top 5 Categorias de Gastos</h3>
                         <ul id="topExpensesList" class="space-y-2">
-                            </ul>
+                        </ul>
                     </div>
                 </div>
 
@@ -252,12 +253,28 @@
     </main>
 
     <div id="importModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 text-center animate-scale-in">
+        <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 text-center animate-scale-in relative">
+            
+            <button onclick="document.getElementById('importModal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fas fa-times"></i>
+            </button>
+
             <h3 class="text-lg font-bold text-slate-800 mb-4">Importar PDF Bancário</h3>
             <div id="dropZone" class="border-2 border-dashed border-indigo-200 bg-indigo-50 rounded-xl p-8 cursor-pointer hover:bg-indigo-100 transition group">
                 <i class="fas fa-cloud-upload-alt text-3xl text-indigo-400 group-hover:text-indigo-600 mb-2 transition"></i>
                 <p class="text-sm text-indigo-800 font-semibold">Clique para selecionar o PDF</p>
                 <input type="file" id="fileInput" accept=".pdf" class="hidden">
             </div>
+            
             <div id="loadingStatus" class="hidden mt-6">
-                <div class="animate-spin rounded-full h-8
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <p class="text-sm text-slate-500 mt-2 font-medium">Lendo extrato e categorizando...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="./app.js"></script>
+
+</body>
+</html>
