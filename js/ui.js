@@ -49,14 +49,15 @@ export const UI = {
         });
     },
 
-    renderApp(selectedMonths = []) {
+    // renderApp recebe agora a CATEGORIA
+    renderApp(selectedMonths = [], selectedCategory = 'Todas') {
         const list = document.getElementById('transactionList');
         if (!list) return;
 
         list.innerHTML = '';
         const transactions = store.transactions || [];
 
-        // Lógica Saldo Acumulado
+        // 1. Calcula SALDO ACUMULADO (Ignora filtro de categoria, considera só meses)
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let maxMonthIndex = -1;
         selectedMonths.forEach(m => {
@@ -75,11 +76,19 @@ export const UI = {
             }
         });
 
+        // 2. FILTRAGEM DE LISTA (Meses + Categoria)
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
         }
 
+        // --- AQUI APLICA O FILTRO DE CATEGORIA ---
+        if (selectedCategory && selectedCategory !== 'Todas') {
+            filtered = filtered.filter(t => t.category === selectedCategory);
+        }
+        // ------------------------------------------
+
+        // 3. Calcula totais DO PERÍODO FILTRADO
         let totalRec = 0, totalInv = 0, totalDesp = 0;
         filtered.forEach(t => {
             if (t.type === 'Receita') totalRec += t.amount;
@@ -88,7 +97,7 @@ export const UI = {
         });
 
         if (filtered.length === 0) {
-            list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">Nenhum lançamento neste período.</td></tr>';
+            list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 dark:text-slate-500">Nenhum lançamento encontrado.</td></tr>';
             this.updateKPIs(accumulatedBalance, 0, 0, 0); 
             this.updateChart([]);
             return;
@@ -97,7 +106,6 @@ export const UI = {
         filtered.forEach(t => {
             const catData = this.categories.find(c => c.id === t.category) || { icon: 'fa-tag', color: 'text-slate-400' };
             const tr = document.createElement('tr');
-            // Classes Dark Mode aplicadas aqui
             tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
             tr.innerHTML = `
                 <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${t.date}</td>
@@ -114,11 +122,14 @@ export const UI = {
     },
 
     updateKPIs(accumulatedBalance, rec, desp, inv) {
+        // Saldo Acumulado (Global)
         const balEl = document.getElementById('kpiBalance');
         if(balEl) {
             balEl.innerText = `R$ ${accumulatedBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             balEl.className = `text-2xl font-bold ${accumulatedBalance >= 0 ? 'text-indigo-900 dark:text-indigo-300' : 'text-red-600 dark:text-red-400'}`;
         }
+        
+        // Investido e Gastos (Respeitam o filtro)
         const invEl = document.getElementById('kpiInvest');
         if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         
