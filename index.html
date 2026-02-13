@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="pt-br" class=""> <head>
+<html lang="pt-br" class=""> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infinity Finance | AI Dashboard</title>
@@ -8,11 +9,11 @@
     
     <script>
         tailwind.config = {
-            darkMode: 'class', // Ativa modo escuro via classe CSS
+            darkMode: 'class', 
             theme: {
                 extend: {
                     colors: {
-                        slate: { 850: '#151e2e' } // Uma cor extra para contraste
+                        slate: { 850: '#151e2e' } 
                     }
                 }
             }
@@ -30,16 +31,13 @@
     </script>
     
     <style>
-        /* Ajuste para inputs date/time no dark mode */
         .dark ::-webkit-calendar-picker-indicator { filter: invert(1); }
-        
-        /* Glassmorphism adaptativo */
         .glass { 
             background: rgba(255, 255, 255, 0.7); 
             backdrop-filter: blur(10px); 
         }
         .dark .glass { 
-            background: rgba(30, 41, 59, 0.7); /* Slate-800 com transparência */
+            background: rgba(30, 41, 59, 0.7); 
             border-color: rgba(51, 65, 85, 0.5); 
         }
     </style>
@@ -113,32 +111,19 @@
                         <i class="fas fa-file-pdf"></i> Importar Extrato
                     </button>
                     
-                    <div class="flex items-center gap-2 w-full sm:w-auto z-40">
-                        <span class="text-xs font-bold text-slate-400 uppercase hidden sm:inline">Mês:</span>
-                        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm z-30 relative transition-colors">
-                            <button id="btnImport" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold py-2.5 px-5 rounded-full transition flex items-center justify-center gap-2 shadow-lg shadow-slate-200 dark:shadow-none">
-                                <i class="fas fa-file-pdf"></i> Importar Extrato
-                            </button>
-                            
-                            <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto z-40">
-                                
-                                <div class="relative w-full sm:w-48">
-                                    <select id="filterCategory" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2 px-4 rounded-lg outline-none cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm appearance-none">
-                                        <option value="Todas">📂 Todas Categorias</option>
-                                        </select>
-                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                                        <i class="fas fa-chevron-down"></i>
-                                    </div>
-                                </div>
+                    <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto z-40">
                         
-                                <span class="text-xs font-bold text-slate-400 uppercase hidden sm:inline">Mês:</span>
-                                
-                                <div class="relative w-full sm:w-64">
-                                     <button id="monthDropdownBtn" class="...">...</button>
-                                     <div id="monthDropdownMenu" class="...">...</div>
-                                </div>
+                        <div class="relative w-full sm:w-48">
+                            <select id="filterCategory" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2 px-4 rounded-lg outline-none cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm appearance-none">
+                                <option value="Todas">📂 Todas Categorias</option>
+                            </select>
+                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                                <i class="fas fa-chevron-down"></i>
                             </div>
                         </div>
+
+                        <span class="text-xs font-bold text-slate-400 uppercase hidden sm:inline">Mês:</span>
+                        
                         <div class="relative w-full sm:w-64">
                             <button id="monthDropdownBtn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2 px-4 rounded-lg outline-none flex justify-between items-center hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm">
                                 <span id="monthBtnText" class="truncate">📅 Carregando...</span>
@@ -148,6 +133,7 @@
                             <div id="monthDropdownMenu" class="hidden absolute top-full left-0 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl mt-2 max-h-64 overflow-y-auto custom-scrollbar p-2 animate-fade-in z-[100]">
                                 </div>
                         </div>
+
                     </div>
                 </div>
 
