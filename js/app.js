@@ -7,7 +7,7 @@ console.log("🚀 app.js carregado!");
 
 // Variáveis Globais de Filtro
 let selectedMonths = [];
-let selectedCategory = 'Todas'; // <--- NOVA VARIÁVEL
+let selectedCategory = 'Todas';
 
 // --- 1. PROTEÇÃO DE ROTA ---
 const isLoginPage = window.location.pathname.includes('login.html');
@@ -16,18 +16,39 @@ const authToken = localStorage.getItem('inf_auth_token');
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
 if (authToken && isLoginPage) window.location.href = 'index.html';
 
-// --- 2. SETUP GERAL ---
+// --- 2. SETUP DE TEMA (DARK MODE + ATALHO CTRL+D) ---
 function setupTheme() {
     const btnTheme = document.getElementById('btnThemeToggle');
     const html = document.documentElement;
-    if (localStorage.getItem('theme') === 'dark') html.classList.add('dark');
 
-    if(btnTheme) {
-        btnTheme.addEventListener('click', () => {
-            html.classList.toggle('dark');
-            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-        });
+    // 1. Carrega preferência salva
+    if (localStorage.getItem('theme') === 'dark') {
+        html.classList.add('dark');
     }
+
+    // Função para alternar (usada pelo botão e pelo teclado)
+    const toggleTheme = () => {
+        html.classList.toggle('dark');
+        const isDark = html.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        // Atualiza ícones do botão se necessário (opcional visual)
+        console.log(`🌗 Tema alterado para: ${isDark ? 'Escuro' : 'Claro'}`);
+    };
+
+    // 2. Evento de Clique no Botão
+    if(btnTheme) {
+        btnTheme.addEventListener('click', toggleTheme);
+    }
+
+    // 3. ATALHO DE TECLADO (Ctrl + D)
+    document.addEventListener('keydown', (e) => {
+        // Verifica se Ctrl (ou Command no Mac) + D foram pressionados
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+            e.preventDefault(); // 🛑 IMPEDE DE SALVAR NOS FAVORITOS
+            toggleTheme(); // 🌗 TROCA O TEMA
+        }
+    });
 }
 
 // Preenche o Select de Filtro de Categoria
@@ -35,17 +56,15 @@ function setupCategoryFilter() {
     const select = document.getElementById('filterCategory');
     if (!select || !UI || !UI.categories) return;
 
-    // Limpa mantendo a opção "Todas"
     select.innerHTML = '<option value="Todas">📂 Todas Categorias</option>';
 
     UI.categories.forEach(cat => {
         const option = document.createElement('option');
         option.value = cat.id;
-        option.textContent = `${cat.id}`; // Poderia adicionar emoji aqui se quisesse
+        option.textContent = `${cat.id}`;
         select.appendChild(option);
     });
 
-    // Evento de Mudança
     select.addEventListener('change', (e) => {
         selectedCategory = e.target.value;
         updateAllViews();
@@ -53,15 +72,17 @@ function setupCategoryFilter() {
 }
 
 function setupMonthSelector() {
-    // ... (SEU CÓDIGO DO DROPDOWN DE MESES MANTIDO IGUAL - NÃO MUDE NADA AQUI) ...
-    // Vou resumir para não ocupar espaço, mas mantenha a função setupMonthSelector completa que você já tem.
     const btn = document.getElementById('monthDropdownBtn');
     const menu = document.getElementById('monthDropdownMenu');
     const btnText = document.getElementById('monthBtnText');
     if (!btn || !menu) return;
+
     const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
     const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    if (selectedMonths.length === 0) selectedMonths = [months[new Date().getMonth()]];
+
+    if (selectedMonths.length === 0) {
+        selectedMonths = [months[new Date().getMonth()]];
+    }
 
     const updateButtonText = () => {
         if (selectedMonths.length === 0) { btnText.textContent = "Selecione um mês"; btnText.classList.add('text-red-500'); }
@@ -73,7 +94,7 @@ function setupMonthSelector() {
     menu.innerHTML = '';
     const divAll = document.createElement('div');
     divAll.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer mb-1 border-b border-slate-100 dark:border-slate-700";
-    divAll.innerHTML = `<input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500"><label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200 flex-1 cursor-pointer">Selecionar Todos</label>`;
+    divAll.innerHTML = `<input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200 flex-1 cursor-pointer">Selecionar Todos</label>`;
     divAll.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = divAll.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
     divAll.querySelector('input').addEventListener('change', (e) => { selectedMonths = e.target.checked ? [...months] : []; setupMonthSelector(); updateAllViews(); });
     menu.appendChild(divAll);
@@ -81,7 +102,7 @@ function setupMonthSelector() {
     months.forEach((m, index) => {
         const div = document.createElement('div');
         div.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer";
-        div.innerHTML = `<input type="checkbox" id="m-${index}" value="${m}" ${selectedMonths.includes(m)?'checked':''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500"><label for="m-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 flex-1 cursor-pointer">${shortMonths[index]}</label>`;
+        div.innerHTML = `<input type="checkbox" id="m-${index}" value="${m}" ${selectedMonths.includes(m)?'checked':''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="m-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 flex-1 cursor-pointer">${shortMonths[index]}</label>`;
         div.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = div.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
         div.querySelector('input').addEventListener('change', (e) => { 
             if(e.target.checked) { if(!selectedMonths.includes(m)) selectedMonths.push(m); } 
@@ -92,24 +113,18 @@ function setupMonthSelector() {
     });
     updateButtonText();
     
-    // Toggle Menu
     btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
     document.addEventListener('click', (e) => { if (!btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden'); });
 }
 
 // --- 3. ATUALIZAÇÃO ---
 function updateAllViews() {
-    // Passamos a Categoria Selecionada para a UI
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
-    
-    // O Dashboard continua recebendo só os meses (ou você pode implementar filtro lá também se quiser)
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths); 
-    
     renderDebts();
 }
 
 function renderDebts() {
-    // (SEU CÓDIGO DE DÍVIDAS MANTIDO IGUAL)
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
     if(!list) return;
@@ -139,9 +154,9 @@ window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeD
 
 // --- EVENTS ---
 function setupEvents() {
+    // 1. Inicia o tema (e o atalho Ctrl+D)
     setupTheme();
     
-    // (SEU CÓDIGO DE ABAS MANTIDO IGUAL)
     const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash') };
     const switchTab = (viewId) => {
         ['viewHome', 'viewDebts', 'viewDashboard'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
@@ -160,7 +175,6 @@ function setupEvents() {
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
 
-    // Transaction Form
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
@@ -184,7 +198,6 @@ function setupEvents() {
         });
     }
 
-    // Outros botões (Logout, Settings, Import...) - MANTIDOS IGUAIS
     const debtForm = document.getElementById('debtForm');
     if(debtForm) { debtForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('debtName').value; const amount = document.getElementById('debtAmount').value; if(name && amount) { await store.addDebt(name, parseFloat(amount)); renderDebts(); debtForm.reset(); } }); }
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
@@ -201,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(UI && UI.initCategories) UI.initCategories();
         
         setupMonthSelector();
-        setupCategoryFilter(); // <--- INICIA O FILTRO DE CATEGORIA
+        setupCategoryFilter(); 
         setupEvents();
 
         const hasCache = store.loadFromCache();
