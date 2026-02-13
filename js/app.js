@@ -123,6 +123,88 @@ window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeD
 
 // 6. Events
 function setupEvents() {
+    // Navegação de Abas (Desktop e Mobile)
+    const tabs = {
+        home: document.getElementById('tabHome'),
+        debts: document.getElementById('tabDebts'),
+        dash: document.getElementById('tabDash'),
+        goals: document.getElementById('tabGoals')
+    };
+
+    // Botões Mobile
+    const mobileTabs = {
+        home: document.getElementById('btnMobileHome'),
+        debts: document.getElementById('btnMobileDebts'),
+        dash: document.getElementById('btnMobileDash'),
+        goals: document.getElementById('btnMobileGoals')
+    };
+
+    const switchTab = (viewId) => {
+        // Esconde todas as views
+        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.classList.add('hidden');
+        });
+        
+        // Mostra a view alvo com animação
+        const target = document.getElementById(viewId);
+        if(target) {
+            target.classList.remove('hidden');
+            target.classList.remove('animate-fade-in');
+            void target.offsetWidth; 
+            target.classList.add('animate-fade-in');
+        }
+
+        // Estilo Inativo (Desktop)
+        Object.values(tabs).forEach(btn => {
+            if(btn) btn.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
+        });
+
+        // Estilo Inativo (Mobile - Ícones cinzas)
+        Object.values(mobileTabs).forEach(btn => {
+            if(btn) btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
+        });
+
+        // Estilo Ativo (Desktop)
+        const activeClassDesktop = "px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
+        
+        // Estilo Ativo (Mobile - Ícone Colorido)
+        const activeClassMobile = "flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16";
+
+        if(viewId === 'viewHome') {
+            if(tabs.home) tabs.home.className = activeClassDesktop;
+            if(mobileTabs.home) mobileTabs.home.className = activeClassMobile;
+        }
+        if(viewId === 'viewDebts') {
+            if(tabs.debts) tabs.debts.className = activeClassDesktop;
+            if(mobileTabs.debts) mobileTabs.debts.className = activeClassMobile;
+        }
+        if(viewId === 'viewDashboard') {
+            if(tabs.dash) tabs.dash.className = activeClassDesktop;
+            if(mobileTabs.dash) mobileTabs.dash.className = activeClassMobile;
+        }
+        if(viewId === 'viewGoals') {
+            if(tabs.goals) tabs.goals.className = activeClassDesktop;
+            if(mobileTabs.goals) mobileTabs.goals.className = activeClassMobile;
+        }
+
+        // Renderiza o conteúdo específico
+        if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
+        if(viewId === 'viewGoals') Goals.render(selectedMonths);
+        if(viewId === 'viewDebts') renderDebts();
+    };
+
+    // Event Listeners Desktop
+    if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
+    if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
+    if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
+    if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
+
+    // Event Listeners Mobile
+    if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
+    if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
+    if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
+    if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
     setupTheme();
     const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash'), goals: document.getElementById('tabGoals') };
     const switchTab = (viewId) => {
