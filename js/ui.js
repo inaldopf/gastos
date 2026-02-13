@@ -1,11 +1,10 @@
 import { store } from './store.js';
 
-// Variável segura para o gráfico
 let chartInstance = null;
 
 export const UI = {
-    // Lista de Categorias
-    categories: [
+    // ... categories e initCategories (Mantidos iguais) ...
+        categories: [
         { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600', hex: '#059669' },
         { id: 'Investimento', icon: 'fa-chart-line', color: 'text-emerald-600', hex: '#10B981' },
         { id: 'Renda Extra', icon: 'fa-plus-circle', color: 'text-emerald-500', hex: '#34D399' },
@@ -38,42 +37,31 @@ export const UI = {
         { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8' }
     ],
 
-    // --- 1. PREENCHE O DROPDOWN (CATEGORIAS) ---
-    initCategories() {
+    initCategories() { /* ... Código de preencher o select (igual ao anterior) ... */ 
         const select = document.getElementById('inputCategory');
-        if (!select) {
-            console.error("ERRO: Não encontrei o <select id='inputCategory'> no HTML.");
-            return;
-        }
-
+        if(!select) return;
         select.innerHTML = '';
-        this.categories.forEach(cat => {
-            const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = cat.id;
-            select.appendChild(option);
+        this.categories.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id; opt.textContent = c.id; select.appendChild(opt);
         });
-        console.log("✅ Categorias carregadas com sucesso!");
     },
 
-    // --- 2. RENDERIZA A LISTA ---
-    renderApp(filterMonth) {
+    // --- AGORA ACEITA ARRAY DE MESES ---
+    renderApp(selectedMonths = []) {
         const list = document.getElementById('transactionList');
         if (!list) return;
-
         list.innerHTML = '';
 
-        // Filtro seguro
+        // Filtro Multi-mês
         let filtered = store.transactions || [];
-        if (filterMonth !== 'Todos') {
-            filtered = filtered.filter(t => t.month && t.month.toUpperCase() === filterMonth.toUpperCase());
+        if (selectedMonths.length > 0) {
+            filtered = filtered.filter(t => selectedMonths.includes(t.month));
         }
 
-        // Se não tiver transações, mostra aviso
         if (filtered.length === 0) {
-            list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">Nenhum lançamento neste período.</td></tr>';
-            this.updateKPIs(0, 0, 0); // Zera KPIs
-            this.updateChart([]); // Zera Gráfico
+            list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">Nenhum lançamento selecionado.</td></tr>';
+            this.updateKPIs(0, 0, 0); this.updateChart([]);
             return;
         }
 
@@ -102,46 +90,24 @@ export const UI = {
         this.updateChart(filtered);
     },
 
-    // --- 3. ATUALIZA NÚMEROS (KPIs) ---
-    updateKPIs(rec, desp, inv) {
+    updateKPIs(rec, desp, inv) { /* ... Mantido igual ... */
         const saldo = rec - desp - inv;
         const balEl = document.getElementById('kpiBalance');
-        if(balEl) {
-            balEl.innerText = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            balEl.className = `text-2xl font-bold ${saldo >= 0 ? 'text-indigo-900' : 'text-red-600'}`;
-        }
-        const invEl = document.getElementById('kpiInvest');
-        if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
-        const expEl = document.getElementById('kpiExpense');
-        if(expEl) expEl.innerText = `R$ ${desp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        if(balEl) { balEl.innerText = `R$ ${saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; balEl.className = `text-2xl font-bold ${saldo >= 0 ? 'text-indigo-900' : 'text-red-600'}`; }
+        const invEl = document.getElementById('kpiInvest'); if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        const expEl = document.getElementById('kpiExpense'); if(expEl) expEl.innerText = `R$ ${desp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     },
 
-    // --- 4. GRÁFICO SEGURO ---
-    updateChart(transactions) {
-        // Se Chart não existe (erro de carregamento), não faz nada para não travar o resto
+    updateChart(transactions) { /* ... Mantido igual (Doughnut) ... */ 
         if (typeof Chart === 'undefined') return;
-
-        const ctx = document.getElementById('categoryChart');
-        if (!ctx) return;
-
+        const ctx = document.getElementById('categoryChart'); if (!ctx) return;
         const expenses = transactions.filter(t => t.type === 'Despesa');
-        const totals = {};
-        expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + t.amount);
-
+        const totals = {}; expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + t.amount);
         if (chartInstance) chartInstance.destroy();
-
         chartInstance = new Chart(ctx, {
             type: 'doughnut',
-            data: {
-                labels: Object.keys(totals),
-                datasets: [{
-                    data: Object.values(totals),
-                    backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6'],
-                    borderWidth: 0
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '75%' }
+            data: { labels: Object.keys(totals), datasets: [{ data: Object.values(totals), backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
         });
     }
 };
