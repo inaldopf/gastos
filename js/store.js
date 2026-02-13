@@ -1,45 +1,40 @@
+// ==========================================
+// ARQUIVO: js/store.js (COM SYNC DE METAS)
+// ==========================================
+
 const API_URL = "https://financeiro-app-okjm.onrender.com";
 const CACHE_KEY = 'finance_data_cache';
-const GOALS_KEY = 'finance_goals_local'; // Nova chave para as metas
 
 export const store = {
     transactions: [],
     debtors: [],
-    goals: [], // Lista de metas
-    meta: 0,
+    goals: [], // Lista de metas por categoria
+    meta: 0,   // Meta de Sobra Geral
 
     getToken() {
         return localStorage.getItem('inf_auth_token');
     },
 
+    // --- GERENCIAMENTO DE CACHE ---
     saveToCache() {
         const data = {
             transactions: this.transactions,
             debtors: this.debtors,
+            goals: this.goals,
             meta: this.meta,
             timestamp: new Date().getTime()
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(data));
     },
 
-    // Salva as metas separadamente (Local)
-    saveGoals() {
-        localStorage.setItem(GOALS_KEY, JSON.stringify(this.goals));
-    },
-
     loadFromCache() {
-        // Carrega Metas
-        const cachedGoals = localStorage.getItem(GOALS_KEY);
-        if (cachedGoals) {
-            this.goals = JSON.parse(cachedGoals);
-        }
-
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
             try {
                 const data = JSON.parse(cached);
                 this.transactions = data.transactions || [];
                 this.debtors = data.debtors || [];
+                this.goals = data.goals || [];
                 this.meta = data.meta || 0;
                 return true;
             } catch (e) {
@@ -50,6 +45,7 @@ export const store = {
         return false;
     },
 
+    // --- INICIALIZAÇÃO (CARREGA DO BANCO) ---
     async init() {
         const token = this.getToken();
         if (!token) return;
@@ -59,10 +55,12 @@ export const store = {
         try {
             console.log("🔄 Sincronizando com o servidor...");
             
-            const [resTrans, resDebt, resMeta] = await Promise.all([
+            // Busca tudo em paralelo: Transações, Dívidas, Meta Geral e METAS POR CATEGORIA
+            const [resTrans, resDebt, resMeta, resGoals] = await Promise.all([
                 fetch(`${API_URL}/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/debtors`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/meta`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`${API_URL}/meta`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_URL}/goals`, { headers: { 'Authorization': `Bearer ${token}` } }) // Novo endpoint
             ]);
 
             if (resTrans.status === 401 || resTrans.status === 403) {
@@ -96,6 +94,11 @@ export const store = {
                 this.meta = parseFloat(d.meta) || 0;
             }
 
+            // Carrega as metas do banco
+            if (resGoals && resGoals.ok) {
+                this.goals = await resGoals.json();
+            }
+
             this.saveToCache();
             console.log("✅ Dados sincronizados!");
 
@@ -109,13 +112,14 @@ export const store = {
         }
     },
 
+    // --- TRANSAÇÕES ---
     async addTransaction(data) {
-        // ... (Mantido igual ao anterior, sem alterações na lógica de transação)
         const token = this.getToken();
         const tempId = Date.now();
         const newItem = { ...data, id: tempId, isTemp: true };
         this.transactions.unshift(newItem);
         this.saveToCache();
+
         try {
             const res = await fetch(`${API_URL}/transactions`, {
                 method: 'POST',
@@ -133,13 +137,12 @@ export const store = {
         } catch (error) {
             this.transactions = this.transactions.filter(t => t.id !== tempId);
             this.saveToCache();
-            alert("Erro ao salvar. Verifique sua conexão.");
+            alert("Erro de conexão ao salvar transação.");
             throw error;
         }
     },
 
     async removeTransaction(id) {
-        // ... (Mantido igual)
         const token = this.getToken();
         const backup = [...this.transactions];
         this.transactions = this.transactions.filter(t => t.id !== id);
@@ -154,6 +157,7 @@ export const store = {
         }
     },
 
+    // --- META DE SOBRA (GERAL) ---
     async setMeta(valor) {
         const token = this.getToken();
         this.meta = valor;
@@ -166,7 +170,39 @@ export const store = {
     },
     getMeta() { return this.meta; },
 
-    async addDebt(name, amount) { /* ... Mantido igual ... */
+    // --- METAS POR CATEGORIA (SYNC COM BANCO) ---
+    async setCategoryGoal(category, amount) {
+        const token = this.getToken();
+        
+        // 1. Atualização Otimista (Visual Instantâneo)
+        // Remove meta anterior dessa categoria (para não duplicar)
+        this.goals = this.goals.filter(g => g.category !== category);
+        
+        if (amount > 0) {
+            this.goals.push({ category, amount: parseFloat(amount) });
+        }
+        this.saveToCache();
+
+        // 2. Envia para o Banco
+        try {
+            await fetch(`${API_URL}/goals`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ category, amount: parseFloat(amount) })
+            });
+        } catch (error) {
+            console.error("Erro ao salvar meta no servidor:", error);
+            // Não bloqueamos o uso, mas fica o log
+        }
+    },
+
+    getGoal(category) {
+        const g = this.goals.find(g => g.category === category);
+        return g ? g.amount : 0;
+    },
+
+    // --- DÍVIDAS ---
+    async addDebt(name, amount) {
         const token = this.getToken();
         const tempId = Date.now();
         this.debtors.unshift({ id: tempId, name, amount, paid: false });
@@ -180,33 +216,24 @@ export const store = {
             const realItem = await res.json();
             const idx = this.debtors.findIndex(d => d.id === tempId);
             if(idx !== -1) { this.debtors[idx].id = realItem.id; this.saveToCache(); }
-        } catch(e) { this.debtors = this.debtors.filter(d => d.id !== tempId); this.saveToCache(); alert("Erro ao salvar dívida."); }
+        } catch(e) {
+            this.debtors = this.debtors.filter(d => d.id !== tempId);
+            this.saveToCache();
+            alert("Erro ao salvar dívida.");
+        }
     },
-    async toggleDebt(id) { /* ... Mantido igual ... */ 
+
+    async toggleDebt(id) {
         const token = this.getToken();
         const idx = this.debtors.findIndex(d => d.id === id);
         if(idx !== -1) { this.debtors[idx].paid = !this.debtors[idx].paid; this.saveToCache(); }
         fetch(`${API_URL}/debtors/${id}/toggle`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
     },
-    async removeDebt(id) { /* ... Mantido igual ... */
+
+    async removeDebt(id) {
         const token = this.getToken();
         this.debtors = this.debtors.filter(d => d.id !== id);
         this.saveToCache();
         fetch(`${API_URL}/debtors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    },
-
-    // --- NOVAS FUNÇÕES DE METAS (GOALS) ---
-    setCategoryGoal(category, amount) {
-        // Remove meta anterior dessa categoria se existir
-        this.goals = this.goals.filter(g => g.category !== category);
-        if (amount > 0) {
-            this.goals.push({ category, amount: parseFloat(amount) });
-        }
-        this.saveGoals();
-    },
-
-    getGoal(category) {
-        const g = this.goals.find(g => g.category === category);
-        return g ? g.amount : 0;
     }
 };
