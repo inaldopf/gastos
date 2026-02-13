@@ -12,17 +12,11 @@ export const Goals = {
         
         this.setupInputs();
 
-        // 1. Calcula os Totais
         const income = this.calculateIncome(selectedMonths);
         const goalsData = this.calculateGoalsData(selectedMonths);
-        
-        // Soma de todas as metas de categorias (O que você pretende gastar)
         const totalPlannedSpend = goalsData.reduce((acc, item) => acc + item.goal, 0); 
         
-        // 2. Renderiza o Painel de Projeção
         this.renderBudgetOverview(income, totalPlannedSpend, selectedMonths.length || 1);
-
-        // 3. Renderiza Listas e Gráficos
         this.renderProgressCards(goalsData);
         this.renderChart(goalsData);
     },
@@ -33,7 +27,8 @@ export const Goals = {
         if (select && select.options.length <= 1) {
             select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
             UI.categories.forEach(cat => {
-                if (cat.id !== 'Salário' && cat.id !== 'Renda Extra' && cat.id !== 'Investimento') {
+                // AGORA PERMITE INVESTIMENTO, mas ignora Salário e Renda Extra
+                if (cat.id !== 'Salário' && cat.id !== 'Renda Extra') {
                     const opt = document.createElement('option');
                     opt.value = cat.id; opt.textContent = cat.id;
                     select.appendChild(opt);
@@ -41,35 +36,28 @@ export const Goals = {
             });
         }
 
-        // Input Meta de Sobra
         const savingsInput = document.getElementById('goalSavingsInput');
         if (savingsInput) {
             const newInput = savingsInput.cloneNode(true);
             savingsInput.parentNode.replaceChild(newInput, savingsInput);
-            
             newInput.value = store.getMeta() > 0 ? store.getMeta() : '';
-
             newInput.addEventListener('change', (e) => {
                 const val = parseFloat(e.target.value);
                 store.setMeta(val);
                 this.render(window.currentSelectedMonths); 
-                
                 const dashInput = document.getElementById('inputMeta');
                 if(dashInput) dashInput.value = val;
             });
         }
 
-        // Form Nova Meta
         const form = document.getElementById('goalsForm');
         if (form) {
             const newForm = form.cloneNode(true);
             form.parentNode.replaceChild(newForm, form);
-            
             newForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const cat = document.getElementById('goalCategoryInput').value;
                 const amount = document.getElementById('goalAmountInput').value;
-                
                 if (cat && amount) {
                     store.setCategoryGoal(cat, amount);
                     document.getElementById('goalAmountInput').value = '';
@@ -82,7 +70,6 @@ export const Goals = {
     calculateIncome(selectedMonths) {
         const transactions = store.transactions || [];
         let totalIncome = 0;
-        
         const filtered = (selectedMonths && selectedMonths.length > 0) 
             ? transactions.filter(t => selectedMonths.includes(t.month))
             : transactions;
@@ -94,65 +81,42 @@ export const Goals = {
     },
 
     renderBudgetOverview(income, totalPlannedSpend, monthsCount) {
-        // Meta de Sobra ajustada pelo número de meses selecionados
         const monthlySavingsGoal = store.getMeta();
         const totalSavingsGoal = monthlySavingsGoal * monthsCount;
-
-        // CÁLCULO MÁGICO: Sobra Projetada = Receita - Tudo que planejei gastar
         const projectedSurplus = income - totalPlannedSpend;
 
-        // Atualiza HTML
         document.getElementById('goalTotalIncome').innerText = `R$ ${income.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         document.getElementById('goalProjectedSurplus').innerText = `R$ ${projectedSurplus.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         document.getElementById('goalTargetDisplay').innerText = `R$ ${totalSavingsGoal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 
-        // Lógica Visual
         const bar = document.getElementById('goalBudgetBar');
         const msg = document.getElementById('goalBudgetMsg');
         const card = document.getElementById('goalBudgetCard');
         const valueEl = document.getElementById('goalProjectedSurplus');
 
-        // Situação 1: Receita zerada ou muito baixa (Cuidado para não dividir por zero)
         if (income <= 0) {
             bar.style.width = '0%';
-            msg.innerText = "Sem receita registrada para calcular.";
+            msg.innerText = "Sem receita registrada.";
             msg.className = "text-xs font-bold text-slate-400 mt-1 text-right";
             card.className = "glass p-5 rounded-xl border-l-4 border-slate-400 shadow-sm";
             return;
         }
 
-        // Situação 2: Sobra Projetada MENOR que a Meta (RUIM)
         if (projectedSurplus < totalSavingsGoal) {
-            // Calcula quão longe estamos (Barra diminui ou fica vermelha)
-            // Vamos fazer a barra representar a "Saúde da Meta".
-            // Se Sobra < Meta, estamos em perigo.
-            
             bar.style.width = '100%';
             bar.className = 'h-1.5 rounded-full bg-red-500 transition-all duration-500';
-            
             const shortfall = totalSavingsGoal - projectedSurplus;
-            msg.innerText = `Faltam R$ ${shortfall.toLocaleString('pt-BR')} para atingir a meta!`;
+            msg.innerText = `Faltam R$ ${shortfall.toLocaleString('pt-BR')} na meta!`;
             msg.className = "text-xs font-bold text-red-500 mt-1 text-right";
-            
             card.className = "glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm";
             valueEl.classList.remove('text-slate-800', 'dark:text-slate-200');
             valueEl.classList.add('text-red-500');
-        
         } else {
-            // Situação 3: Sobra Projetada MAIOR ou IGUAL a Meta (BOM)
-            // A barra representa o excedente? Não, vamos deixar ela cheia verde.
-            
             bar.style.width = '100%';
             bar.className = 'h-1.5 rounded-full bg-emerald-500 transition-all duration-500';
-            
             const extra = projectedSurplus - totalSavingsGoal;
-            if (extra > 0) {
-                msg.innerText = `Parabéns! Vai sobrar R$ ${extra.toLocaleString('pt-BR')} a mais que a meta.`;
-            } else {
-                msg.innerText = "Planejamento exato na meta.";
-            }
+            msg.innerText = extra > 0 ? `Vai sobrar + R$ ${extra.toLocaleString('pt-BR')}` : "Planejamento na meta.";
             msg.className = "text-xs font-bold text-emerald-600 mt-1 text-right";
-            
             card.className = "glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm";
             valueEl.classList.remove('text-red-500');
             valueEl.classList.add('text-slate-800', 'dark:text-slate-200');
@@ -161,7 +125,6 @@ export const Goals = {
 
     calculateGoalsData(selectedMonths) {
         const transactions = store.transactions || [];
-        
         let filteredTrans = transactions;
         if (selectedMonths && selectedMonths.length > 0) {
             filteredTrans = transactions.filter(t => selectedMonths.includes(t.month));
@@ -169,7 +132,8 @@ export const Goals = {
 
         const spending = {};
         filteredTrans.forEach(t => {
-            if (t.type === 'Despesa') {
+            // SOMA DESPESAS E AGORA TAMBÉM INVESTIMENTOS
+            if (t.type === 'Despesa' || t.type === 'Investimento') {
                 spending[t.category] = (spending[t.category] || 0) + parseFloat(t.amount);
             }
         });
@@ -179,8 +143,9 @@ export const Goals = {
 
         UI.categories.forEach(cat => {
             const monthlyGoal = store.getGoal(cat.id);
-            // Ignora categorias de entrada
-            if (cat.id === 'Salário' || cat.id === 'Renda Extra' || cat.id === 'Investimento') return;
+            
+            // Ignora apenas entradas puras (Salário/Renda Extra)
+            if (cat.id === 'Salário' || cat.id === 'Renda Extra') return;
 
             if (monthlyGoal > 0 || spending[cat.id] > 0) {
                 const totalGoal = monthlyGoal * monthsCount;
@@ -214,9 +179,9 @@ export const Goals = {
             let statusColor = 'text-emerald-600 dark:text-emerald-400';
 
             if (item.percent >= 100) {
-                barColor = 'bg-red-500'; statusText = 'Estourou!'; statusColor = 'text-red-500 dark:text-red-400';
+                barColor = 'bg-red-500'; statusText = 'Atingido/Estourado'; statusColor = 'text-red-500 dark:text-red-400';
             } else if (item.percent >= 80) {
-                barColor = 'bg-yellow-400'; statusText = 'Atenção'; statusColor = 'text-yellow-600 dark:text-yellow-400';
+                barColor = 'bg-yellow-400'; statusText = 'Perto do limite'; statusColor = 'text-yellow-600 dark:text-yellow-400';
             }
 
             const visualPercent = Math.min(item.percent, 100);
@@ -235,13 +200,12 @@ export const Goals = {
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-xs text-slate-400 font-bold uppercase">Gasto / Meta</p>
+                        <p class="text-xs text-slate-400 font-bold uppercase">Realizado / Meta</p>
                         <p class="text-sm font-bold text-slate-800 dark:text-slate-100">
                             R$ ${item.spent.toLocaleString('pt-BR')} <span class="text-slate-400 dark:text-slate-500 text-xs">/ ${item.goal.toLocaleString('pt-BR')}</span>
                         </p>
                     </div>
                 </div>
-                
                 <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                     <div class="${barColor} h-2 rounded-full transition-all duration-1000" style="width: ${visualPercent}%"></div>
                 </div>
@@ -267,7 +231,7 @@ export const Goals = {
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Gasto Real',
+                        label: 'Realizado',
                         data: dataSpent,
                         backgroundColor: '#EF4444',
                         borderRadius: 4,
