@@ -2,15 +2,17 @@
 <html lang="pt-br" class=""> 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infinity Finance | AI Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> <title>Infinity Finance | AI Dashboard</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class', 
             theme: {
-                extend: { colors: { slate: { 850: '#151e2e' } } }
+                extend: { 
+                    colors: { slate: { 850: '#151e2e' } },
+                    screens: { 'xs': '380px' } // Breakpoint extra para telas muito pequenas
+                }
             }
         }
     </script>
@@ -28,6 +30,13 @@
         .dark ::-webkit-calendar-picker-indicator { filter: invert(1); }
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
         .dark .glass { background: rgba(30, 41, 59, 0.7); border-color: rgba(51, 65, 85, 0.5); }
+        
+        /* Remove barra de rolagem em selects no mobile */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Safe Area para iPhones novos (com notch) */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900 font-sans transition-colors duration-300">
@@ -42,22 +51,14 @@
             </div>
             
             <div class="flex gap-3 items-center">
-                <div class="bg-slate-100 dark:bg-slate-700 p-1 rounded-lg flex gap-1 mr-2 sm:mr-4 transition-colors">
-                    <button id="tabHome" class="px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition">
-                        <i class="fas fa-list sm:hidden mr-1"></i> <span class="hidden sm:inline">Lançamentos</span>
-                    </button>
-                    <button id="tabGoals" class="px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
-                        <i class="fas fa-bullseye sm:hidden mr-1"></i> <span class="hidden sm:inline">Metas</span>
-                    </button>
-                    <button id="tabDebts" class="px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
-                        <i class="fas fa-hand-holding-usd sm:hidden mr-1"></i> <span class="hidden sm:inline">Dívidas</span>
-                    </button>
-                    <button id="tabDash" class="px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
-                        <i class="fas fa-robot sm:hidden mr-1"></i> <span class="hidden sm:inline">Dashboard AI</span>
-                    </button>
+                <div class="hidden sm:flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg gap-1 mr-4 transition-colors">
+                    <button id="tabHome" class="px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition">Lançamentos</button>
+                    <button id="tabGoals" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Metas</button>
+                    <button id="tabDebts" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Dívidas</button>
+                    <button id="tabDash" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Dashboard</button>
                 </div>
 
-                <div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                <div class="hidden sm:block h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
                 <button id="btnThemeToggle" class="text-slate-400 hover:text-yellow-500 dark:hover:text-yellow-300 w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center justify-center">
                     <i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:inline"></i>
@@ -69,39 +70,42 @@
         </div>
     </nav>
 
-    <main class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 bg-slate-50/50 dark:bg-slate-900/50 transition-colors duration-300">
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pb-24 sm:pb-6 bg-slate-50/50 dark:bg-slate-900/50 transition-colors duration-300">
         <div class="max-w-7xl mx-auto">
             
-            <section id="viewHome" class="space-y-6 animate-fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm hover:shadow-md transition">
+            <section id="viewHome" class="space-y-4 sm:space-y-6 animate-fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                    <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm">
                         <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Saldo Atual</p>
-                        <h2 class="text-2xl font-bold text-indigo-900 dark:text-indigo-300" id="kpiBalance">R$ 0,00</h2>
+                        <h2 class="text-3xl font-bold text-indigo-900 dark:text-indigo-300" id="kpiBalance">R$ 0,00</h2>
                     </div>
-                    <div class="glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm hover:shadow-md transition">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Investido (Mês)</p>
-                        <h2 class="text-2xl font-bold text-emerald-700 dark:text-emerald-400" id="kpiInvest">R$ 0,00</h2>
-                    </div>
-                    <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm hover:shadow-md transition">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Gastos (Mês)</p>
-                        <h2 class="text-2xl font-bold text-red-600 dark:text-red-400" id="kpiExpense">R$ 0,00</h2>
+                    <div class="grid grid-cols-2 gap-3 md:col-span-2 md:grid-cols-2">
+                        <div class="glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
+                            <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Investido</p>
+                            <h2 class="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-400" id="kpiInvest">R$ 0,00</h2>
+                        </div>
+                        <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
+                            <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Gastos</p>
+                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400" id="kpiExpense">R$ 0,00</h2>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm z-30 relative transition-colors">
-                    <button id="btnImport" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold py-2.5 px-5 rounded-full transition flex items-center justify-center gap-2 shadow-lg shadow-slate-200 dark:shadow-none">
+                <div class="flex flex-col xl:flex-row justify-between items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm z-30 relative transition-colors">
+                    <button id="btnImport" class="w-full xl:w-auto bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold py-3 px-5 rounded-lg sm:rounded-full transition flex items-center justify-center gap-2 shadow-lg shadow-slate-200 dark:shadow-none order-2 xl:order-1">
                         <i class="fas fa-file-pdf"></i> Importar Extrato
                     </button>
-                    <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto z-40">
+                    
+                    <div class="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto z-40 order-1 xl:order-2">
                         <div class="relative w-full sm:w-48">
-                            <select id="filterCategory" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2 px-4 rounded-lg outline-none cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm appearance-none">
+                            <select id="filterCategory" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2.5 px-4 rounded-lg outline-none cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm appearance-none">
                                 <option value="Todas">📂 Todas Categorias</option>
                             </select>
                             <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs"><i class="fas fa-chevron-down"></i></div>
                         </div>
-                        <span class="text-xs font-bold text-slate-400 uppercase hidden sm:inline">Mês:</span>
+                        
                         <div class="relative w-full sm:w-64">
-                            <button id="monthDropdownBtn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2 px-4 rounded-lg outline-none flex justify-between items-center hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm">
+                            <button id="monthDropdownBtn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2.5 px-4 rounded-lg outline-none flex justify-between items-center hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm">
                                 <span id="monthBtnText" class="truncate">📅 Carregando...</span>
                                 <i class="fas fa-chevron-down text-xs text-slate-400"></i>
                             </button>
@@ -113,38 +117,39 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 space-y-4">
                         <div class="glass p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <form id="transactionForm" class="flex flex-wrap gap-3 items-end">
-                                <div class="flex-1 min-w-[100px]">
-                                    <select id="inputType" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition dark:text-slate-200">
+                            <form id="transactionForm" class="flex flex-col sm:flex-row flex-wrap gap-3 items-end">
+                                <div class="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex-1">
+                                    <select id="inputType" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 dark:text-slate-200 w-full">
                                         <option value="Despesa">🔴 Despesa</option>
                                         <option value="Receita">🟢 Receita</option>
                                         <option value="Investimento">🔵 Invest.</option>
                                     </select>
+                                    <input type="number" step="0.01" id="inputAmount" placeholder="R$ 0,00" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200 w-full">
                                 </div>
-                                <div class="flex-[2] min-w-[150px]">
-                                    <input type="text" id="inputDesc" placeholder="Descrição (ex: Mercado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition dark:text-slate-200">
+                                <div class="w-full sm:flex-[2]">
+                                    <input type="text" id="inputDesc" placeholder="Descrição (ex: Mercado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200">
                                 </div>
-                                <div class="flex-1 min-w-[100px]">
-                                    <input type="number" step="0.01" id="inputAmount" placeholder="R$ 0,00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition dark:text-slate-200">
+                                <div class="flex gap-2 w-full sm:flex-1">
+                                    <select id="inputCategory" class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200"></select>
+                                    <button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg px-5 hover:bg-indigo-700 transition shadow-md active:scale-95"><i class="fas fa-plus"></i></button>
                                 </div>
-                                <div class="flex-1 min-w-[120px]">
-                                    <select id="inputCategory" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition dark:text-slate-200"></select>
-                                </div>
-                                <button type="submit" class="bg-indigo-600 text-white p-2.5 rounded-lg px-5 hover:bg-indigo-700 transition shadow-md shadow-indigo-200 dark:shadow-none active:scale-95"><i class="fas fa-plus"></i></button>
                             </form>
                         </div>
-                        <div class="glass rounded-xl overflow-hidden min-h-[400px] border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <table class="w-full text-sm text-left">
-                                <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
-                                    <tr>
-                                        <th class="px-4 py-3 font-semibold">Data</th><th class="px-4 py-3 font-semibold">Descrição</th><th class="px-4 py-3 font-semibold">Categ.</th><th class="px-4 py-3 font-semibold text-right">Valor</th><th class="px-4 py-3 text-center w-10"><i class="fas fa-trash"></i></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transactionList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
-                            </table>
+                        
+                        <div class="glass rounded-xl overflow-hidden min-h-[300px] border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <div class="overflow-x-auto"> <table class="w-full text-sm text-left whitespace-nowrap">
+                                    <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
+                                        <tr>
+                                            <th class="px-4 py-3 font-semibold">Data</th><th class="px-4 py-3 font-semibold">Descrição</th><th class="px-4 py-3 font-semibold">Categ.</th><th class="px-4 py-3 font-semibold text-right">Valor</th><th class="px-4 py-3 text-center w-10"><i class="fas fa-trash"></i></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transactionList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                    <div class="glass p-5 rounded-xl h-fit border border-slate-100 dark:border-slate-700 shadow-sm sticky top-6">
+                    
+                    <div class="glass p-5 rounded-xl h-fit border border-slate-100 dark:border-slate-700 shadow-sm">
                         <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-pie text-indigo-500"></i> Gastos por Categoria</h3>
                         <div class="h-64 relative"><canvas id="categoryChart"></canvas></div>
                     </div>
@@ -152,69 +157,51 @@
             </section>
 
             <section id="viewGoals" class="space-y-6 hidden animate-fade-in">
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Receita Real (Período)</p>
+                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Receita Real</p>
                         <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400" id="goalTotalIncome">R$ 0,00</h2>
                     </div>
-
-                    <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm flex flex-col justify-between">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Meta de Sobra (Objetivo)</p>
+                    <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Meta Sobra</p>
                         <div class="flex items-center gap-2">
                             <span class="text-slate-400 font-bold">R$</span>
-                            <input type="number" id="goalSavingsInput" class="font-bold text-2xl text-indigo-900 dark:text-indigo-300 bg-transparent outline-none w-full border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-indigo-500 transition placeholder-slate-300" placeholder="0.00">
+                            <input type="number" id="goalSavingsInput" class="font-bold text-2xl text-indigo-900 dark:text-indigo-300 bg-transparent outline-none w-full border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-indigo-500 transition" placeholder="0.00">
                         </div>
                     </div>
-
                     <div class="glass p-5 rounded-xl border-l-4 border-slate-400 shadow-sm" id="goalBudgetCard">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Projeção de Fechamento</p>
+                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Projeção</p>
                         <div class="flex justify-between items-end">
-                            <div>
-                                <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Vai Sobrar:</span>
-                                <h2 class="text-xl font-bold text-slate-800 dark:text-slate-200" id="goalProjectedSurplus">R$ 0,00</h2>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold">Objetivo:</span>
-                                <h2 class="text-xl font-bold text-slate-400" id="goalTargetDisplay">R$ 0,00</h2>
-                            </div>
+                            <div><span class="text-xs text-slate-500 font-semibold">Vai Sobrar:</span><h2 class="text-xl font-bold text-slate-800 dark:text-slate-200" id="goalProjectedSurplus">R$ 0,00</h2></div>
+                            <div class="text-right"><span class="text-xs text-slate-500 font-semibold">Meta:</span><h2 class="text-xl font-bold text-slate-400" id="goalTargetDisplay">R$ 0,00</h2></div>
                         </div>
-                        
-                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-2 overflow-hidden relative">
-                            <div id="goalBudgetBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
-                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-2 overflow-hidden"><div id="goalBudgetBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div>
                         <p id="goalBudgetMsg" class="text-xs font-bold text-emerald-600 mt-1 text-right">Planejamento Seguro</p>
                     </div>
                 </div>
 
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
-                    <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2">
-                        <i class="fas fa-plus-circle text-indigo-500"></i> Definir Meta por Categoria
-                    </h3>
+                    <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-indigo-500"></i> Definir Meta Categoria</h3>
                     <form id="goalsForm" class="flex flex-col sm:flex-row gap-4 items-end">
                         <div class="w-full sm:w-1/3">
                             <label class="text-xs font-bold text-slate-400 uppercase">Categoria</label>
-                            <select id="goalCategoryInput" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-2.5 rounded-lg outline-none focus:border-indigo-500 transition mt-1"></select>
+                            <select id="goalCategoryInput" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-3 rounded-lg outline-none focus:border-indigo-500 transition mt-1"></select>
                         </div>
                         <div class="w-full sm:w-1/3">
-                            <label class="text-xs font-bold text-slate-400 uppercase">Valor Limite Mensal</label>
-                            <input type="number" id="goalAmountInput" placeholder="Ex: 500.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-2.5 rounded-lg outline-none focus:border-indigo-500 transition mt-1" required>
+                            <label class="text-xs font-bold text-slate-400 uppercase">Limite Mensal</label>
+                            <input type="number" id="goalAmountInput" placeholder="Ex: 500.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-3 rounded-lg outline-none focus:border-indigo-500 transition mt-1" required>
                         </div>
-                        <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-lg transition shadow-md h-fit">
-                            Salvar Meta
-                        </button>
+                        <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md h-fit">Salvar</button>
                     </form>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-4">
-                        <h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1">Acompanhamento</h3>
-                        <div id="goalsList" class="space-y-3">
-                            </div>
+                        <h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1">Progresso</h3>
+                        <div id="goalsList" class="space-y-3"></div>
                     </div>
-                    
                     <div>
-                         <h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1 mb-4">Realizado vs Meta</h3>
+                         <h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1 mb-4">Gráfico</h3>
                          <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm h-80">
                             <canvas id="goalsChart"></canvas>
                          </div>
@@ -223,35 +210,36 @@
             </section>
 
             <section id="viewDebts" class="space-y-6 hidden animate-fade-in">
-                <div class="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+                <div class="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                     <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div>
                             <h2 class="text-2xl font-bold mb-1">Controle de Dívidas</h2>
-                            <p class="text-slate-400 text-sm">Gerencie quem te deve e o que você deve.</p>
+                            <p class="text-slate-400 text-sm">Gerencie quem te deve.</p>
                         </div>
                         <div class="text-right">
                             <p class="text-slate-400 text-xs font-bold uppercase">Total a Receber</p>
                             <h2 class="text-4xl font-bold text-emerald-400" id="totalDebtAmount">R$ 0,00</h2>
                         </div>
                     </div>
-                    <div class="absolute -right-10 -bottom-20 w-64 h-64 bg-indigo-500 opacity-20 rounded-full blur-3xl"></div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 h-fit">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Adicionar Devedor</h3>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Adicionar</h3>
                         <form id="debtForm" class="space-y-4">
-                            <div><label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nome</label><input type="text" id="debtName" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200"></div>
-                            <div><label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Valor</label><input type="number" step="0.01" id="debtAmount" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200"></div>
-                            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-lg hover:bg-indigo-700 transition shadow-md shadow-indigo-200 dark:shadow-none">Salvar</button>
+                            <div><label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nome</label><input type="text" id="debtName" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200"></div>
+                            <div><label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Valor</label><input type="number" step="0.01" id="debtAmount" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200"></div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition shadow-md">Salvar</button>
                         </form>
                     </div>
                     <div class="md:col-span-2 glass rounded-xl overflow-hidden border border-slate-100 dark:border-slate-700 min-h-[300px]">
-                        <table class="w-full text-sm text-left">
-                            <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
-                                <tr><th class="px-6 py-3 font-semibold">Nome</th><th class="px-6 py-3 font-semibold text-right">Valor</th><th class="px-6 py-3 font-semibold text-center">Status</th><th class="px-6 py-3 font-semibold text-center">Ações</th></tr>
-                            </thead>
-                            <tbody id="debtList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left whitespace-nowrap">
+                                <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
+                                    <tr><th class="px-6 py-3 font-semibold">Nome</th><th class="px-6 py-3 font-semibold text-right">Valor</th><th class="px-6 py-3 font-semibold text-center">Status</th><th class="px-6 py-3 font-semibold text-center">Ações</th></tr>
+                                </thead>
+                                <tbody id="debtList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -259,56 +247,64 @@
             <section id="viewDashboard" class="space-y-6 hidden animate-fade-in">
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
                     <div class="relative z-10">
-                        <h2 class="text-2xl font-bold mb-2"><i class="fas fa-robot mr-2"></i>Consultoria IA</h2>
-                        <p class="text-indigo-100 text-sm mb-4 max-w-2xl">A inteligência artificial analisa seus padrões de consumo e sugere onde você pode economizar.</p>
-                        <button id="btnGenerateReport" class="bg-white text-indigo-600 font-bold py-2 px-6 rounded-full text-sm hover:bg-indigo-50 transition shadow-md">Gerar Relatório Financeiro</button>
+                        <h2 class="text-2xl font-bold mb-2">Consultoria IA</h2>
+                        <p class="text-indigo-100 text-sm mb-4 max-w-2xl">Inteligência artificial analisando seus dados.</p>
+                        <button id="btnGenerateReport" class="bg-white text-indigo-600 font-bold py-2 px-6 rounded-full text-sm hover:bg-indigo-50 transition shadow-md">Gerar Relatório</button>
                     </div>
-                    <div class="absolute -right-10 -top-10 w-48 h-48 bg-white opacity-10 rounded-full blur-2xl"></div>
                 </div>
                 <div id="aiResponseArea" class="hidden glass p-6 rounded-xl border-l-4 border-purple-500 animate-fade-in shadow-sm">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2"><i class="fas fa-sparkles text-purple-500"></i> Análise do Gemini:</h3>
                     <div id="aiTextContent" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line prose prose-sm max-w-none"></div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Evolução Mensal (Receita vs Despesa vs Invest.)</h3>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Evolução Mensal</h3>
                         <div class="h-64"><canvas id="evolutionChart"></canvas></div>
                     </div>
                     <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Top 5 Categorias de Gastos</h3>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Top Gastos</h3>
                         <ul id="topExpensesList" class="space-y-2"></ul>
-                    </div>
-                </div>
-                <div class="glass p-6 rounded-xl border-l-4 border-emerald-500 relative overflow-hidden shadow-sm">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                        <div>
-                            <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase mb-1">Meta de Sobra Mensal</p>
-                            <div class="flex items-center gap-2">
-                                <span class="text-slate-400 font-bold text-xl">R$</span>
-                                <input type="number" id="inputMeta" class="font-bold text-3xl text-slate-800 dark:text-slate-200 bg-transparent outline-none w-40 border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-emerald-500 transition" placeholder="0.00">
-                            </div>
-                        </div>
-                        <button id="btnSaveMeta" class="bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 font-bold py-2 px-4 rounded-lg transition flex items-center gap-2">
-                            <i class="fas fa-save"></i> Salvar Meta
-                        </button>
                     </div>
                 </div>
             </section>
         </div>
     </main>
 
+    <nav id="mobileNav" class="sm:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 flex justify-around items-center p-2 z-50 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+        <button id="btnMobileHome" class="flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16">
+            <i class="fas fa-list text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">Início</span>
+        </button>
+        <button id="btnMobileGoals" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16">
+            <i class="fas fa-bullseye text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">Metas</span>
+        </button>
+        <div class="relative -top-5">
+            <button onclick="document.getElementById('transactionForm').scrollIntoView({behavior: 'smooth'})" class="bg-indigo-600 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 dark:shadow-indigo-900 active:scale-95 transition-transform border-4 border-slate-50 dark:border-slate-900">
+                <i class="fas fa-plus text-lg"></i>
+            </button>
+        </div>
+        <button id="btnMobileDebts" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16">
+            <i class="fas fa-hand-holding-usd text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">Dívidas</span>
+        </button>
+        <button id="btnMobileDash" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16">
+            <i class="fas fa-chart-pie text-xl mb-1"></i>
+            <span class="text-[10px] font-bold">Dash</span>
+        </button>
+    </nav>
+
     <div id="importModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 text-center animate-scale-in relative">
             <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fas fa-times"></i></button>
-            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Importar PDF Bancário</h3>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Importar PDF</h3>
             <div id="dropZone" class="border-2 border-dashed border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-8 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition group">
                 <i class="fas fa-cloud-upload-alt text-3xl text-indigo-400 dark:text-indigo-500 group-hover:text-indigo-600 mb-2 transition"></i>
-                <p class="text-sm text-indigo-800 dark:text-indigo-300 font-semibold">Clique para selecionar o PDF</p>
+                <p class="text-sm text-indigo-800 dark:text-indigo-300 font-semibold">Clique para selecionar</p>
                 <input type="file" id="fileInput" accept=".pdf" class="hidden">
             </div>
             <div id="loadingStatus" class="hidden mt-6">
                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto"></div>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Lendo extrato e categorizando...</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Lendo extrato...</p>
             </div>
         </div>
     </div>
