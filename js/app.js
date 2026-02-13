@@ -1,5 +1,5 @@
 // ==========================================
-// ARQUIVO: js/app.js (CORRIGIDO E BLINDADO)
+// ARQUIVO: js/app.js (CORRIGIDO - SEM ERRO FATAL)
 // ==========================================
 
 import { store } from './store.js';
@@ -11,23 +11,20 @@ import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
 
-// --- 1. PROTEÇÃO DE ROTA (O FIM DO LOOP) ---
+// --- 1. PROTEÇÃO DE ROTA ---
 const isLoginPage = window.location.pathname.includes('login.html');
-const authToken = localStorage.getItem('inf_auth_token'); // NOME CORRETO
+const authToken = localStorage.getItem('inf_auth_token');
 
 if (!authToken && !isLoginPage) {
-    // Sem token e fora do login -> Vai pro Login
     window.location.href = 'login.html';
 }
 
 if (authToken && isLoginPage) {
-    // Com token e no login -> Vai pra Home
     window.location.href = 'index.html';
 }
 
 // --- 2. FUNÇÕES AUXILIARES ---
 function updateAllViews(monthFilter) {
-    // Verifica se os módulos carregaram antes de usar
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(monthFilter);
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(); 
     renderDebts();
@@ -183,18 +180,18 @@ function setupEvents() {
     const monthFilter = document.getElementById('monthFilter');
     if(monthFilter) monthFilter.addEventListener('change', (e) => updateAllViews(e.target.value));
 
-    // LOGOUT (CORRIGIDO)
+    // Logout
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             if(confirm("Sair do sistema?")) { 
-                localStorage.removeItem('inf_auth_token'); // <--- AQUI ESTAVA O ERRO (ERA 'token')
+                localStorage.removeItem('inf_auth_token'); 
                 window.location.href = 'login.html'; 
             }
         });
     }
 
-    // Configurações e Reset
+    // Configurações
     const btnSettings = document.getElementById('btnSettings');
     if(btnSettings) btnSettings.addEventListener('click', () => {
         const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || '');
@@ -204,20 +201,41 @@ function setupEvents() {
     const btnReset = document.getElementById('btnReset');
     if(btnReset) btnReset.addEventListener('click', () => location.reload());
 
-    // Importar PDF
+    // --- CORREÇÃO DO ERRO FATAL AQUI ---
     const btnImport = document.getElementById('btnImport');
     if(btnImport) {
-        btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
-        document.getElementById('btnCloseModal').addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
-        document.getElementById('dropZone').addEventListener('click', () => document.getElementById('fileInput').click());
-        
-        document.getElementById('fileInput').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            
-            // ... Lógica de PDF simplificada ...
-            alert("Processando PDF... (Verifique o console se houver erros)");
+        btnImport.addEventListener('click', () => {
+            const modal = document.getElementById('importModal');
+            if(modal) modal.classList.remove('hidden');
         });
+        
+        // Verifica se o botão de fechar existe antes de adicionar evento
+        const btnClose = document.getElementById('btnCloseModal');
+        if (btnClose) {
+            btnClose.addEventListener('click', () => {
+                const modal = document.getElementById('importModal');
+                if(modal) modal.classList.add('hidden');
+            });
+        }
+
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            dropZone.addEventListener('click', () => {
+                const fileInput = document.getElementById('fileInput');
+                if(fileInput) fileInput.click();
+            });
+        }
+        
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) {
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                
+                // Lógica simples de aviso, já que o pdf.js está em outro módulo
+                alert("Para processar o PDF, certifique-se que a função de importação está conectada corretamente.");
+            });
+        }
     }
 }
 
@@ -238,8 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         setupEvents();
 
-        // BUSCA DE DADOS (CORRIGIDO)
-        const token = localStorage.getItem('inf_auth_token'); // <--- AQUI ESTAVA O ERRO (ERA 'token')
+        const token = localStorage.getItem('inf_auth_token');
         if (token) {
             await store.init();
             updateAllViews('Todos');
