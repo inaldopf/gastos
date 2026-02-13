@@ -3,11 +3,23 @@ import { store } from './store.js';
 let chartInstance = null;
 
 export const UI = {
-    // Lista de Categorias
+    // Lista de Categorias EXPANDIDA
     categories: [
+        // --- Receitas ---
         { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600', hex: '#059669' },
         { id: 'Investimento', icon: 'fa-chart-line', color: 'text-emerald-600', hex: '#10B981' },
         { id: 'Renda Extra', icon: 'fa-plus-circle', color: 'text-emerald-500', hex: '#34D399' },
+        
+        // --- Novas Categorias Adicionadas ---
+        { id: 'Pets', icon: 'fa-paw', color: 'text-orange-600', hex: '#EA580C' },
+        { id: 'Beleza', icon: 'fa-cut', color: 'text-pink-400', hex: '#F472B6' },
+        { id: 'Roupas', icon: 'fa-tshirt', color: 'text-indigo-400', hex: '#818CF8' },
+        { id: 'Seguros', icon: 'fa-shield-alt', color: 'text-slate-600', hex: '#475569' },
+        { id: 'Eletrônicos', icon: 'fa-laptop', color: 'text-gray-800', hex: '#1F2937' },
+        { id: 'Doações', icon: 'fa-hand-holding-heart', color: 'text-rose-400', hex: '#FB7185' },
+        { id: 'Assinaturas', icon: 'fa-file-signature', color: 'text-purple-400', hex: '#C084FC' },
+
+        // --- Categorias Existentes ---
         { id: 'Aluguel', icon: 'fa-home', color: 'text-indigo-600', hex: '#4F46E5' },
         { id: 'Condomínio', icon: 'fa-building', color: 'text-indigo-500', hex: '#6366F1' },
         { id: 'Luz', icon: 'fa-bolt', color: 'text-yellow-500', hex: '#EAB308' },
@@ -40,6 +52,7 @@ export const UI = {
     initCategories() {
         const select = document.getElementById('inputCategory');
         if (!select) return;
+
         select.innerHTML = '';
         this.categories.forEach(cat => {
             const option = document.createElement('option');
@@ -49,7 +62,6 @@ export const UI = {
         });
     },
 
-    // renderApp recebe agora a CATEGORIA
     renderApp(selectedMonths = [], selectedCategory = 'Todas') {
         const list = document.getElementById('transactionList');
         if (!list) return;
@@ -57,7 +69,7 @@ export const UI = {
         list.innerHTML = '';
         const transactions = store.transactions || [];
 
-        // 1. Calcula SALDO ACUMULADO (Ignora filtro de categoria, considera só meses)
+        // 1. Calcula SALDO ACUMULADO (Global)
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let maxMonthIndex = -1;
         selectedMonths.forEach(m => {
@@ -76,19 +88,16 @@ export const UI = {
             }
         });
 
-        // 2. FILTRAGEM DE LISTA (Meses + Categoria)
+        // 2. FILTRAGEM (Meses + Categoria)
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
         }
 
-        // --- AQUI APLICA O FILTRO DE CATEGORIA ---
         if (selectedCategory && selectedCategory !== 'Todas') {
             filtered = filtered.filter(t => t.category === selectedCategory);
         }
-        // ------------------------------------------
 
-        // 3. Calcula totais DO PERÍODO FILTRADO
         let totalRec = 0, totalInv = 0, totalDesp = 0;
         filtered.forEach(t => {
             if (t.type === 'Receita') totalRec += t.amount;
@@ -122,17 +131,13 @@ export const UI = {
     },
 
     updateKPIs(accumulatedBalance, rec, desp, inv) {
-        // Saldo Acumulado (Global)
         const balEl = document.getElementById('kpiBalance');
         if(balEl) {
             balEl.innerText = `R$ ${accumulatedBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             balEl.className = `text-2xl font-bold ${accumulatedBalance >= 0 ? 'text-indigo-900 dark:text-indigo-300' : 'text-red-600 dark:text-red-400'}`;
         }
-        
-        // Investido e Gastos (Respeitam o filtro)
         const invEl = document.getElementById('kpiInvest');
         if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
         const expEl = document.getElementById('kpiExpense');
         if(expEl) expEl.innerText = `R$ ${desp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     },
@@ -154,7 +159,7 @@ export const UI = {
                 labels: Object.keys(totals),
                 datasets: [{
                     data: Object.values(totals),
-                    backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6'],
+                    backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#8B5CF6'],
                     borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
                     borderWidth: 2
                 }]
