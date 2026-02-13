@@ -21,6 +21,7 @@ function setupMonthSelector() {
     const menu = document.getElementById('monthDropdownMenu');
     const btnText = document.getElementById('monthBtnText');
     
+    // Se não encontrar os elementos, sai (evita erros se o HTML estiver velho)
     if (!btn || !menu) return;
 
     const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
@@ -41,12 +42,10 @@ function setupMonthSelector() {
             btnText.textContent = "📅 Ano Completo (Todos)";
             btnText.classList.remove('text-red-500');
         } else if (selectedMonths.length <= 2) {
-            // Mostra os nomes (ex: Janeiro, Fevereiro)
             const names = selectedMonths.map(m => shortMonths[months.indexOf(m)]).join(', ');
             btnText.textContent = `📅 ${names}`;
             btnText.classList.remove('text-red-500');
         } else {
-            // Mostra contagem (ex: 5 meses selecionados)
             btnText.textContent = `📅 ${selectedMonths.length} meses selecionados`;
             btnText.classList.remove('text-red-500');
         }
@@ -75,7 +74,7 @@ function setupMonthSelector() {
         } else {
             selectedMonths = [];
         }
-        setupMonthSelector(); // Re-renderiza para atualizar os checkboxes individuais
+        setupMonthSelector(); 
         updateAllViews();
     });
     menu.appendChild(divAll);
@@ -92,7 +91,6 @@ function setupMonthSelector() {
             <label for="month-${index}" class="ml-2 text-sm text-slate-600 cursor-pointer flex-1">${shortMonths[index]}</label>
         `;
 
-        // Clique na linha inteira marca o checkbox
         div.onclick = (e) => {
             if (e.target.tagName !== 'INPUT') {
                 const checkbox = div.querySelector('input');
@@ -129,7 +127,6 @@ function setupMonthSelector() {
         }
     };
 
-    // Fecha ao clicar fora
     document.addEventListener('click', (e) => {
         if (!btn.contains(e.target) && !menu.contains(e.target)) {
             menu.classList.add('hidden');
@@ -138,19 +135,16 @@ function setupMonthSelector() {
     });
 }
 
-// --- 3. ATUALIZAÇÃO GERAL ---
 function updateAllViews() {
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths);
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths); 
     renderDebts();
 }
 
-// --- 4. RENDERIZAÇÃO DE DÍVIDAS ---
 function renderDebts() {
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
     if(!list) return;
-
     list.innerHTML = '';
     let totalReceber = 0;
     const debtors = Array.isArray(store.debtors) ? store.debtors : [];
@@ -176,60 +170,31 @@ function renderDebts() {
         `;
         list.appendChild(tr);
     });
-
     if(totalEl) totalEl.innerText = `R$ ${totalReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 }
 
-// --- 5. FUNÇÕES GLOBAIS ---
-window.removeTransaction = async (id) => {
-    if(confirm("Tem certeza que deseja apagar?")) {
-        await store.removeTransaction(id);
-        updateAllViews();
-    }
-};
+window.removeTransaction = async (id) => { if(confirm("Tem certeza que deseja apagar?")) { await store.removeTransaction(id); updateAllViews(); } };
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
 window.deleteDebt = async (id) => { if(confirm("Apagar permanentemente?")) { await store.removeDebt(id); renderDebts(); }};
 
-// --- 6. CONFIGURAÇÃO DE EVENTOS ---
 function setupEvents() {
-    const tabs = {
-        home: document.getElementById('tabHome'),
-        debts: document.getElementById('tabDebts'),
-        dash: document.getElementById('tabDash')
-    };
-
+    const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash') };
     const switchTab = (viewId) => {
-        ['viewHome', 'viewDebts', 'viewDashboard'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.classList.add('hidden');
-        });
-        
+        ['viewHome', 'viewDebts', 'viewDashboard'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
         const target = document.getElementById(viewId);
-        if(target) {
-            target.classList.remove('hidden');
-            target.classList.remove('animate-fade-in');
-            void target.offsetWidth; 
-            target.classList.add('animate-fade-in');
-        }
-
-        Object.values(tabs).forEach(btn => {
-            if(btn) btn.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition";
-        });
-
+        if(target) { target.classList.remove('hidden'); target.classList.remove('animate-fade-in'); void target.offsetWidth; target.classList.add('animate-fade-in'); }
+        Object.values(tabs).forEach(btn => { if(btn) btn.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition"; });
         const activeClass = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-indigo-600 transition";
         if(viewId === 'viewHome' && tabs.home) tabs.home.className = activeClass;
         if(viewId === 'viewDebts' && tabs.debts) tabs.debts.className = activeClass;
         if(viewId === 'viewDashboard' && tabs.dash) tabs.dash.className = activeClass;
-
         if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
         if(viewId === 'viewDebts') renderDebts();
     };
-
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
 
-    // Formulário de Transação
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
@@ -239,93 +204,39 @@ function setupEvents() {
             const type = document.getElementById('inputType').value;
             const category = document.getElementById('inputCategory').value;
             const btn = transForm.querySelector('button[type="submit"]');
-
             if (!desc || isNaN(amount)) return alert("Preencha corretamente.");
-
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
             try {
-                // Pega o último mês selecionado ou o atual
                 let targetMonth = selectedMonths[selectedMonths.length - 1];
                 if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
-
-                await store.addTransaction({
-                    desc, amount, type, category,
-                    date: new Date().toLocaleDateString('pt-BR'),
-                    month: targetMonth
-                });
+                await store.addTransaction({ desc, amount, type, category, date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
                 updateAllViews();
                 transForm.reset();
-            } catch (err) {
-                console.error(err);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
+            } catch (err) { console.error(err); } finally { btn.innerHTML = originalText; btn.disabled = false; }
         });
     }
 
-    // Formulário Dívidas
     const debtForm = document.getElementById('debtForm');
-    if(debtForm) {
-        debtForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('debtName').value;
-            const amount = document.getElementById('debtAmount').value;
-            if(name && amount) {
-                await store.addDebt(name, parseFloat(amount));
-                renderDebts();
-                debtForm.reset();
-            }
-        });
-    }
-
-    const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
-
-    const btnSettings = document.getElementById('btnSettings');
-    if(btnSettings) btnSettings.addEventListener('click', () => {
-        const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || '');
-        if (key) localStorage.setItem('gemini_api_key', key);
-    });
-
-    const btnReset = document.getElementById('btnReset');
-    if(btnReset) btnReset.addEventListener('click', () => location.reload());
-
-    const btnImport = document.getElementById('btnImport');
-    if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
-    
-    const btnCloseModal = document.getElementById('btnCloseModal');
-    if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
-    
-    const dropZone = document.getElementById('dropZone');
-    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+    if(debtForm) { debtForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('debtName').value; const amount = document.getElementById('debtAmount').value; if(name && amount) { await store.addDebt(name, parseFloat(amount)); renderDebts(); debtForm.reset(); } }); }
+    const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
+    const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
+    const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
+    const btnImport = document.getElementById('btnImport'); if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
+    const btnCloseModal = document.getElementById('btnCloseModal'); if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
+    const dropZone = document.getElementById('dropZone'); if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
 }
 
-// --- 7. INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         if(UI && UI.initCategories) UI.initCategories();
-
         const hasCache = store.loadFromCache();
-        if(!hasCache) {
-            const list = document.getElementById('transactionList');
-            if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>';
-        }
-
-        setupMonthSelector(); // <--- Inicia o Dropdown
+        if(!hasCache) { const list = document.getElementById('transactionList'); if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>'; }
+        
+        setupMonthSelector(); // <--- O SEGREDO ESTÁ AQUI
         setupEvents();
-
+        
         const token = localStorage.getItem('inf_auth_token');
-        if (token) {
-            await store.init();
-            updateAllViews();
-            const inputMeta = document.getElementById('inputMeta');
-            if(inputMeta) inputMeta.value = store.getMeta();
-        }
-    } catch (error) {
-        console.error("Erro fatal:", error);
-    }
+        if (token) { await store.init(); updateAllViews(); const inputMeta = document.getElementById('inputMeta'); if(inputMeta) inputMeta.value = store.getMeta(); }
+    } catch (error) { console.error("Erro fatal:", error); }
 });
