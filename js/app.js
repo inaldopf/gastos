@@ -1,35 +1,79 @@
-// ==========================================
-// ARQUIVO: js/app.js (CORRIGIDO - SEM ERRO FATAL)
-// ==========================================
-
 import { store } from './store.js';
 import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
-import { readPdfText } from './pdf.js';
-import { categorizeWithGemini } from './ai.js';
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
+
+// Variável Global para guardar os meses selecionados
+let selectedMonths = [];
 
 // --- 1. PROTEÇÃO DE ROTA ---
 const isLoginPage = window.location.pathname.includes('login.html');
 const authToken = localStorage.getItem('inf_auth_token');
 
-if (!authToken && !isLoginPage) {
-    window.location.href = 'login.html';
+if (!authToken && !isLoginPage) window.location.href = 'login.html';
+if (authToken && isLoginPage) window.location.href = 'index.html';
+
+// --- 2. GERENCIADOR DE MESES (NOVO) ---
+function setupMonthSelector() {
+    const container = document.getElementById('monthSelector');
+    if (!container) return;
+
+    const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+    const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    
+    // Define mês atual como padrão se a lista estiver vazia
+    if (selectedMonths.length === 0) {
+        const currentMonthIndex = new Date().getMonth(); // 0 a 11
+        selectedMonths = [months[currentMonthIndex]];
+    }
+
+    container.innerHTML = '';
+
+    months.forEach((m, index) => {
+        const btn = document.createElement('button');
+        const isActive = selectedMonths.includes(m);
+        
+        // Estilo do botão (Ativo vs Inativo)
+        btn.className = `px-3 py-1.5 text-xs font-bold rounded-full border transition whitespace-nowrap ${
+            isActive 
+            ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
+            : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
+        }`;
+        
+        btn.textContent = shortMonths[index];
+        
+        btn.onclick = () => {
+            // Lógica de Multi-Seleção
+            if (selectedMonths.includes(m)) {
+                // Se já tem, remove (mas impede de ficar vazio)
+                if (selectedMonths.length > 1) {
+                    selectedMonths = selectedMonths.filter(item => item !== m);
+                }
+            } else {
+                // Se não tem, adiciona
+                selectedMonths.push(m);
+            }
+            
+            // Re-renderiza botões e atualiza a tela
+            setupMonthSelector();
+            updateAllViews();
+        };
+
+        container.appendChild(btn);
+    });
 }
 
-if (authToken && isLoginPage) {
-    window.location.href = 'index.html';
-}
-
-// --- 2. FUNÇÕES AUXILIARES ---
-function updateAllViews(monthFilter) {
-    if (UI && typeof UI.renderApp === 'function') UI.renderApp(monthFilter);
-    if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(); 
+// --- 3. ATUALIZAÇÃO GERAL ---
+function updateAllViews() {
+    // Passa a lista de meses para as views
+    if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths);
+    if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths); 
     renderDebts();
 }
 
+// --- 4. RENDERIZAÇÃO DE DÍVIDAS ---
 function renderDebts() {
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
@@ -64,22 +108,18 @@ function renderDebts() {
     if(totalEl) totalEl.innerText = `R$ ${totalReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 }
 
-// --- 3. FUNÇÕES GLOBAIS ---
+// --- 5. FUNÇÕES GLOBAIS ---
 window.removeTransaction = async (id) => {
     if(confirm("Tem certeza que deseja apagar?")) {
         await store.removeTransaction(id);
-        const filterEl = document.getElementById('monthFilter');
-        updateAllViews(filterEl ? filterEl.value : 'Todos');
+        updateAllViews();
     }
 };
-
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
 window.deleteDebt = async (id) => { if(confirm("Apagar permanentemente?")) { await store.removeDebt(id); renderDebts(); }};
 
-// --- 4. CONFIGURAÇÃO DE EVENTOS ---
+// --- 6. CONFIGURAÇÃO DE EVENTOS ---
 function setupEvents() {
-    console.log("🛠️ Configurando eventos...");
-
     // Navegação de Abas
     const tabs = {
         home: document.getElementById('tabHome'),
@@ -110,7 +150,7 @@ function setupEvents() {
         if(viewId === 'viewDebts' && tabs.debts) tabs.debts.className = activeClass;
         if(viewId === 'viewDashboard' && tabs.dash) tabs.dash.className = activeClass;
 
-        if(viewId === 'viewDashboard' && Dashboard) Dashboard.render();
+        if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
         if(viewId === 'viewDebts') renderDebts();
     };
 
@@ -123,7 +163,6 @@ function setupEvents() {
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const desc = document.getElementById('inputDesc').value;
             const amount = parseFloat(document.getElementById('inputAmount').value);
             const type = document.getElementById('inputType').value;
@@ -136,21 +175,16 @@ function setupEvents() {
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             btn.disabled = true;
 
-            const filterEl = document.getElementById('monthFilter');
-            let monthToSave = filterEl ? filterEl.value : 'Todos';
-            
-            if (monthToSave === 'Todos') {
-                 const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
-                 monthToSave = meses[new Date().getMonth()];
-            }
-
             try {
+                // Pega o último mês selecionado ou o atual para salvar
+                let targetMonth = selectedMonths[selectedMonths.length - 1];
+                
                 await store.addTransaction({
                     desc, amount, type, category,
                     date: new Date().toLocaleDateString('pt-BR'),
-                    month: monthToSave
+                    month: targetMonth
                 });
-                updateAllViews(filterEl ? filterEl.value : 'Todos');
+                updateAllViews();
                 transForm.reset();
             } catch (err) {
                 console.error(err);
@@ -176,22 +210,10 @@ function setupEvents() {
         });
     }
 
-    // Filtro Mês
-    const monthFilter = document.getElementById('monthFilter');
-    if(monthFilter) monthFilter.addEventListener('change', (e) => updateAllViews(e.target.value));
-
-    // Logout
+    // Logout e Configs
     const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            if(confirm("Sair do sistema?")) { 
-                localStorage.removeItem('inf_auth_token'); 
-                window.location.href = 'login.html'; 
-            }
-        });
-    }
+    if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
 
-    // Configurações
     const btnSettings = document.getElementById('btnSettings');
     if(btnSettings) btnSettings.addEventListener('click', () => {
         const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || '');
@@ -201,71 +223,40 @@ function setupEvents() {
     const btnReset = document.getElementById('btnReset');
     if(btnReset) btnReset.addEventListener('click', () => location.reload());
 
-    // --- CORREÇÃO DO ERRO FATAL AQUI ---
+    // Importar PDF (Apenas evento de abrir)
     const btnImport = document.getElementById('btnImport');
-    if(btnImport) {
-        btnImport.addEventListener('click', () => {
-            const modal = document.getElementById('importModal');
-            if(modal) modal.classList.remove('hidden');
-        });
-        
-        // Verifica se o botão de fechar existe antes de adicionar evento
-        const btnClose = document.getElementById('btnCloseModal');
-        if (btnClose) {
-            btnClose.addEventListener('click', () => {
-                const modal = document.getElementById('importModal');
-                if(modal) modal.classList.add('hidden');
-            });
-        }
-
-        const dropZone = document.getElementById('dropZone');
-        if (dropZone) {
-            dropZone.addEventListener('click', () => {
-                const fileInput = document.getElementById('fileInput');
-                if(fileInput) fileInput.click();
-            });
-        }
-        
-        const fileInput = document.getElementById('fileInput');
-        if (fileInput) {
-            fileInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if(!file) return;
-                
-                // Lógica simples de aviso, já que o pdf.js está em outro módulo
-                alert("Para processar o PDF, certifique-se que a função de importação está conectada corretamente.");
-            });
-        }
-    }
+    if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
+    
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
+    
+    const dropZone = document.getElementById('dropZone');
+    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
 }
 
-// --- 5. INICIALIZAÇÃO ---
+// --- 7. INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("🎬 DOM Pronto. Iniciando...");
-
     try {
         if(UI && UI.initCategories) UI.initCategories();
 
         const hasCache = store.loadFromCache();
-        if (hasCache) {
-            updateAllViews('Todos');
-        } else {
+        if(!hasCache) {
             const list = document.getElementById('transactionList');
-            if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i><p class="text-slate-500 mt-2">Buscando dados...</p></td></tr>';
+            if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>';
         }
 
+        // Configura o seletor de meses PRIMEIRO
+        setupMonthSelector();
         setupEvents();
 
         const token = localStorage.getItem('inf_auth_token');
         if (token) {
             await store.init();
-            updateAllViews('Todos');
-            
+            updateAllViews();
             const inputMeta = document.getElementById('inputMeta');
             if(inputMeta) inputMeta.value = store.getMeta();
         }
-
     } catch (error) {
-        console.error("☠️ Erro fatal:", error);
+        console.error("Erro fatal:", error);
     }
 });
