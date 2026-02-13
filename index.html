@@ -80,23 +80,14 @@
                         <i class="fas fa-file-pdf"></i> Importar Extrato
                     </button>
                     
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <div class="flex items-center gap-2 w-full sm:w-auto overflow-hidden">
                         <span class="text-xs font-bold text-slate-400 uppercase hidden sm:inline">Mês:</span>
-                        <select id="monthFilter" class="w-full sm:w-auto bg-slate-50 border border-slate-200 text-sm font-semibold py-2 px-4 rounded-lg outline-none cursor-pointer hover:border-indigo-300 transition focus:ring-2 focus:ring-indigo-100">
-                            <option value="Todos">📅 2026 Completo</option>
-                            <option value="JANEIRO">Janeiro</option>
-                            <option value="FEVEREIRO">Fevereiro</option>
-                            <option value="MARÇO">Março</option>
-                            <option value="ABRIL">Abril</option>
-                            <option value="MAIO">Maio</option>
-                            <option value="JUNHO">Junho</option>
-                            <option value="JULHO">Julho</option>
-                            <option value="AGOSTO">Agosto</option>
-                            <option value="SETEMBRO">Setembro</option>
-                            <option value="OUTUBRO">Outubro</option>
-                            <option value="NOVEMBRO">Novembro</option>
-                            <option value="DEZEMBRO">Dezembro</option>
-                        </select>
+                        
+                        <div class="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+                            <div id="monthSelector" class="flex gap-2 min-w-max">
+                                </div>
+                        </div>
+
                     </div>
                 </div>
 
@@ -255,7 +246,7 @@
     <div id="importModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6 text-center animate-scale-in relative">
             
-            <button onclick="document.getElementById('importModal').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+            <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
                 <i class="fas fa-times"></i>
             </button>
 
