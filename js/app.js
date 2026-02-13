@@ -1,7 +1,7 @@
 import { store } from './store.js';
 import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
-import { Goals } from './goals.js'; // <--- IMPORTANTE
+import { Goals } from './goals.js';
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
@@ -9,7 +9,7 @@ console.log("🚀 app.js carregado!");
 let selectedMonths = [];
 let selectedCategory = 'Todas';
 
-// 1. Auth Logic (Mantida)
+// 1. Auth Logic
 const isLoginPage = window.location.pathname.includes('login.html');
 const authToken = localStorage.getItem('inf_auth_token');
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
@@ -34,7 +34,7 @@ function setupTheme() {
     });
 }
 
-// 3. Components Setup (Mantidos)
+// 3. Components Setup
 function setupCategoryFilter() {
     const select = document.getElementById('filterCategory');
     if (!select || !UI || !UI.categories) return;
@@ -84,12 +84,10 @@ function setupMonthSelector() {
 
 // 4. Update
 function updateAllViews() {
-    // Para Metas, disponibilizamos globalmente os meses selecionados (hack simples)
     window.currentSelectedMonths = selectedMonths;
-
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
-    if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths); // <--- RENDERIZA METAS
+    if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
     renderDebts();
 }
 
@@ -121,9 +119,11 @@ window.removeTransaction = async (id) => { if(confirm("Apagar?")) { await store.
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
 window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
 
-// 6. Events
+// 6. Events (CORRIGIDO: Apenas UMA função setupEvents)
 function setupEvents() {
-    // Navegação de Abas (Desktop e Mobile)
+    setupTheme();
+
+    // Referências Desktop
     const tabs = {
         home: document.getElementById('tabHome'),
         debts: document.getElementById('tabDebts'),
@@ -131,7 +131,7 @@ function setupEvents() {
         goals: document.getElementById('tabGoals')
     };
 
-    // Botões Mobile
+    // Referências Mobile
     const mobileTabs = {
         home: document.getElementById('btnMobileHome'),
         debts: document.getElementById('btnMobileDebts'),
@@ -140,13 +140,13 @@ function setupEvents() {
     };
 
     const switchTab = (viewId) => {
-        // Esconde todas as views
+        // Esconde tudo
         ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.classList.add('hidden');
         });
         
-        // Mostra a view alvo com animação
+        // Mostra alvo
         const target = document.getElementById(viewId);
         if(target) {
             target.classList.remove('hidden');
@@ -155,83 +155,54 @@ function setupEvents() {
             target.classList.add('animate-fade-in');
         }
 
-        // Estilo Inativo (Desktop)
+        // Estilos Desktop
         Object.values(tabs).forEach(btn => {
             if(btn) btn.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
         });
 
-        // Estilo Inativo (Mobile - Ícones cinzas)
+        // Estilos Mobile
         Object.values(mobileTabs).forEach(btn => {
             if(btn) btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
         });
 
-        // Estilo Ativo (Desktop)
-        const activeClassDesktop = "px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        
-        // Estilo Ativo (Mobile - Ícone Colorido)
-        const activeClassMobile = "flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16";
+        const activeDesktop = "px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
+        const activeMobile = "flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16";
 
         if(viewId === 'viewHome') {
-            if(tabs.home) tabs.home.className = activeClassDesktop;
-            if(mobileTabs.home) mobileTabs.home.className = activeClassMobile;
+            if(tabs.home) tabs.home.className = activeDesktop;
+            if(mobileTabs.home) mobileTabs.home.className = activeMobile;
         }
         if(viewId === 'viewDebts') {
-            if(tabs.debts) tabs.debts.className = activeClassDesktop;
-            if(mobileTabs.debts) mobileTabs.debts.className = activeClassMobile;
+            if(tabs.debts) tabs.debts.className = activeDesktop;
+            if(mobileTabs.debts) mobileTabs.debts.className = activeMobile;
         }
         if(viewId === 'viewDashboard') {
-            if(tabs.dash) tabs.dash.className = activeClassDesktop;
-            if(mobileTabs.dash) mobileTabs.dash.className = activeClassMobile;
+            if(tabs.dash) tabs.dash.className = activeDesktop;
+            if(mobileTabs.dash) mobileTabs.dash.className = activeMobile;
         }
         if(viewId === 'viewGoals') {
-            if(tabs.goals) tabs.goals.className = activeClassDesktop;
-            if(mobileTabs.goals) mobileTabs.goals.className = activeClassMobile;
+            if(tabs.goals) tabs.goals.className = activeDesktop;
+            if(mobileTabs.goals) mobileTabs.goals.className = activeMobile;
         }
 
-        // Renderiza o conteúdo específico
         if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
         if(viewId === 'viewGoals') Goals.render(selectedMonths);
         if(viewId === 'viewDebts') renderDebts();
     };
 
-    // Event Listeners Desktop
+    // Listeners Desktop
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
 
-    // Event Listeners Mobile
+    // Listeners Mobile
     if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
-    setupTheme();
-    const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash'), goals: document.getElementById('tabGoals') };
-    const switchTab = (viewId) => {
-        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-        const t = document.getElementById(viewId);
-        if(t) { t.classList.remove('hidden'); t.classList.remove('animate-fade-in'); void t.offsetWidth; t.classList.add('animate-fade-in'); }
-        
-        Object.values(tabs).forEach(b => {
-             if(b) b.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
-        });
-        
-        const activeClass = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        if(viewId==='viewHome' && tabs.home) tabs.home.className = activeClass;
-        if(viewId==='viewDebts' && tabs.debts) tabs.debts.className = activeClass;
-        if(viewId==='viewDashboard' && tabs.dash) tabs.dash.className = activeClass;
-        if(viewId==='viewGoals' && tabs.goals) tabs.goals.className = activeClass;
 
-        if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
-        if(viewId === 'viewGoals') Goals.render(selectedMonths);
-        if(viewId === 'viewDebts') renderDebts();
-    };
-    if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
-    if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
-    if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
-    if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
-
-    // ... (Mantido o resto dos eventos: TransactionForm, DebtForm, etc)
+    // Formulários e Botões
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
@@ -252,14 +223,22 @@ function setupEvents() {
             } catch (err) { console.error(err); } finally { btn.innerHTML = oldText; btn.disabled = false; }
         });
     }
+
     const debtForm = document.getElementById('debtForm');
     if(debtForm) { debtForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('debtName').value; const amount = document.getElementById('debtAmount').value; if(name && amount) { await store.addDebt(name, parseFloat(amount)); renderDebts(); debtForm.reset(); } }); }
+    
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
     const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
     const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
-    const btnImport = document.getElementById('btnImport'); if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
-    const btnCloseModal = document.getElementById('btnCloseModal'); if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
-    const dropZone = document.getElementById('dropZone'); if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+    
+    const btnImport = document.getElementById('btnImport'); 
+    if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
+    
+    const btnCloseModal = document.getElementById('btnCloseModal'); 
+    if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
+    
+    const dropZone = document.getElementById('dropZone'); 
+    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
