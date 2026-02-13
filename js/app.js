@@ -5,7 +5,6 @@ import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
 
-// Variável Global
 let selectedMonths = [];
 
 // --- 1. PROTEÇÃO DE ROTA ---
@@ -15,25 +14,45 @@ const authToken = localStorage.getItem('inf_auth_token');
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
 if (authToken && isLoginPage) window.location.href = 'index.html';
 
-// --- 2. GERENCIADOR DE MESES (DROPDOWN COM CHECKBOX) ---
+// --- 2. DARK MODE LOGIC (NOVO) ---
+function setupTheme() {
+    const btnTheme = document.getElementById('btnThemeToggle');
+    const html = document.documentElement;
+
+    // 1. Carrega preferência
+    if (localStorage.getItem('theme') === 'dark') {
+        html.classList.add('dark');
+    }
+
+    // 2. Evento de Click
+    if(btnTheme) {
+        btnTheme.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            if (html.classList.contains('dark')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    }
+}
+
+// --- 3. GERENCIADOR DE MESES ---
 function setupMonthSelector() {
     const btn = document.getElementById('monthDropdownBtn');
     const menu = document.getElementById('monthDropdownMenu');
     const btnText = document.getElementById('monthBtnText');
     
-    // Se não encontrar os elementos, sai (evita erros se o HTML estiver velho)
     if (!btn || !menu) return;
 
     const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
     const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-    // 1. Inicializa com o mês atual se vazio
     if (selectedMonths.length === 0) {
         const currentMonthIndex = new Date().getMonth();
         selectedMonths = [months[currentMonthIndex]];
     }
 
-    // 2. Função para atualizar o texto do botão
     const updateButtonText = () => {
         if (selectedMonths.length === 0) {
             btnText.textContent = "Selecione pelo menos um";
@@ -51,15 +70,15 @@ function setupMonthSelector() {
         }
     };
 
-    // 3. Renderiza os Checkboxes
     menu.innerHTML = '';
     
     // Botão "Todos"
     const divAll = document.createElement('div');
-    divAll.className = "flex items-center p-2 hover:bg-slate-50 rounded-lg cursor-pointer mb-1 border-b border-slate-100";
+    // Ajuste de classes para Dark Mode
+    divAll.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer mb-1 border-b border-slate-100 dark:border-slate-700";
     divAll.innerHTML = `
-        <input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer">
-        <label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 cursor-pointer flex-1">Selecionar Todos</label>
+        <input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:border-slate-500 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer">
+        <label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer flex-1">Selecionar Todos</label>
     `;
     divAll.onclick = (e) => {
         if(e.target.tagName !== 'INPUT') {
@@ -82,13 +101,13 @@ function setupMonthSelector() {
     // Checkboxes dos Meses
     months.forEach((m, index) => {
         const div = document.createElement('div');
-        div.className = "flex items-center p-2 hover:bg-slate-50 rounded-lg cursor-pointer";
+        div.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer";
         
         const isChecked = selectedMonths.includes(m);
         
         div.innerHTML = `
-            <input type="checkbox" id="month-${index}" value="${m}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer">
-            <label for="month-${index}" class="ml-2 text-sm text-slate-600 cursor-pointer flex-1">${shortMonths[index]}</label>
+            <input type="checkbox" id="month-${index}" value="${m}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:border-slate-500 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer">
+            <label for="month-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer flex-1">${shortMonths[index]}</label>
         `;
 
         div.onclick = (e) => {
@@ -115,7 +134,6 @@ function setupMonthSelector() {
 
     updateButtonText();
 
-    // 4. Eventos de Abrir/Fechar
     btn.onclick = (e) => {
         e.stopPropagation();
         menu.classList.toggle('hidden');
@@ -158,13 +176,14 @@ function renderDebts() {
         if(!d.paid) totalReceber += parseFloat(d.amount || 0);
 
         const tr = document.createElement('tr');
-        tr.className = `hover:bg-slate-50 transition ${opacityClass}`;
+        // Estilo de linha no Dark Mode
+        tr.className = `hover:bg-slate-50 dark:hover:bg-slate-700 transition ${opacityClass} border-b border-slate-50 dark:border-slate-700`;
         tr.innerHTML = `
-            <td class="px-6 py-4 font-medium text-slate-900">${d.name}</td>
-            <td class="px-6 py-4 text-right font-bold text-slate-600">R$ ${parseFloat(d.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">${d.name}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-600 dark:text-slate-300">R$ ${parseFloat(d.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
             <td class="px-6 py-4 text-center">${statusBadge}</td>
             <td class="px-6 py-4 text-center flex justify-center gap-2">
-                <button onclick="window.toggleDebt(${d.id})" class="text-indigo-600 hover:text-indigo-900"><i class="fas fa-check-circle"></i></button>
+                <button onclick="window.toggleDebt(${d.id})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"><i class="fas fa-check-circle"></i></button>
                 <button onclick="window.deleteDebt(${d.id})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
             </td>
         `;
@@ -178,16 +197,23 @@ window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); }
 window.deleteDebt = async (id) => { if(confirm("Apagar permanentemente?")) { await store.removeDebt(id); renderDebts(); }};
 
 function setupEvents() {
+    // Configura Tema
+    setupTheme();
+
     const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash') };
     const switchTab = (viewId) => {
         ['viewHome', 'viewDebts', 'viewDashboard'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.add('hidden'); });
         const target = document.getElementById(viewId);
         if(target) { target.classList.remove('hidden'); target.classList.remove('animate-fade-in'); void target.offsetWidth; target.classList.add('animate-fade-in'); }
-        Object.values(tabs).forEach(btn => { if(btn) btn.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 transition"; });
-        const activeClass = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-indigo-600 transition";
+        
+        // Estilo Botões Abas (Dark Mode)
+        Object.values(tabs).forEach(btn => { if(btn) btn.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition"; });
+        
+        const activeClass = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
         if(viewId === 'viewHome' && tabs.home) tabs.home.className = activeClass;
         if(viewId === 'viewDebts' && tabs.debts) tabs.debts.className = activeClass;
         if(viewId === 'viewDashboard' && tabs.dash) tabs.dash.className = activeClass;
+        
         if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
         if(viewId === 'viewDebts') renderDebts();
     };
@@ -233,7 +259,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hasCache = store.loadFromCache();
         if(!hasCache) { const list = document.getElementById('transactionList'); if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>'; }
         
-        setupMonthSelector(); // <--- O SEGREDO ESTÁ AQUI
+        setupMonthSelector(); 
         setupEvents();
         
         const token = localStorage.getItem('inf_auth_token');
