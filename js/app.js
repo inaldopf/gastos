@@ -11,23 +11,20 @@ import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
 
-// --- 1. PROTEÇÃO DE ROTA (Anti-Loop Infinito) ---
-(function checkAuth() {
-    const token = localStorage.getItem('token');
-    // Converte para minúsculo para garantir que /Login e /login sejam iguais
-    const path = window.location.pathname.toLowerCase(); 
+// --- PROTEÇÃO INTELIGENTE ---
+// Verifica se NÃO estamos na tela de login antes de expulsar o usuário
+const isLoginPage = window.location.pathname.includes('login.html');
+const hasToken = localStorage.getItem('inf_auth_token');
 
-    // Define se estamos numa página pública (Login ou Cadastro)
-    // A verificação .includes('login') resolve o problema da Vercel (URLs sem .html)
-    const isPublicPage = path.includes('login') || path.includes('register') || path.includes('cadastro');
+if (!hasToken && !isLoginPage) {
+    // Se não tem token e não está no login, manda pro login
+    window.location.href = 'login.html';
+}
 
-    // Se NÃO tem token E NÃO estamos numa página pública -> TCHAU!
-    if (!token && !isPublicPage) {
-        console.warn("🚫 Sem token. Redirecionando para login...");
-        // .replace() é melhor que .href pois não salva no histórico (evita loop ao voltar)
-        window.location.replace('login.html'); 
-    }
-})();
+if (hasToken && isLoginPage) {
+    // Se JÁ tem token e tentou entrar no login, manda pra home
+    window.location.href = 'index.html';
+}
 
 // --- 2. FUNÇÕES AUXILIARES DE RENDERIZAÇÃO ---
 function updateAllViews(monthFilter) {
