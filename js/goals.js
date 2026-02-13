@@ -10,29 +10,29 @@ export const Goals = {
 
         console.log("🎯 Renderizando Planejador...");
         
-        // 1. Configura Inputs e Selects
         this.setupInputs();
 
-        // 2. Calcula Dados
+        // 1. Calcula os Totais
         const income = this.calculateIncome(selectedMonths);
         const goalsData = this.calculateGoalsData(selectedMonths);
-        const totalCategoryGoals = goalsData.reduce((acc, item) => acc + item.goal, 0); // Soma das metas cadastradas
         
-        // 3. Renderiza Painel Superior (O Orçamento)
-        this.renderBudgetOverview(income, totalCategoryGoals, selectedMonths.length || 1);
+        // Soma de todas as metas de categorias (O que você pretende gastar)
+        const totalPlannedSpend = goalsData.reduce((acc, item) => acc + item.goal, 0); 
+        
+        // 2. Renderiza o Painel de Projeção
+        this.renderBudgetOverview(income, totalPlannedSpend, selectedMonths.length || 1);
 
-        // 4. Renderiza Listas e Gráficos
+        // 3. Renderiza Listas e Gráficos
         this.renderProgressCards(goalsData);
         this.renderChart(goalsData);
     },
 
     setupInputs() {
-        // Preenche Select de Categorias
+        // Preenche Select
         const select = document.getElementById('goalCategoryInput');
         if (select && select.options.length <= 1) {
             select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
             UI.categories.forEach(cat => {
-                // Filtra categorias que não são "Entrada" (Salário, Renda Extra, Investimento)
                 if (cat.id !== 'Salário' && cat.id !== 'Renda Extra' && cat.id !== 'Investimento') {
                     const opt = document.createElement('option');
                     opt.value = cat.id; opt.textContent = cat.id;
@@ -41,30 +41,25 @@ export const Goals = {
             });
         }
 
-        // Input de Meta de Sobra (Carrega valor e adiciona evento de salvar)
+        // Input Meta de Sobra
         const savingsInput = document.getElementById('goalSavingsInput');
         if (savingsInput) {
-            // Remove listeners antigos para não duplicar
             const newInput = savingsInput.cloneNode(true);
             savingsInput.parentNode.replaceChild(newInput, savingsInput);
             
-            // Carrega valor atual
             newInput.value = store.getMeta() > 0 ? store.getMeta() : '';
 
-            // Salva ao sair do campo (blur) ou pressionar Enter
             newInput.addEventListener('change', (e) => {
                 const val = parseFloat(e.target.value);
                 store.setMeta(val);
-                // Atualiza a tela para recalcular o orçamento
                 this.render(window.currentSelectedMonths); 
                 
-                // Atualiza também o input lá do Dashboard se existir
                 const dashInput = document.getElementById('inputMeta');
                 if(dashInput) dashInput.value = val;
             });
         }
 
-        // Formulário de Nova Meta
+        // Form Nova Meta
         const form = document.getElementById('goalsForm');
         if (form) {
             const newForm = form.cloneNode(true);
@@ -77,9 +72,7 @@ export const Goals = {
                 
                 if (cat && amount) {
                     store.setCategoryGoal(cat, amount);
-                    // Limpa campo valor
                     document.getElementById('goalAmountInput').value = '';
-                    // Recarrega
                     this.render(window.currentSelectedMonths);
                 }
             });
@@ -100,63 +93,69 @@ export const Goals = {
         return totalIncome;
     },
 
-    renderBudgetOverview(income, totalCategoryGoals, monthsCount) {
-        // Pega a meta de sobra mensal e multiplica pelos meses selecionados
+    renderBudgetOverview(income, totalPlannedSpend, monthsCount) {
+        // Meta de Sobra ajustada pelo número de meses selecionados
         const monthlySavingsGoal = store.getMeta();
         const totalSavingsGoal = monthlySavingsGoal * monthsCount;
 
-        // Cálculo do Teto: Quanto sobra da receita para gastar nas categorias?
-        // Disponível = Receita - Meta de Sobra Obrigatória
-        const availableForSpending = income - totalSavingsGoal;
+        // CÁLCULO MÁGICO: Sobra Projetada = Receita - Tudo que planejei gastar
+        const projectedSurplus = income - totalPlannedSpend;
 
         // Atualiza HTML
         document.getElementById('goalTotalIncome').innerText = `R$ ${income.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        document.getElementById('goalSumCategories').innerText = `R$ ${totalCategoryGoals.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
-        // Exibe o Teto
-        const limitEl = document.getElementById('goalAvailableLimit');
-        limitEl.innerText = `R$ ${availableForSpending.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        document.getElementById('goalProjectedSurplus').innerText = `R$ ${projectedSurplus.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        document.getElementById('goalTargetDisplay').innerText = `R$ ${totalSavingsGoal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 
-        // Lógica da Barra e Avisos
+        // Lógica Visual
         const bar = document.getElementById('goalBudgetBar');
         const msg = document.getElementById('goalBudgetMsg');
         const card = document.getElementById('goalBudgetCard');
+        const valueEl = document.getElementById('goalProjectedSurplus');
 
-        if (availableForSpending <= 0) {
-            // Se a receita não paga nem a meta de sobra
-            limitEl.classList.remove('text-slate-400'); limitEl.classList.add('text-red-500');
-            bar.style.width = '100%';
-            bar.className = 'h-1.5 rounded-full bg-red-600 transition-all duration-500';
-            msg.innerText = "Receita insuficiente para a Meta de Sobra!";
-            msg.className = "text-xs font-bold text-red-600 mt-1 text-right";
-            card.className = "glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm";
-        } else {
-            // Calculo da porcentagem ocupada pelas metas
-            const percentUsed = (totalCategoryGoals / availableForSpending) * 100;
+        // Situação 1: Receita zerada ou muito baixa (Cuidado para não dividir por zero)
+        if (income <= 0) {
+            bar.style.width = '0%';
+            msg.innerText = "Sem receita registrada para calcular.";
+            msg.className = "text-xs font-bold text-slate-400 mt-1 text-right";
+            card.className = "glass p-5 rounded-xl border-l-4 border-slate-400 shadow-sm";
+            return;
+        }
+
+        // Situação 2: Sobra Projetada MENOR que a Meta (RUIM)
+        if (projectedSurplus < totalSavingsGoal) {
+            // Calcula quão longe estamos (Barra diminui ou fica vermelha)
+            // Vamos fazer a barra representar a "Saúde da Meta".
+            // Se Sobra < Meta, estamos em perigo.
             
-            // Limitador visual 100%
-            bar.style.width = `${Math.min(percentUsed, 100)}%`;
-
-            if (percentUsed > 100) {
-                // Estourou o teto
-                bar.className = 'h-1.5 rounded-full bg-red-500 transition-all duration-500';
-                msg.innerText = `Estourou o teto em R$ ${(totalCategoryGoals - availableForSpending).toLocaleString('pt-BR')}!`;
-                msg.className = "text-xs font-bold text-red-500 mt-1 text-right";
-                card.className = "glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm";
-            } else if (percentUsed > 90) {
-                // Perigo
-                bar.className = 'h-1.5 rounded-full bg-yellow-400 transition-all duration-500';
-                msg.innerText = "No limite do orçamento.";
-                msg.className = "text-xs font-bold text-yellow-600 mt-1 text-right";
-                card.className = "glass p-5 rounded-xl border-l-4 border-yellow-500 shadow-sm";
+            bar.style.width = '100%';
+            bar.className = 'h-1.5 rounded-full bg-red-500 transition-all duration-500';
+            
+            const shortfall = totalSavingsGoal - projectedSurplus;
+            msg.innerText = `Faltam R$ ${shortfall.toLocaleString('pt-BR')} para atingir a meta!`;
+            msg.className = "text-xs font-bold text-red-500 mt-1 text-right";
+            
+            card.className = "glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm";
+            valueEl.classList.remove('text-slate-800', 'dark:text-slate-200');
+            valueEl.classList.add('text-red-500');
+        
+        } else {
+            // Situação 3: Sobra Projetada MAIOR ou IGUAL a Meta (BOM)
+            // A barra representa o excedente? Não, vamos deixar ela cheia verde.
+            
+            bar.style.width = '100%';
+            bar.className = 'h-1.5 rounded-full bg-emerald-500 transition-all duration-500';
+            
+            const extra = projectedSurplus - totalSavingsGoal;
+            if (extra > 0) {
+                msg.innerText = `Parabéns! Vai sobrar R$ ${extra.toLocaleString('pt-BR')} a mais que a meta.`;
             } else {
-                // Seguro
-                bar.className = 'h-1.5 rounded-full bg-emerald-500 transition-all duration-500';
-                msg.innerText = "Planejamento Saudável.";
-                msg.className = "text-xs font-bold text-emerald-600 mt-1 text-right";
-                card.className = "glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm";
-                limitEl.classList.add('text-slate-400'); limitEl.classList.remove('text-red-500');
+                msg.innerText = "Planejamento exato na meta.";
             }
+            msg.className = "text-xs font-bold text-emerald-600 mt-1 text-right";
+            
+            card.className = "glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm";
+            valueEl.classList.remove('text-red-500');
+            valueEl.classList.add('text-slate-800', 'dark:text-slate-200');
         }
     },
 
@@ -180,7 +179,7 @@ export const Goals = {
 
         UI.categories.forEach(cat => {
             const monthlyGoal = store.getGoal(cat.id);
-            // Ignora categorias de entrada para metas de gasto
+            // Ignora categorias de entrada
             if (cat.id === 'Salário' || cat.id === 'Renda Extra' || cat.id === 'Investimento') return;
 
             if (monthlyGoal > 0 || spending[cat.id] > 0) {
@@ -278,11 +277,11 @@ export const Goals = {
                     {
                         label: 'Meta',
                         data: dataGoal,
-                        backgroundColor: document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0', // Cinza escuro ou claro
+                        backgroundColor: document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0', 
                         borderRadius: 4,
-                        barPercentage: 0.8, // Mais largo para ficar "atrás"
+                        barPercentage: 0.8, 
                         categoryPercentage: 0.9,
-                        order: 2 // Fica no fundo
+                        order: 2 
                     }
                 ]
             },
@@ -295,9 +294,7 @@ export const Goals = {
                         grid: { color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
                         ticks: { color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b' }
                     },
-                    x: { 
-                        display: false 
-                    }
+                    x: { display: false }
                 },
                 plugins: {
                     legend: {
