@@ -1,74 +1,50 @@
 import { store } from './store.js';
 import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
+import { Goals } from './goals.js'; // <--- IMPORTANTE
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
 
-// Variáveis Globais de Filtro
 let selectedMonths = [];
 let selectedCategory = 'Todas';
 
-// --- 1. PROTEÇÃO DE ROTA ---
+// 1. Auth Logic (Mantida)
 const isLoginPage = window.location.pathname.includes('login.html');
 const authToken = localStorage.getItem('inf_auth_token');
-
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
 if (authToken && isLoginPage) window.location.href = 'index.html';
 
-// --- 2. SETUP DE TEMA (DARK MODE + ATALHO CTRL+D) ---
+// 2. Setup Theme (Ctrl+D)
 function setupTheme() {
     const btnTheme = document.getElementById('btnThemeToggle');
     const html = document.documentElement;
+    if (localStorage.getItem('theme') === 'dark') html.classList.add('dark');
 
-    // 1. Carrega preferência salva
-    if (localStorage.getItem('theme') === 'dark') {
-        html.classList.add('dark');
-    }
-
-    // Função para alternar (usada pelo botão e pelo teclado)
     const toggleTheme = () => {
         html.classList.toggle('dark');
-        const isDark = html.classList.contains('dark');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        
-        // Atualiza ícones do botão se necessário (opcional visual)
-        console.log(`🌗 Tema alterado para: ${isDark ? 'Escuro' : 'Claro'}`);
+        localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
     };
 
-    // 2. Evento de Clique no Botão
-    if(btnTheme) {
-        btnTheme.addEventListener('click', toggleTheme);
-    }
-
-    // 3. ATALHO DE TECLADO (Ctrl + D)
+    if(btnTheme) btnTheme.addEventListener('click', toggleTheme);
     document.addEventListener('keydown', (e) => {
-        // Verifica se Ctrl (ou Command no Mac) + D foram pressionados
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
-            e.preventDefault(); // 🛑 IMPEDE DE SALVAR NOS FAVORITOS
-            toggleTheme(); // 🌗 TROCA O TEMA
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+            e.preventDefault(); toggleTheme();
         }
     });
 }
 
-// Preenche o Select de Filtro de Categoria
+// 3. Components Setup (Mantidos)
 function setupCategoryFilter() {
     const select = document.getElementById('filterCategory');
     if (!select || !UI || !UI.categories) return;
-
     select.innerHTML = '<option value="Todas">📂 Todas Categorias</option>';
-
     UI.categories.forEach(cat => {
         const option = document.createElement('option');
-        option.value = cat.id;
-        option.textContent = `${cat.id}`;
+        option.value = cat.id; option.textContent = `${cat.id}`;
         select.appendChild(option);
     });
-
-    select.addEventListener('change', (e) => {
-        selectedCategory = e.target.value;
-        updateAllViews();
-    });
+    select.addEventListener('change', (e) => { selectedCategory = e.target.value; updateAllViews(); });
 }
 
 function setupMonthSelector() {
@@ -76,13 +52,9 @@ function setupMonthSelector() {
     const menu = document.getElementById('monthDropdownMenu');
     const btnText = document.getElementById('monthBtnText');
     if (!btn || !menu) return;
-
     const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
     const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-    if (selectedMonths.length === 0) {
-        selectedMonths = [months[new Date().getMonth()]];
-    }
+    if (selectedMonths.length === 0) selectedMonths = [months[new Date().getMonth()]];
 
     const updateButtonText = () => {
         if (selectedMonths.length === 0) { btnText.textContent = "Selecione um mês"; btnText.classList.add('text-red-500'); }
@@ -90,7 +62,6 @@ function setupMonthSelector() {
         else if (selectedMonths.length <= 2) { btnText.textContent = `📅 ${selectedMonths.map(m => shortMonths[months.indexOf(m)]).join(', ')}`; btnText.classList.remove('text-red-500'); }
         else { btnText.textContent = `📅 ${selectedMonths.length} meses selecionados`; btnText.classList.remove('text-red-500'); }
     };
-
     menu.innerHTML = '';
     const divAll = document.createElement('div');
     divAll.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer mb-1 border-b border-slate-100 dark:border-slate-700";
@@ -98,29 +69,27 @@ function setupMonthSelector() {
     divAll.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = divAll.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
     divAll.querySelector('input').addEventListener('change', (e) => { selectedMonths = e.target.checked ? [...months] : []; setupMonthSelector(); updateAllViews(); });
     menu.appendChild(divAll);
-
     months.forEach((m, index) => {
         const div = document.createElement('div');
         div.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer";
         div.innerHTML = `<input type="checkbox" id="m-${index}" value="${m}" ${selectedMonths.includes(m)?'checked':''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="m-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 flex-1 cursor-pointer">${shortMonths[index]}</label>`;
         div.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = div.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
-        div.querySelector('input').addEventListener('change', (e) => { 
-            if(e.target.checked) { if(!selectedMonths.includes(m)) selectedMonths.push(m); } 
-            else { selectedMonths = selectedMonths.filter(x => x !== m); }
-            updateButtonText(); updateAllViews(); 
-        });
+        div.querySelector('input').addEventListener('change', (e) => { if(e.target.checked) { if(!selectedMonths.includes(m)) selectedMonths.push(m); } else { selectedMonths = selectedMonths.filter(x => x !== m); } updateButtonText(); updateAllViews(); });
         menu.appendChild(div);
     });
     updateButtonText();
-    
     btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
     document.addEventListener('click', (e) => { if (!btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden'); });
 }
 
-// --- 3. ATUALIZAÇÃO ---
+// 4. Update
 function updateAllViews() {
+    // Para Metas, disponibilizamos globalmente os meses selecionados (hack simples)
+    window.currentSelectedMonths = selectedMonths;
+
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
-    if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths); 
+    if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
+    if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths); // <--- RENDERIZA METAS
     renderDebts();
 }
 
@@ -147,34 +116,40 @@ function renderDebts() {
     if(totalEl) totalEl.innerText = `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 }
 
-// --- GLOBAIS ---
+// 5. Globals
 window.removeTransaction = async (id) => { if(confirm("Apagar?")) { await store.removeTransaction(id); updateAllViews(); } };
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
 window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
 
-// --- EVENTS ---
+// 6. Events
 function setupEvents() {
-    // 1. Inicia o tema (e o atalho Ctrl+D)
     setupTheme();
-    
-    const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash') };
+    const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash'), goals: document.getElementById('tabGoals') };
     const switchTab = (viewId) => {
-        ['viewHome', 'viewDebts', 'viewDashboard'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
         const t = document.getElementById(viewId);
         if(t) { t.classList.remove('hidden'); t.classList.remove('animate-fade-in'); void t.offsetWidth; t.classList.add('animate-fade-in'); }
         
-        Object.values(tabs).forEach(b => b.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition");
-        if(viewId==='viewHome') tabs.home.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        if(viewId==='viewDebts') tabs.debts.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        if(viewId==='viewDashboard') tabs.dash.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
+        Object.values(tabs).forEach(b => {
+             if(b) b.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
+        });
+        
+        const activeClass = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
+        if(viewId==='viewHome' && tabs.home) tabs.home.className = activeClass;
+        if(viewId==='viewDebts' && tabs.debts) tabs.debts.className = activeClass;
+        if(viewId==='viewDashboard' && tabs.dash) tabs.dash.className = activeClass;
+        if(viewId==='viewGoals' && tabs.goals) tabs.goals.className = activeClass;
 
         if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
+        if(viewId === 'viewGoals') Goals.render(selectedMonths);
         if(viewId === 'viewDebts') renderDebts();
     };
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
+    if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
 
+    // ... (Mantido o resto dos eventos: TransactionForm, DebtForm, etc)
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
@@ -184,10 +159,8 @@ function setupEvents() {
             const type = document.getElementById('inputType').value;
             const category = document.getElementById('inputCategory').value;
             const btn = transForm.querySelector('button[type="submit"]');
-
             if (!desc || isNaN(amount)) return alert("Preencha corretamente.");
             const oldText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-
             try {
                 let targetMonth = selectedMonths[selectedMonths.length - 1];
                 if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
@@ -197,7 +170,6 @@ function setupEvents() {
             } catch (err) { console.error(err); } finally { btn.innerHTML = oldText; btn.disabled = false; }
         });
     }
-
     const debtForm = document.getElementById('debtForm');
     if(debtForm) { debtForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('debtName').value; const amount = document.getElementById('debtAmount').value; if(name && amount) { await store.addDebt(name, parseFloat(amount)); renderDebts(); debtForm.reset(); } }); }
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
@@ -208,18 +180,14 @@ function setupEvents() {
     const dropZone = document.getElementById('dropZone'); if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
 }
 
-// --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         if(UI && UI.initCategories) UI.initCategories();
-        
         setupMonthSelector();
         setupCategoryFilter(); 
         setupEvents();
-
         const hasCache = store.loadFromCache();
         if(!hasCache) document.getElementById('transactionList').innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>';
-
         const token = localStorage.getItem('inf_auth_token');
         if (token) {
             await store.init();
