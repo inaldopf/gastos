@@ -5,7 +5,7 @@ import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
 
-// Variável Global para guardar os meses selecionados
+// Variável Global
 let selectedMonths = [];
 
 // --- 1. PROTEÇÃO DE ROTA ---
@@ -15,59 +15,131 @@ const authToken = localStorage.getItem('inf_auth_token');
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
 if (authToken && isLoginPage) window.location.href = 'index.html';
 
-// --- 2. GERENCIADOR DE MESES (NOVO) ---
+// --- 2. GERENCIADOR DE MESES (DROPDOWN COM CHECKBOX) ---
 function setupMonthSelector() {
-    const container = document.getElementById('monthSelector');
-    if (!container) return;
+    const btn = document.getElementById('monthDropdownBtn');
+    const menu = document.getElementById('monthDropdownMenu');
+    const btnText = document.getElementById('monthBtnText');
+    
+    if (!btn || !menu) return;
 
     const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
     const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    
-    // Define mês atual como padrão se a lista estiver vazia
+
+    // 1. Inicializa com o mês atual se vazio
     if (selectedMonths.length === 0) {
-        const currentMonthIndex = new Date().getMonth(); // 0 a 11
+        const currentMonthIndex = new Date().getMonth();
         selectedMonths = [months[currentMonthIndex]];
     }
 
-    container.innerHTML = '';
+    // 2. Função para atualizar o texto do botão
+    const updateButtonText = () => {
+        if (selectedMonths.length === 0) {
+            btnText.textContent = "Selecione pelo menos um";
+            btnText.classList.add('text-red-500');
+        } else if (selectedMonths.length === 12) {
+            btnText.textContent = "📅 Ano Completo (Todos)";
+            btnText.classList.remove('text-red-500');
+        } else if (selectedMonths.length <= 2) {
+            // Mostra os nomes (ex: Janeiro, Fevereiro)
+            const names = selectedMonths.map(m => shortMonths[months.indexOf(m)]).join(', ');
+            btnText.textContent = `📅 ${names}`;
+            btnText.classList.remove('text-red-500');
+        } else {
+            // Mostra contagem (ex: 5 meses selecionados)
+            btnText.textContent = `📅 ${selectedMonths.length} meses selecionados`;
+            btnText.classList.remove('text-red-500');
+        }
+    };
 
+    // 3. Renderiza os Checkboxes
+    menu.innerHTML = '';
+    
+    // Botão "Todos"
+    const divAll = document.createElement('div');
+    divAll.className = "flex items-center p-2 hover:bg-slate-50 rounded-lg cursor-pointer mb-1 border-b border-slate-100";
+    divAll.innerHTML = `
+        <input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer">
+        <label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 cursor-pointer flex-1">Selecionar Todos</label>
+    `;
+    divAll.onclick = (e) => {
+        if(e.target.tagName !== 'INPUT') {
+            const chk = divAll.querySelector('input');
+            chk.checked = !chk.checked;
+            chk.dispatchEvent(new Event('change'));
+        }
+    };
+    divAll.querySelector('input').addEventListener('change', (e) => {
+        if(e.target.checked) {
+            selectedMonths = [...months];
+        } else {
+            selectedMonths = [];
+        }
+        setupMonthSelector(); // Re-renderiza para atualizar os checkboxes individuais
+        updateAllViews();
+    });
+    menu.appendChild(divAll);
+
+    // Checkboxes dos Meses
     months.forEach((m, index) => {
-        const btn = document.createElement('button');
-        const isActive = selectedMonths.includes(m);
+        const div = document.createElement('div');
+        div.className = "flex items-center p-2 hover:bg-slate-50 rounded-lg cursor-pointer";
         
-        // Estilo do botão (Ativo vs Inativo)
-        btn.className = `px-3 py-1.5 text-xs font-bold rounded-full border transition whitespace-nowrap ${
-            isActive 
-            ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' 
-            : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-        }`;
+        const isChecked = selectedMonths.includes(m);
         
-        btn.textContent = shortMonths[index];
-        
-        btn.onclick = () => {
-            // Lógica de Multi-Seleção
-            if (selectedMonths.includes(m)) {
-                // Se já tem, remove (mas impede de ficar vazio)
-                if (selectedMonths.length > 1) {
-                    selectedMonths = selectedMonths.filter(item => item !== m);
-                }
-            } else {
-                // Se não tem, adiciona
-                selectedMonths.push(m);
+        div.innerHTML = `
+            <input type="checkbox" id="month-${index}" value="${m}" ${isChecked ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer">
+            <label for="month-${index}" class="ml-2 text-sm text-slate-600 cursor-pointer flex-1">${shortMonths[index]}</label>
+        `;
+
+        // Clique na linha inteira marca o checkbox
+        div.onclick = (e) => {
+            if (e.target.tagName !== 'INPUT') {
+                const checkbox = div.querySelector('input');
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
             }
-            
-            // Re-renderiza botões e atualiza a tela
-            setupMonthSelector();
-            updateAllViews();
         };
 
-        container.appendChild(btn);
+        const checkbox = div.querySelector('input');
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                if (!selectedMonths.includes(m)) selectedMonths.push(m);
+            } else {
+                selectedMonths = selectedMonths.filter(item => item !== m);
+            }
+            updateButtonText();
+            updateAllViews();
+        });
+
+        menu.appendChild(div);
+    });
+
+    updateButtonText();
+
+    // 4. Eventos de Abrir/Fechar
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+        const icon = btn.querySelector('i');
+        if(menu.classList.contains('hidden')) {
+            icon.className = "fas fa-chevron-down text-xs text-slate-400";
+        } else {
+            icon.className = "fas fa-chevron-up text-xs text-indigo-500";
+        }
+    };
+
+    // Fecha ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!btn.contains(e.target) && !menu.contains(e.target)) {
+            menu.classList.add('hidden');
+            btn.querySelector('i').className = "fas fa-chevron-down text-xs text-slate-400";
+        }
     });
 }
 
 // --- 3. ATUALIZAÇÃO GERAL ---
 function updateAllViews() {
-    // Passa a lista de meses para as views
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths);
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths); 
     renderDebts();
@@ -120,7 +192,6 @@ window.deleteDebt = async (id) => { if(confirm("Apagar permanentemente?")) { awa
 
 // --- 6. CONFIGURAÇÃO DE EVENTOS ---
 function setupEvents() {
-    // Navegação de Abas
     const tabs = {
         home: document.getElementById('tabHome'),
         debts: document.getElementById('tabDebts'),
@@ -176,9 +247,10 @@ function setupEvents() {
             btn.disabled = true;
 
             try {
-                // Pega o último mês selecionado ou o atual para salvar
+                // Pega o último mês selecionado ou o atual
                 let targetMonth = selectedMonths[selectedMonths.length - 1];
-                
+                if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
+
                 await store.addTransaction({
                     desc, amount, type, category,
                     date: new Date().toLocaleDateString('pt-BR'),
@@ -210,7 +282,6 @@ function setupEvents() {
         });
     }
 
-    // Logout e Configs
     const btnLogout = document.getElementById('btnLogout');
     if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
 
@@ -223,7 +294,6 @@ function setupEvents() {
     const btnReset = document.getElementById('btnReset');
     if(btnReset) btnReset.addEventListener('click', () => location.reload());
 
-    // Importar PDF (Apenas evento de abrir)
     const btnImport = document.getElementById('btnImport');
     if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
     
@@ -245,8 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(list) list.innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>';
         }
 
-        // Configura o seletor de meses PRIMEIRO
-        setupMonthSelector();
+        setupMonthSelector(); // <--- Inicia o Dropdown
         setupEvents();
 
         const token = localStorage.getItem('inf_auth_token');
