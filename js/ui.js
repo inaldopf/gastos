@@ -56,7 +56,7 @@ export const UI = {
         list.innerHTML = '';
         const transactions = store.transactions || [];
 
-        // 1. Calcula SALDO ACUMULADO (Lógica igual ao Dashboard)
+        // Lógica Saldo Acumulado
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let maxMonthIndex = -1;
         selectedMonths.forEach(m => {
@@ -75,13 +75,11 @@ export const UI = {
             }
         });
 
-        // 2. Filtra lista apenas para os meses selecionados (Visualização)
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
         }
 
-        // 3. Calcula totais DO PERÍODO para os cards de Fluxo
         let totalRec = 0, totalInv = 0, totalDesp = 0;
         filtered.forEach(t => {
             if (t.type === 'Receita') totalRec += t.amount;
@@ -89,10 +87,8 @@ export const UI = {
             else totalDesp += t.amount;
         });
 
-        // Renderiza Lista
         if (filtered.length === 0) {
             list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">Nenhum lançamento neste período.</td></tr>';
-            // Mesmo sem lista, atualizamos os KPIs (Saldo acumulado pode existir)
             this.updateKPIs(accumulatedBalance, 0, 0, 0); 
             this.updateChart([]);
             return;
@@ -101,28 +97,27 @@ export const UI = {
         filtered.forEach(t => {
             const catData = this.categories.find(c => c.id === t.category) || { icon: 'fa-tag', color: 'text-slate-400' };
             const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50 transition border-b border-slate-50";
+            // Classes Dark Mode aplicadas aqui
+            tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
             tr.innerHTML = `
-                <td class="px-4 py-3 text-xs text-slate-500">${t.date}</td>
-                <td class="px-4 py-3 text-sm font-bold text-slate-700">${t.desc}</td>
+                <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${t.date}</td>
+                <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${t.desc}</td>
                 <td class="px-4 py-3"><span class="${catData.color} text-xs font-bold uppercase"><i class="fas ${catData.icon}"></i> ${t.category}</span></td>
-                <td class="px-4 py-3 text-right font-bold text-sm ${t.type === 'Despesa' ? 'text-red-500' : 'text-emerald-600'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td class="px-4 py-3 text-right font-bold text-sm ${t.type === 'Despesa' ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                 <td class="px-4 py-3 text-center"><button onclick="window.removeTransaction(${t.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td>
             `;
             list.appendChild(tr);
         });
 
-        // Atualiza KPIs com o Saldo Acumulado e os fluxos do período
         this.updateKPIs(accumulatedBalance, totalRec, totalDesp, totalInv);
         this.updateChart(filtered);
     },
 
     updateKPIs(accumulatedBalance, rec, desp, inv) {
-        // Saldo agora recebe o valor direto do acumulado
         const balEl = document.getElementById('kpiBalance');
         if(balEl) {
             balEl.innerText = `R$ ${accumulatedBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            balEl.className = `text-2xl font-bold ${accumulatedBalance >= 0 ? 'text-indigo-900' : 'text-red-600'}`;
+            balEl.className = `text-2xl font-bold ${accumulatedBalance >= 0 ? 'text-indigo-900 dark:text-indigo-300' : 'text-red-600 dark:text-red-400'}`;
         }
         const invEl = document.getElementById('kpiInvest');
         if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
@@ -149,10 +144,26 @@ export const UI = {
                 datasets: [{
                     data: Object.values(totals),
                     backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6'],
-                    borderWidth: 0
+                    borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
+                    borderWidth: 2
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                cutout: '75%', 
+                plugins: { 
+                    legend: { 
+                        position: 'right', 
+                        labels: { 
+                            usePointStyle: true, 
+                            boxWidth: 8, 
+                            font: { size: 10 },
+                            color: document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#64748b' 
+                        } 
+                    } 
+                } 
+            }
         });
     }
 };
