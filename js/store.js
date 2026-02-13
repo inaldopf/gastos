@@ -81,8 +81,20 @@ export const store = {
             console.log("✅ Banco sincronizado!");
             
         } catch (error) {
-            console.error("⚠️ Usando dados offline:", error);
+        console.error("⚠️ Erro na sincronização:", error);
+        
+        // --- CORREÇÃO DO LOOP ---
+        // Só redireciona se o servidor disser EXPLICITAMENTE "401" (Não autorizado)
+        // Se for erro de conexão ou servidor dormindo, MANTER NA TELA com dados do cache.
+        if (error.message.includes("401") || error.message.includes("403")) {
+            alert("Sessão expirada. Faça login novamente.");
+            localStorage.removeItem('inf_auth_token');
+            window.location.href = 'login.html';
+        } else {
+            console.log("Mantendo sessão offline devido a erro de conexão.");
+            // Não faz nada (o usuário vê os dados do cache ou o loading)
         }
+    }
     },
 
     // --- ADICIONAR COM SEGURANÇA ---
