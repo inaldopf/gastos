@@ -5,14 +5,9 @@ let chartInstance = null;
 export const UI = {
     // Lista de Categorias COM CLASSIFICAÇÃO DE TIPO
     categories: [
-        // --- RECEITAS ---
         { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600', hex: '#059669', type: 'Receita' },
         { id: 'Renda Extra', icon: 'fa-plus-circle', color: 'text-emerald-500', hex: '#34D399', type: 'Receita' },
-        
-        // --- INVESTIMENTO ---
         { id: 'Investimento', icon: 'fa-chart-line', color: 'text-blue-600', hex: '#3B82F6', type: 'Investimento' },
-
-        // --- DESPESAS (Todas as outras) ---
         { id: 'Aluguel', icon: 'fa-home', color: 'text-indigo-600', hex: '#4F46E5', type: 'Despesa' },
         { id: 'Condomínio', icon: 'fa-building', color: 'text-indigo-500', hex: '#6366F1', type: 'Despesa' },
         { id: 'Luz', icon: 'fa-bolt', color: 'text-yellow-500', hex: '#EAB308', type: 'Despesa' },
@@ -49,25 +44,16 @@ export const UI = {
         { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8', type: 'Despesa' }
     ],
 
-    // --- 1. PREENCHE O DROPDOWN COM FILTRO ---
-    // Agora aceita um argumento 'filterType' (Receita, Despesa, Investimento)
     populateCategories(filterType = 'Despesa') {
         const select = document.getElementById('inputCategory');
         if (!select) return;
-
         select.innerHTML = '';
-        
-        // Filtra as categorias baseada no tipo selecionado
         const filtered = this.categories.filter(cat => cat.type === filterType);
-
         filtered.forEach(cat => {
             const option = document.createElement('option');
-            option.value = cat.id;
-            option.textContent = cat.id;
+            option.value = cat.id; option.textContent = cat.id;
             select.appendChild(option);
         });
-        
-        // Se não tiver categorias (ex: erro), coloca "Outros" por segurança
         if (filtered.length === 0) {
              const opt = document.createElement('option');
              opt.value = 'Outros'; opt.textContent = 'Outros';
@@ -75,12 +61,10 @@ export const UI = {
         }
     },
 
-    // A função antiga 'initCategories' agora apenas chama a populate com o padrão
     initCategories() {
-        this.populateCategories('Despesa'); // Padrão inicial
+        this.populateCategories('Despesa');
     },
 
-    // --- 2. RENDERIZA A LISTA ---
     renderApp(selectedMonths = [], selectedCategory = 'Todas') {
         const list = document.getElementById('transactionList');
         if (!list) return;
@@ -88,7 +72,7 @@ export const UI = {
         list.innerHTML = '';
         const transactions = store.transactions || [];
 
-        // Lógica Saldo Acumulado (Global)
+        // 1. Calcula SALDO ACUMULADO (Global)
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let maxMonthIndex = -1;
         selectedMonths.forEach(m => {
@@ -107,7 +91,7 @@ export const UI = {
             }
         });
 
-        // FILTRAGEM (Meses + Categoria)
+        // 2. FILTRAGEM (Meses + Categoria)
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
@@ -127,7 +111,7 @@ export const UI = {
         if (filtered.length === 0) {
             list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 dark:text-slate-500">Nenhum lançamento encontrado.</td></tr>';
             this.updateKPIs(accumulatedBalance, 0, 0, 0); 
-            this.updateChart([]);
+            this.updateChart([]); // Passa array vazio para limpar gráfico
             return;
         }
 
@@ -146,7 +130,7 @@ export const UI = {
         });
 
         this.updateKPIs(accumulatedBalance, totalRec, totalDesp, totalInv);
-        this.updateChart(filtered);
+        this.updateChart(filtered); // Passa os dados FILTRADOS
     },
 
     updateKPIs(accumulatedBalance, rec, desp, inv) {
@@ -166,9 +150,13 @@ export const UI = {
         const ctx = document.getElementById('categoryChart');
         if (!ctx) return;
 
+        // Filtra apenas despesas para o gráfico
         const expenses = transactions.filter(t => t.type === 'Despesa');
+        
+        // Se não houver despesas, mostra gráfico vazio ou esconde?
+        // Vamos mostrar vazio para não dar erro
         const totals = {};
-        expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + t.amount);
+        expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount));
 
         if (chartInstance) chartInstance.destroy();
 
