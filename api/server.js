@@ -187,36 +187,34 @@ app.post('/goals', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 9.5 ROTAS DE VALE ALIMENTAÇÃO (NOVO) ---
+// --- 10. ROTAS DE VA (VALE ALIMENTAÇÃO) ---
 app.get('/va', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM va_transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
-        res.json(result.rows);
+        const result = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
+        res.json({ balance: parseFloat(result.rows[0].va_balance) });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/va', authenticateToken, async (req, res) => {
-    const { desc, amount, type, date } = req.body;
+    const { amount, type } = req.body; // type: 'credit' ou 'debit'
     try {
-        const result = await pool.query(
-            'INSERT INTO va_transactions (user_id, description, amount, type, date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [req.user.id, desc, amount, type, date]
-        );
-        res.json(result.rows[0]);
-    } catch (err) { 
-        console.error(err);
-        res.status(500).json({ error: err.message }); 
-    }
-});
+        // Busca saldo atual
+        const currentRes = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
+        let currentBalance = parseFloat(currentRes.rows[0].va_balance);
+        
+        // Calcula novo saldo
+        const val = parseFloat(amount);
+        if (type === 'credit') currentBalance += val;
+        else currentBalance -= val;
 
-app.delete('/va/:id', authenticateToken, async (req, res) => {
-    try {
-        await pool.query('DELETE FROM va_transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
-        res.json({ success: true });
+        // Atualiza
+        await pool.query('UPDATE users SET va_balance = $1 WHERE id = $2', [currentBalance, req.user.id]);
+        
+        res.json({ success: true, newBalance: currentBalance });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- 10. INICIAR O SERVIDOR ---
+// --- 11. INICIAR O SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`✅ Servidor rodando na porta ${PORT}`);
