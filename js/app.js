@@ -15,7 +15,7 @@ const authToken = localStorage.getItem('inf_auth_token');
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
 if (authToken && isLoginPage) window.location.href = 'index.html';
 
-// 2. Setup Theme (Ctrl+D)
+// 2. Setup Theme
 function setupTheme() {
     const btnTheme = document.getElementById('btnThemeToggle');
     const html = document.documentElement;
@@ -119,11 +119,10 @@ window.removeTransaction = async (id) => { if(confirm("Apagar?")) { await store.
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
 window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
 
-// 6. Events (CORRIGIDO: Apenas UMA função setupEvents)
+// 6. Events
 function setupEvents() {
     setupTheme();
 
-    // Referências Desktop
     const tabs = {
         home: document.getElementById('tabHome'),
         debts: document.getElementById('tabDebts'),
@@ -131,7 +130,6 @@ function setupEvents() {
         goals: document.getElementById('tabGoals')
     };
 
-    // Referências Mobile
     const mobileTabs = {
         home: document.getElementById('btnMobileHome'),
         debts: document.getElementById('btnMobileDebts'),
@@ -140,13 +138,11 @@ function setupEvents() {
     };
 
     const switchTab = (viewId) => {
-        // Esconde tudo
         ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.classList.add('hidden');
         });
         
-        // Mostra alvo
         const target = document.getElementById(viewId);
         if(target) {
             target.classList.remove('hidden');
@@ -155,12 +151,10 @@ function setupEvents() {
             target.classList.add('animate-fade-in');
         }
 
-        // Estilos Desktop
         Object.values(tabs).forEach(btn => {
             if(btn) btn.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
         });
 
-        // Estilos Mobile
         Object.values(mobileTabs).forEach(btn => {
             if(btn) btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
         });
@@ -190,17 +184,24 @@ function setupEvents() {
         if(viewId === 'viewDebts') renderDebts();
     };
 
-    // Listeners Desktop
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
 
-    // Listeners Mobile
     if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
+
+    // --- FILTRO DE CATEGORIAS INTELIGENTE ---
+    const inputType = document.getElementById('inputType');
+    if (inputType) {
+        inputType.addEventListener('change', (e) => {
+            // Atualiza as categorias baseado no que foi selecionado
+            UI.populateCategories(e.target.value);
+        });
+    }
 
     // Formulários e Botões
     const transForm = document.getElementById('transactionForm');
@@ -220,6 +221,9 @@ function setupEvents() {
                 await store.addTransaction({ desc, amount, type, category, date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
                 updateAllViews();
                 transForm.reset();
+                // Reseta categorias para o padrão "Despesa"
+                document.getElementById('inputType').value = 'Despesa';
+                UI.populateCategories('Despesa');
             } catch (err) { console.error(err); } finally { btn.innerHTML = oldText; btn.disabled = false; }
         });
     }
@@ -243,7 +247,9 @@ function setupEvents() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // Inicializa categorias com o padrão "Despesa"
         if(UI && UI.initCategories) UI.initCategories();
+        
         setupMonthSelector();
         setupCategoryFilter(); 
         setupEvents();
