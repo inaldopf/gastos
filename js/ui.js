@@ -3,65 +3,84 @@ import { store } from './store.js';
 let chartInstance = null;
 
 export const UI = {
-    // Lista de Categorias EXPANDIDA
+    // Lista de Categorias COM CLASSIFICAÇÃO DE TIPO
     categories: [
-        // --- Receitas ---
-        { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600', hex: '#059669' },
-        { id: 'Investimento', icon: 'fa-chart-line', color: 'text-emerald-600', hex: '#10B981' },
-        { id: 'Renda Extra', icon: 'fa-plus-circle', color: 'text-emerald-500', hex: '#34D399' },
+        // --- RECEITAS ---
+        { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600', hex: '#059669', type: 'Receita' },
+        { id: 'Renda Extra', icon: 'fa-plus-circle', color: 'text-emerald-500', hex: '#34D399', type: 'Receita' },
         
-        // --- Novas Categorias Adicionadas ---
-        { id: 'Pets', icon: 'fa-paw', color: 'text-orange-600', hex: '#EA580C' },
-        { id: 'Beleza', icon: 'fa-cut', color: 'text-pink-400', hex: '#F472B6' },
-        { id: 'Roupas', icon: 'fa-tshirt', color: 'text-indigo-400', hex: '#818CF8' },
-        { id: 'Seguros', icon: 'fa-shield-alt', color: 'text-slate-600', hex: '#475569' },
-        { id: 'Eletrônicos', icon: 'fa-laptop', color: 'text-gray-800', hex: '#1F2937' },
-        { id: 'Doações', icon: 'fa-hand-holding-heart', color: 'text-rose-400', hex: '#FB7185' },
-        { id: 'Assinaturas', icon: 'fa-file-signature', color: 'text-purple-400', hex: '#C084FC' },
+        // --- INVESTIMENTO ---
+        { id: 'Investimento', icon: 'fa-chart-line', color: 'text-blue-600', hex: '#3B82F6', type: 'Investimento' },
 
-        // --- Categorias Existentes ---
-        { id: 'Aluguel', icon: 'fa-home', color: 'text-indigo-600', hex: '#4F46E5' },
-        { id: 'Condomínio', icon: 'fa-building', color: 'text-indigo-500', hex: '#6366F1' },
-        { id: 'Luz', icon: 'fa-bolt', color: 'text-yellow-500', hex: '#EAB308' },
-        { id: 'Água', icon: 'fa-tint', color: 'text-blue-400', hex: '#60A5FA' },
-        { id: 'Internet / TV', icon: 'fa-wifi', color: 'text-cyan-500', hex: '#06B6D4' },
-        { id: 'Gás', icon: 'fa-fire', color: 'text-orange-500', hex: '#F97316' },
-        { id: 'Telefone / Celular', icon: 'fa-mobile-alt', color: 'text-slate-600', hex: '#475569' },
-        { id: 'Supermercado', icon: 'fa-shopping-cart', color: 'text-red-500', hex: '#EF4444' },
-        { id: 'Feira / Padaria', icon: 'fa-bread-slice', color: 'text-orange-400', hex: '#FB923C' },
-        { id: 'Restaurantes / Bares', icon: 'fa-utensils', color: 'text-red-600', hex: '#DC2626' },
-        { id: 'Comida', icon: 'fa-pizza-slice', color: 'text-red-400', hex: '#F87171' },
-        { id: 'Combustível', icon: 'fa-gas-pump', color: 'text-slate-700', hex: '#334155' },
-        { id: 'Uber / Táxi', icon: 'fa-car', color: 'text-slate-800', hex: '#1E293B' },
-        { id: 'Ônibus / Metrô', icon: 'fa-bus', color: 'text-blue-600', hex: '#2563EB' },
-        { id: 'Estacionamento', icon: 'fa-parking', color: 'text-slate-500', hex: '#64748B' },
-        { id: 'Manutenção Carro', icon: 'fa-tools', color: 'text-slate-600', hex: '#475569' },
-        { id: 'Viagens / Passeios', icon: 'fa-plane', color: 'text-sky-500', hex: '#0EA5E9' },
-        { id: 'Cinema / Teatro', icon: 'fa-film', color: 'text-purple-500', hex: '#A855F7' },
-        { id: 'Clube / Academia', icon: 'fa-dumbbell', color: 'text-rose-500', hex: '#F43F5E' },
-        { id: 'Presentes', icon: 'fa-gift', color: 'text-pink-500', hex: '#EC4899' },
-        { id: 'Compras', icon: 'fa-shopping-bag', color: 'text-purple-600', hex: '#9333EA' },
-        { id: 'Médico / Hospital', icon: 'fa-hospital', color: 'text-green-500', hex: '#22C55E' },
-        { id: 'Farmácia', icon: 'fa-capsules', color: 'text-green-600', hex: '#16A34A' },
-        { id: 'Material Escolar', icon: 'fa-book', color: 'text-yellow-600', hex: '#CA8A04' },
-        { id: 'Educação / Cursos', icon: 'fa-graduation-cap', color: 'text-blue-800', hex: '#1E40AF' },
-        { id: 'Impostos', icon: 'fa-file-invoice-dollar', color: 'text-slate-500', hex: '#64748B' },
-        { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8' }
+        // --- DESPESAS (Todas as outras) ---
+        { id: 'Aluguel', icon: 'fa-home', color: 'text-indigo-600', hex: '#4F46E5', type: 'Despesa' },
+        { id: 'Condomínio', icon: 'fa-building', color: 'text-indigo-500', hex: '#6366F1', type: 'Despesa' },
+        { id: 'Luz', icon: 'fa-bolt', color: 'text-yellow-500', hex: '#EAB308', type: 'Despesa' },
+        { id: 'Água', icon: 'fa-tint', color: 'text-blue-400', hex: '#60A5FA', type: 'Despesa' },
+        { id: 'Internet / TV', icon: 'fa-wifi', color: 'text-cyan-500', hex: '#06B6D4', type: 'Despesa' },
+        { id: 'Gás', icon: 'fa-fire', color: 'text-orange-500', hex: '#F97316', type: 'Despesa' },
+        { id: 'Telefone / Celular', icon: 'fa-mobile-alt', color: 'text-slate-600', hex: '#475569', type: 'Despesa' },
+        { id: 'Supermercado', icon: 'fa-shopping-cart', color: 'text-red-500', hex: '#EF4444', type: 'Despesa' },
+        { id: 'Feira / Padaria', icon: 'fa-bread-slice', color: 'text-orange-400', hex: '#FB923C', type: 'Despesa' },
+        { id: 'Restaurantes / Bares', icon: 'fa-utensils', color: 'text-red-600', hex: '#DC2626', type: 'Despesa' },
+        { id: 'Comida', icon: 'fa-pizza-slice', color: 'text-red-400', hex: '#F87171', type: 'Despesa' },
+        { id: 'Combustível', icon: 'fa-gas-pump', color: 'text-slate-700', hex: '#334155', type: 'Despesa' },
+        { id: 'Uber / Táxi', icon: 'fa-car', color: 'text-slate-800', hex: '#1E293B', type: 'Despesa' },
+        { id: 'Ônibus / Metrô', icon: 'fa-bus', color: 'text-blue-600', hex: '#2563EB', type: 'Despesa' },
+        { id: 'Estacionamento', icon: 'fa-parking', color: 'text-slate-500', hex: '#64748B', type: 'Despesa' },
+        { id: 'Manutenção Carro', icon: 'fa-tools', color: 'text-slate-600', hex: '#475569', type: 'Despesa' },
+        { id: 'Viagens / Passeios', icon: 'fa-plane', color: 'text-sky-500', hex: '#0EA5E9', type: 'Despesa' },
+        { id: 'Cinema / Teatro', icon: 'fa-film', color: 'text-purple-500', hex: '#A855F7', type: 'Despesa' },
+        { id: 'Clube / Academia', icon: 'fa-dumbbell', color: 'text-rose-500', hex: '#F43F5E', type: 'Despesa' },
+        { id: 'Presentes', icon: 'fa-gift', color: 'text-pink-500', hex: '#EC4899', type: 'Despesa' },
+        { id: 'Compras', icon: 'fa-shopping-bag', color: 'text-purple-600', hex: '#9333EA', type: 'Despesa' },
+        { id: 'Médico / Hospital', icon: 'fa-hospital', color: 'text-green-500', hex: '#22C55E', type: 'Despesa' },
+        { id: 'Farmácia', icon: 'fa-capsules', color: 'text-green-600', hex: '#16A34A', type: 'Despesa' },
+        { id: 'Material Escolar', icon: 'fa-book', color: 'text-yellow-600', hex: '#CA8A04', type: 'Despesa' },
+        { id: 'Educação / Cursos', icon: 'fa-graduation-cap', color: 'text-blue-800', hex: '#1E40AF', type: 'Despesa' },
+        { id: 'Impostos', icon: 'fa-file-invoice-dollar', color: 'text-slate-500', hex: '#64748B', type: 'Despesa' },
+        { id: 'Pets', icon: 'fa-paw', color: 'text-orange-600', hex: '#EA580C', type: 'Despesa' },
+        { id: 'Beleza', icon: 'fa-cut', color: 'text-pink-400', hex: '#F472B6', type: 'Despesa' },
+        { id: 'Roupas', icon: 'fa-tshirt', color: 'text-indigo-400', hex: '#818CF8', type: 'Despesa' },
+        { id: 'Seguros', icon: 'fa-shield-alt', color: 'text-slate-600', hex: '#475569', type: 'Despesa' },
+        { id: 'Eletrônicos', icon: 'fa-laptop', color: 'text-gray-800', hex: '#1F2937', type: 'Despesa' },
+        { id: 'Doações', icon: 'fa-hand-holding-heart', color: 'text-rose-400', hex: '#FB7185', type: 'Despesa' },
+        { id: 'Assinaturas', icon: 'fa-file-signature', color: 'text-purple-400', hex: '#C084FC', type: 'Despesa' },
+        { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8', type: 'Despesa' }
     ],
 
-    initCategories() {
+    // --- 1. PREENCHE O DROPDOWN COM FILTRO ---
+    // Agora aceita um argumento 'filterType' (Receita, Despesa, Investimento)
+    populateCategories(filterType = 'Despesa') {
         const select = document.getElementById('inputCategory');
         if (!select) return;
 
         select.innerHTML = '';
-        this.categories.forEach(cat => {
+        
+        // Filtra as categorias baseada no tipo selecionado
+        const filtered = this.categories.filter(cat => cat.type === filterType);
+
+        filtered.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat.id;
             option.textContent = cat.id;
             select.appendChild(option);
         });
+        
+        // Se não tiver categorias (ex: erro), coloca "Outros" por segurança
+        if (filtered.length === 0) {
+             const opt = document.createElement('option');
+             opt.value = 'Outros'; opt.textContent = 'Outros';
+             select.appendChild(opt);
+        }
     },
 
+    // A função antiga 'initCategories' agora apenas chama a populate com o padrão
+    initCategories() {
+        this.populateCategories('Despesa'); // Padrão inicial
+    },
+
+    // --- 2. RENDERIZA A LISTA ---
     renderApp(selectedMonths = [], selectedCategory = 'Todas') {
         const list = document.getElementById('transactionList');
         if (!list) return;
@@ -69,7 +88,7 @@ export const UI = {
         list.innerHTML = '';
         const transactions = store.transactions || [];
 
-        // 1. Calcula SALDO ACUMULADO (Global)
+        // Lógica Saldo Acumulado (Global)
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let maxMonthIndex = -1;
         selectedMonths.forEach(m => {
@@ -88,7 +107,7 @@ export const UI = {
             }
         });
 
-        // 2. FILTRAGEM (Meses + Categoria)
+        // FILTRAGEM (Meses + Categoria)
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
