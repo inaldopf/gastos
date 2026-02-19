@@ -3,7 +3,6 @@ import { store } from './store.js';
 let chartInstance = null;
 
 export const UI = {
-    // Lista de Categorias COM CLASSIFICAÇÃO DE TIPO
     categories: [
         { id: 'Salário', icon: 'fa-money-bill-wave', color: 'text-emerald-600', hex: '#059669', type: 'Receita' },
         { id: 'Renda Extra', icon: 'fa-plus-circle', color: 'text-emerald-500', hex: '#34D399', type: 'Receita' },
@@ -72,7 +71,7 @@ export const UI = {
         list.innerHTML = '';
         const transactions = store.transactions || [];
 
-        // 1. Calcula SALDO ACUMULADO (Global)
+        // Lógica Saldo Acumulado (Global)
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let maxMonthIndex = -1;
         selectedMonths.forEach(m => {
@@ -91,31 +90,34 @@ export const UI = {
             }
         });
 
-        // 2. FILTRAGEM (Meses + Categoria)
+        // FILTRAGEM
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
         }
 
+        let totalRec = 0, totalInv = 0, totalDesp = 0;
+        
+        // Se houver filtro de categoria selecionado, a tabela reduz
+        let tableFiltered = [...filtered];
         if (selectedCategory && selectedCategory !== 'Todas') {
-            filtered = filtered.filter(t => t.category === selectedCategory);
+            tableFiltered = tableFiltered.filter(t => t.category === selectedCategory);
         }
 
-        let totalRec = 0, totalInv = 0, totalDesp = 0;
-        filtered.forEach(t => {
-            if (t.type === 'Receita') totalRec += t.amount;
-            else if (t.type === 'Investimento') totalInv += t.amount;
-            else totalDesp += t.amount;
+        tableFiltered.forEach(t => {
+            if (t.type === 'Receita') totalRec += parseFloat(t.amount || 0);
+            else if (t.type === 'Investimento') totalInv += parseFloat(t.amount || 0);
+            else totalDesp += parseFloat(t.amount || 0);
         });
 
-        if (filtered.length === 0) {
+        if (tableFiltered.length === 0) {
             list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 dark:text-slate-500">Nenhum lançamento encontrado.</td></tr>';
             this.updateKPIs(accumulatedBalance, 0, 0, 0); 
-            this.updateChart([]); // Passa array vazio para limpar gráfico
+            this.updateChart(filtered); // Passa a lista não-filtrada-por-categoria para não sumir o gráfico
             return;
         }
 
-        filtered.forEach(t => {
+        tableFiltered.forEach(t => {
             const catData = this.categories.find(c => c.id === t.category) || { icon: 'fa-tag', color: 'text-slate-400' };
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
@@ -130,7 +132,7 @@ export const UI = {
         });
 
         this.updateKPIs(accumulatedBalance, totalRec, totalDesp, totalInv);
-        this.updateChart(filtered); // Passa os dados FILTRADOS
+        this.updateChart(filtered); // Gráfico sempre exibe a proporção inteira do mês
     },
 
     updateKPIs(accumulatedBalance, rec, desp, inv) {
@@ -145,28 +147,44 @@ export const UI = {
         if(expEl) expEl.innerText = `R$ ${desp.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
     },
 
-    updateChart(transactions) {
-        if (typeof Chart === 'undefined') return;
+    updateChart(transactions, tentativas = 0) {
+        // CORREÇÃO: Sistema de Retry para garantir que o Chart.js baixou
+        if (typeof Chart === 'undefined') {
+            if (tentativas < 10) setTimeout(() => this.updateChart(transactions, tentativas + 1), 300);
+            return;
+        }
+        
         const ctx = document.getElementById('categoryChart');
         if (!ctx) return;
 
         // Filtra apenas despesas para o gráfico
         const expenses = transactions.filter(t => t.type === 'Despesa');
-        
-        // Se não houver despesas, mostra gráfico vazio ou esconde?
-        // Vamos mostrar vazio para não dar erro
         const totals = {};
-        expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount));
+        expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount || 0));
 
-        if (chartInstance) chartInstance.destroy();
+        if (chartInstance) {
+            chartInstance.destroy();
+            chartInstance = null;
+        }
+
+        const labels = Object.keys(totals);
+        if (labels.length === 0) return; // Se não tem dado, o gráfico não quebra
+
+        const dataValues = Object.values(totals);
+        
+        // CORREÇÃO: Cores dinâmicas combinando perfeitamente com as categorias!
+        const bgColors = labels.map(label => {
+            const catObj = this.categories.find(c => c.id === label);
+            return catObj ? catObj.hex : '#94A3B8';
+        });
 
         chartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: Object.keys(totals),
+                labels: labels,
                 datasets: [{
-                    data: Object.values(totals),
-                    backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899', '#8B5CF6'],
+                    data: dataValues,
+                    backgroundColor: bgColors,
                     borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
                     borderWidth: 2
                 }]
