@@ -187,30 +187,57 @@ app.post('/goals', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 10. ROTAS DE VA (VALE ALIMENTAÇÃO) ---
+// --- 10. VA (VALE ALIMENTAÇÃO COM HISTÓRICO) ---
 app.get('/va', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
-        res.json({ balance: parseFloat(result.rows[0].va_balance) });
+        const balanceRes = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
+        const transRes = await pool.query('SELECT * FROM va_transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
+        
+        res.json({ 
+            balance: parseFloat(balanceRes.rows[0].va_balance || 0),
+            transactions: transRes.rows
+        });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.post('/va', authenticateToken, async (req, res) => {
-    const { amount, type } = req.body; // type: 'credit' ou 'debit'
+    const { amount, type, desc, date, month } = req.body;
     try {
-        // Busca saldo atual
-        const currentRes = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
-        let currentBalance = parseFloat(currentRes.rows[0].va_balance);
-        
-        // Calcula novo saldo
         const val = parseFloat(amount);
-        if (type === 'credit') currentBalance += val;
-        else currentBalance -= val;
-
-        // Atualiza
-        await pool.query('UPDATE users SET va_balance = $1 WHERE id = $2', [currentBalance, req.user.id]);
         
-        res.json({ success: true, newBalance: currentBalance });
+        // 1. Atualiza o saldo do usuário
+        const currentRes = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
+        let currentBalance = parseFloat(currentRes.rows[0].va_balance || 0);
+        if (type === 'credit') currentBalance += val; else currentBalance -= val;
+        await pool.query('UPDATE users SET va_balance = $1 WHERE id = $2', [currentBalance, req.user.id]);
+
+        // 2. Registra o histórico
+        const transRes = await pool.query(
+            'INSERT INTO va_transactions (user_id, description, amount, type, transaction_date, month) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [req.user.id, desc, val, type, date, month]
+        );
+
+        res.json({ success: true, newBalance: currentBalance, transaction: transRes.rows[0] });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/va/:id', authenticateToken, async (req, res) => {
+    try {
+        // Busca a transação para reverter o saldo
+        const transRes = await pool.query('SELECT amount, type FROM va_transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        if (transRes.rows.length > 0) {
+            const t = transRes.rows[0];
+            const currentRes = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
+            let currentBalance = parseFloat(currentRes.rows[0].va_balance || 0);
+
+            // Se apagou um gasto (debit), o dinheiro volta. Se apagou recarga (credit), tira.
+            if (t.type === 'credit') currentBalance -= parseFloat(t.amount);
+            else currentBalance += parseFloat(t.amount);
+
+            await pool.query('UPDATE users SET va_balance = $1 WHERE id = $2', [currentBalance, req.user.id]);
+            await pool.query('DELETE FROM va_transactions WHERE id = $1', [req.params.id]);
+        }
+        res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
