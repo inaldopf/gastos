@@ -8,8 +8,6 @@ export const Goals = {
         const view = document.getElementById('viewGoals');
         if (!view || view.classList.contains('hidden')) return;
 
-        console.log("🎯 Renderizando Planejador...");
-        
         this.setupInputs();
 
         const income = this.calculateIncome(selectedMonths);
@@ -22,12 +20,10 @@ export const Goals = {
     },
 
     setupInputs() {
-        // Preenche Select
         const select = document.getElementById('goalCategoryInput');
         if (select && select.options.length <= 1) {
             select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
             UI.categories.forEach(cat => {
-                // AGORA PERMITE INVESTIMENTO, mas ignora Salário e Renda Extra
                 if (cat.id !== 'Salário' && cat.id !== 'Renda Extra') {
                     const opt = document.createElement('option');
                     opt.value = cat.id; opt.textContent = cat.id;
@@ -132,7 +128,6 @@ export const Goals = {
 
         const spending = {};
         filteredTrans.forEach(t => {
-            // SOMA DESPESAS E AGORA TAMBÉM INVESTIMENTOS
             if (t.type === 'Despesa' || t.type === 'Investimento') {
                 spending[t.category] = (spending[t.category] || 0) + parseFloat(t.amount);
             }
@@ -143,10 +138,7 @@ export const Goals = {
 
         UI.categories.forEach(cat => {
             const monthlyGoal = store.getGoal(cat.id);
-            
-            // Ignora apenas entradas puras (Salário/Renda Extra)
             if (cat.id === 'Salário' || cat.id === 'Renda Extra') return;
-
             if (monthlyGoal > 0 || spending[cat.id] > 0) {
                 const totalGoal = monthlyGoal * monthsCount;
                 comparison.push({
@@ -159,7 +151,6 @@ export const Goals = {
                 });
             }
         });
-
         return comparison.sort((a, b) => b.percent - a.percent);
     },
 
@@ -167,7 +158,6 @@ export const Goals = {
         const container = document.getElementById('goalsList');
         if (!container) return;
         container.innerHTML = '';
-
         if (data.length === 0) {
             container.innerHTML = '<p class="text-slate-400 dark:text-slate-500 text-center py-10 text-sm">Cadastre uma meta acima para começar.</p>';
             return;
@@ -214,7 +204,13 @@ export const Goals = {
         });
     },
 
-    renderChart(data) {
+    renderChart(data, tentativas = 0) {
+        // CORREÇÃO: Retry para o Chart.js na aba Metas
+        if (typeof Chart === 'undefined') {
+            if (tentativas < 10) setTimeout(() => this.renderChart(data, tentativas + 1), 300);
+            return;
+        }
+
         const ctx = document.getElementById('goalsChart');
         if (!ctx) return;
 
@@ -223,7 +219,12 @@ export const Goals = {
         const dataSpent = topData.map(d => d.spent);
         const dataGoal = topData.map(d => d.goal);
 
-        if (goalsChart) goalsChart.destroy();
+        if (goalsChart) {
+            goalsChart.destroy();
+            goalsChart = null;
+        }
+        
+        if (labels.length === 0) return; // Se não tem dado, não quebra
 
         goalsChart = new Chart(ctx, {
             type: 'bar',
