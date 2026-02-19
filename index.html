@@ -163,9 +163,7 @@
             <section id="viewVA" class="space-y-6 hidden animate-fade-in">
                 <div class="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden flex flex-col items-center text-center">
                     <div class="relative z-10">
-                        <div class="bg-white/20 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4 mx-auto backdrop-blur-sm">
-                            <i class="fas fa-utensils text-3xl"></i>
-                        </div>
+                        <div class="bg-white/20 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4 mx-auto backdrop-blur-sm"><i class="fas fa-utensils text-3xl"></i></div>
                         <p class="text-orange-100 font-bold uppercase tracking-wider text-sm mb-1">Saldo Vale Alimentação</p>
                         <h2 class="text-5xl font-bold mb-6" id="vaBalanceDisplay">R$ 0,00</h2>
                     </div>
@@ -181,16 +179,34 @@
                             <option value="credit">💳 Recarga (Crédito)</option>
                         </select>
                         <input type="text" id="vaDesc" placeholder="Onde? (ex: Burger King)" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/3">
-                        <input type="number" step="0.01" id="vaAmount" placeholder="R$ Valor" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/4">
+                        <input type="number" step="0.01" id="vaAmount" placeholder="R$ Valor" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/4" required>
                         <button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold p-3 rounded-lg flex-1 transition shadow-md">Confirmar</button>
                     </form>
                 </div>
 
-                <div class="text-center p-4">
-                    <p class="text-slate-400 text-xs">💡 Dica: Use esta área para controlar apenas o saldo do seu cartão de benefício.</p>
+                <div class="glass rounded-xl overflow-hidden min-h-[250px] border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <div class="p-4 border-b border-slate-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
+                        <h3 class="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
+                            <i class="fas fa-list text-orange-500"></i> Histórico do Período
+                        </h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left whitespace-nowrap">
+                            <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold">Data</th>
+                                    <th class="px-4 py-3 font-semibold">Descrição</th>
+                                    <th class="px-4 py-3 font-semibold text-center">Tipo</th>
+                                    <th class="px-4 py-3 font-semibold text-right">Valor</th>
+                                    <th class="px-4 py-3 text-center w-10"><i class="fas fa-trash"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="vaTransactionList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
+                                </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
-
             <section id="viewDebts" class="space-y-6 hidden animate-fade-in">
                <div class="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                     <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
