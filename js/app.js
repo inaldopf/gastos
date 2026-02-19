@@ -2,7 +2,7 @@ import { store } from './store.js';
 import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
 import { Goals } from './goals.js';
-import { VA } from './va.js'; // <--- IMPORTANTE: Importar o módulo VA
+import { VA } from './va.js';
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
@@ -89,12 +89,11 @@ function updateAllViews() {
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
     if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
-    if (VA && typeof VA.render === 'function') VA.render(); // <--- RENDERIZA VA
+    if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
     renderDebts();
 }
 
 function renderDebts() {
-    // ... (função mantida igual)
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
     if(!list) return;
@@ -121,6 +120,7 @@ function renderDebts() {
 window.removeTransaction = async (id) => { if(confirm("Apagar?")) { await store.removeTransaction(id); updateAllViews(); } };
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
 window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
+window.removeVATransaction = async (id) => { if(confirm("Apagar registro do VA? (O saldo será revertido)")) { await store.removeVATransaction(id); updateAllViews(); }};
 
 // 6. Events
 function setupEvents() {
@@ -131,7 +131,7 @@ function setupEvents() {
         debts: document.getElementById('tabDebts'),
         dash: document.getElementById('tabDash'),
         goals: document.getElementById('tabGoals'),
-        va: document.getElementById('tabVA') // <--- NOVO
+        va: document.getElementById('tabVA')
     };
 
     const mobileTabs = {
@@ -139,7 +139,7 @@ function setupEvents() {
         debts: document.getElementById('btnMobileDebts'),
         dash: document.getElementById('btnMobileDash'),
         goals: document.getElementById('btnMobileGoals'),
-        va: document.getElementById('btnMobileVA') // <--- NOVO
+        va: document.getElementById('btnMobileVA')
     };
 
     const switchTab = (viewId) => {
@@ -161,11 +161,8 @@ function setupEvents() {
         });
 
         Object.values(mobileTabs).forEach(btn => {
-            // Estilo padrão mobile
             let base = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
             if (btn === mobileTabs.va) {
-                // Estilo especial para o botão central do VA no mobile (Bola flutuante)
-                // Aqui podemos resetar a cor do icone dentro se necessário, mas o HTML já cuida do shape
                 btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
             } else {
                 btn.className = base;
@@ -178,48 +175,45 @@ function setupEvents() {
         if(viewId === 'viewHome') {
             if(tabs.home) tabs.home.className = activeDesktop;
             if(mobileTabs.home) mobileTabs.home.className = activeMobile;
+            UI.renderApp(selectedMonths, selectedCategory); // <--- CORREÇÃO: Força renderização do gráfico ao voltar pra Home
         }
         if(viewId === 'viewDebts') {
             if(tabs.debts) tabs.debts.className = activeDesktop;
             if(mobileTabs.debts) mobileTabs.debts.className = activeMobile;
+            renderDebts();
         }
         if(viewId === 'viewDashboard') {
             if(tabs.dash) tabs.dash.className = activeDesktop;
             if(mobileTabs.dash) mobileTabs.dash.className = activeMobile;
+            Dashboard.render(selectedMonths);
         }
         if(viewId === 'viewGoals') {
             if(tabs.goals) tabs.goals.className = activeDesktop;
             if(mobileTabs.goals) mobileTabs.goals.className = activeMobile;
+            Goals.render(selectedMonths);
         }
         if(viewId === 'viewVA') {
             if(tabs.va) tabs.va.className = activeDesktop;
-            // O botão mobile VA já tem um estilo "ativo" natural por ser destacado, 
-            // mas podemos adicionar cor ao texto "VA/VR"
             if(mobileTabs.va) {
                 mobileTabs.va.classList.add('text-indigo-600', 'dark:text-indigo-400');
                 mobileTabs.va.classList.remove('text-slate-400');
             }
+            VA.render(selectedMonths);
         }
-
-        if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
-        if(viewId === 'viewGoals') Goals.render(selectedMonths);
-        if(viewId === 'viewVA') VA.render();
-        if(viewId === 'viewDebts') renderDebts();
     };
 
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
-    if(tabs.va) tabs.va.addEventListener('click', () => switchTab('viewVA')); // <--- LISTENER NOVO
+    if(tabs.va) tabs.va.addEventListener('click', () => switchTab('viewVA'));
 
     if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
-    if(mobileTabs.va) mobileTabs.va.addEventListener('click', () => switchTab('viewVA')); // <--- LISTENER NOVO
+    if(mobileTabs.va) mobileTabs.va.addEventListener('click', () => switchTab('viewVA'));
 
-    // Filtro Categorias
     const inputType = document.getElementById('inputType');
     if (inputType) {
         inputType.addEventListener('change', (e) => {
@@ -227,7 +221,6 @@ function setupEvents() {
         });
     }
 
-    // Formulários
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
