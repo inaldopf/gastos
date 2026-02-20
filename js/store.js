@@ -7,6 +7,7 @@ export const store = {
     goals: [],
     meta: 0,
     vaBalance: 0,
+    vaTransactions: [], // <--- RESTAURADO
 
     getToken() { return localStorage.getItem('inf_auth_token'); },
 
@@ -17,6 +18,7 @@ export const store = {
             goals: this.goals,
             meta: this.meta,
             vaBalance: this.vaBalance,
+            vaTransactions: this.vaTransactions, // <--- RESTAURADO
             timestamp: new Date().getTime()
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -32,6 +34,7 @@ export const store = {
                 this.goals = data.goals || [];
                 this.meta = data.meta || 0;
                 this.vaBalance = data.vaBalance || 0;
+                this.vaTransactions = data.vaTransactions || []; // <--- RESTAURADO
                 return true;
             } catch (e) { return false; }
         }
@@ -77,9 +80,12 @@ export const store = {
                 this.meta = parseFloat(d.meta) || 0;
             }
             if (resGoals && resGoals.ok) this.goals = await resGoals.json();
+            
+            // CARREGA HISTÓRICO DO VA AQUI
             if (resVA && resVA.ok) {
                 const d = await resVA.json();
                 this.vaBalance = parseFloat(d.balance) || 0;
+                this.vaTransactions = d.transactions || []; 
             }
             this.saveToCache();
         } catch (error) { 
@@ -193,17 +199,49 @@ export const store = {
         fetch(`${API_URL}/debtors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     },
 
-    async updateVA(amount, type) {
+    // FUNÇÃO VA RESTAURADA (Para salvar no array de extrato também)
+    async updateVA(amount, type, desc, date, month) {
         const token = this.getToken();
         const val = parseFloat(amount);
+        
+        // Atualização Otimista
         if (type === 'credit') this.vaBalance += val; else this.vaBalance -= val;
+        
+        const tempId = Date.now();
+        this.vaTransactions.unshift({ id: tempId, description: desc, amount: val, type, transaction_date: date, month, isTemp: true });
         this.saveToCache();
+
         try {
-            await fetch(`${API_URL}/va`, {
+            const res = await fetch(`${API_URL}/va`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amount: val, type })
+                body: JSON.stringify({ amount: val, type, desc, date, month })
             });
+            const d = await res.json();
+            this.vaBalance = d.newBalance;
+            
+            const idx = this.vaTransactions.findIndex(t => t.id === tempId);
+            if (idx !== -1 && d.transaction) {
+                this.vaTransactions[idx].id = d.transaction.id;
+                delete this.vaTransactions[idx].isTemp;
+            }
+            this.saveToCache();
         } catch (e) { alert("Erro Sync VA"); }
+    },
+
+    // FUNÇÃO PARA DELETAR HISTÓRICO DO VA
+    async removeVATransaction(id) {
+        const token = this.getToken();
+        const t = this.vaTransactions.find(x => x.id === id);
+        if(t) {
+            if(t.type === 'credit') this.vaBalance -= parseFloat(t.amount);
+            else this.vaBalance += parseFloat(t.amount);
+        }
+        this.vaTransactions = this.vaTransactions.filter(x => x.id !== id);
+        this.saveToCache();
+
+        try {
+            await fetch(`${API_URL}/va/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
+        } catch(e) { alert("Erro ao apagar VA"); }
     }
 };
