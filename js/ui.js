@@ -139,7 +139,8 @@ export const UI = {
         const balEl = document.getElementById('kpiBalance');
         if(balEl) {
             balEl.innerText = `R$ ${accumulatedBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            balEl.className = `text-2xl font-bold ${accumulatedBalance >= 0 ? 'text-indigo-900 dark:text-indigo-300' : 'text-red-600 dark:text-red-400'}`;
+            // --- CÓDIGO NOVO: Alterado de 'text-indigo-900' para 'text-emerald-600' ---
+            balEl.className = `text-3xl font-bold ${accumulatedBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`;
         }
         const invEl = document.getElementById('kpiInvest');
         if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
