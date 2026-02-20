@@ -35,6 +35,7 @@ export const Dashboard = {
 
     // --- AQUI ESTÁ A MUDANÇA DO SALDO ACUMULADO ---
     updateCards(selectedMonths) {
+        
         const transactions = store.transactions || [];
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         
@@ -80,7 +81,7 @@ export const Dashboard = {
         };
 
         // Saldo agora usa o acumulado
-        setElement('dashBalance', `R$ ${accumulatedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `text-3xl font-bold ${accumulatedBalance >= 0 ? 'text-indigo-600' : 'text-red-500'}`);
+        setElement('dashBalance', `R$ ${accumulatedBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, `text-3xl font-bold ${accumulatedBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`);
         
         // Outros cards continuam mostrando o fluxo do período selecionado
         setElement('dashIncome', `R$ ${periodRec.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
