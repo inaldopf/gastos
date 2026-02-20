@@ -76,7 +76,7 @@ export const Goals = {
         return totalIncome;
     },
 
-    renderBudgetOverview(income, totalPlannedSpend, monthsCount) {
+renderBudgetOverview(income, totalPlannedSpend, monthsCount) {
         const monthlySavingsGoal = store.getMeta();
         const totalSavingsGoal = monthlySavingsGoal * monthsCount;
         const projectedSurplus = income - totalPlannedSpend;
@@ -89,6 +89,13 @@ export const Goals = {
         const msg = document.getElementById('goalBudgetMsg');
         const card = document.getElementById('goalBudgetCard');
         const valueEl = document.getElementById('goalProjectedSurplus');
+
+        // --- CÓDIGO NOVO: Positivo = Verde, Negativo = Vermelho ---
+        if (projectedSurplus >= 0) {
+            valueEl.className = "text-xl font-bold text-emerald-600 dark:text-emerald-400";
+        } else {
+            valueEl.className = "text-xl font-bold text-red-600 dark:text-red-400";
+        }
 
         if (income <= 0) {
             bar.style.width = '0%';
@@ -105,8 +112,6 @@ export const Goals = {
             msg.innerText = `Faltam R$ ${shortfall.toLocaleString('pt-BR')} na meta!`;
             msg.className = "text-xs font-bold text-red-500 mt-1 text-right";
             card.className = "glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm";
-            valueEl.classList.remove('text-slate-800', 'dark:text-slate-200');
-            valueEl.classList.add('text-red-500');
         } else {
             bar.style.width = '100%';
             bar.className = 'h-1.5 rounded-full bg-emerald-500 transition-all duration-500';
@@ -114,8 +119,6 @@ export const Goals = {
             msg.innerText = extra > 0 ? `Vai sobrar + R$ ${extra.toLocaleString('pt-BR')}` : "Planejamento na meta.";
             msg.className = "text-xs font-bold text-emerald-600 mt-1 text-right";
             card.className = "glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm";
-            valueEl.classList.remove('text-red-500');
-            valueEl.classList.add('text-slate-800', 'dark:text-slate-200');
         }
     },
 
