@@ -93,6 +93,9 @@ function updateAllViews() {
     renderDebts();
 }
 
+// CORREÇÃO: Torna a função updateAllViews acessível globalmente (para o va.js conseguir chamar)
+window.updateAllViews = updateAllViews;
+
 function renderDebts() {
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
@@ -175,7 +178,7 @@ function setupEvents() {
         if(viewId === 'viewHome') {
             if(tabs.home) tabs.home.className = activeDesktop;
             if(mobileTabs.home) mobileTabs.home.className = activeMobile;
-            UI.renderApp(selectedMonths, selectedCategory); // <--- CORREÇÃO: Força renderização do gráfico ao voltar pra Home
+            UI.renderApp(selectedMonths, selectedCategory); 
         }
         if(viewId === 'viewDebts') {
             if(tabs.debts) tabs.debts.className = activeDesktop;
