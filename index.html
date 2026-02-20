@@ -160,7 +160,7 @@
                 </div>
             </section>
 
-            <section id="viewVA" class="space-y-6 hidden animate-fade-in">
+  <section id="viewVA" class="space-y-6 hidden animate-fade-in">
                 <div class="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden flex flex-col items-center text-center">
                     <div class="relative z-10">
                         <div class="bg-white/20 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4 mx-auto backdrop-blur-sm"><i class="fas fa-utensils text-3xl"></i></div>
@@ -170,13 +170,11 @@
                     <div class="absolute -top-10 -left-10 w-48 h-48 bg-white opacity-10 rounded-full blur-3xl"></div>
                     <div class="absolute bottom-0 right-0 w-64 h-64 bg-yellow-400 opacity-20 rounded-full blur-3xl"></div>
                 </div>
-
                 <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                     <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 text-sm uppercase">Registrar Operação</h3>
                     <form id="vaForm" class="flex flex-col sm:flex-row gap-3">
                         <select id="vaType" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm font-bold outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/4">
-                            <option value="debit">🍔 Gastei (Débito)</option>
-                            <option value="credit">💳 Recarga (Crédito)</option>
+                            <option value="debit">🍔 Gastei (Débito)</option><option value="credit">💳 Recarga (Crédito)</option>
                         </select>
                         <input type="text" id="vaDesc" placeholder="Onde? (ex: Burger King)" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/3">
                         <input type="number" step="0.01" id="vaAmount" placeholder="R$ Valor" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/4" required>
@@ -206,6 +204,7 @@
                         </table>
                     </div>
                 </div>
+
             </section>
             <section id="viewDebts" class="space-y-6 hidden animate-fade-in">
                <div class="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
