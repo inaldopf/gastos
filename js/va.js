@@ -17,7 +17,7 @@ export const VA = {
         this.renderList(selectedMonths);
 
         // 3. Configura o Form
-        this.setupForm(selectedMonths);
+        this.setupForm();
     },
 
     renderList(selectedMonths) {
@@ -61,13 +61,15 @@ export const VA = {
         });
     },
 
-    setupForm(selectedMonths) {
+    setupForm() {
         const form = document.getElementById('vaForm');
         if (!form) return;
-        const newForm = form.cloneNode(true);
-        form.parentNode.replaceChild(newForm, form);
+        
+        // CORREÇÃO: Impede que o evento seja criado várias vezes e não apaga o botão
+        if (form.dataset.listenerAttached === 'true') return;
+        form.dataset.listenerAttached = 'true';
 
-        newForm.addEventListener('submit', async (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const type = document.getElementById('vaType').value;
             const amount = parseFloat(document.getElementById('vaAmount').value);
@@ -75,14 +77,17 @@ export const VA = {
             
             if (!amount || isNaN(amount)) return alert("Valor inválido.");
 
-            const btn = newForm.querySelector('button');
+            const btn = form.querySelector('button');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
+            btn.disabled = true;
 
             try {
-                // Pega o mês alvo baseado no filtro (pega o último selecionado ou o atual)
-                let targetMonth = (selectedMonths && selectedMonths.length > 0) ? selectedMonths[selectedMonths.length - 1] : '';
-                if (!targetMonth) {
+                // Descobre qual é o mês selecionado globalmente
+                let targetMonth = '';
+                if (window.currentSelectedMonths && window.currentSelectedMonths.length > 0) {
+                    targetMonth = window.currentSelectedMonths[window.currentSelectedMonths.length - 1];
+                } else {
                     const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
                     targetMonth = months[new Date().getMonth()];
                 }
@@ -90,12 +95,19 @@ export const VA = {
 
                 await store.updateVA(amount, type, desc, dateStr, targetMonth);
                 
-                // Atualiza a tela global
-                if(window.updateAllViews) window.updateAllViews();
-                else this.render(selectedMonths);
+                form.reset();
 
-                newForm.reset();
-            } catch (err) { console.error(err); } finally { btn.innerHTML = originalText; btn.disabled = false; }
+                // Atualiza todas as tabelas na tela
+                if(window.updateAllViews) window.updateAllViews();
+                else this.render(window.currentSelectedMonths);
+
+            } catch (err) { 
+                console.error(err); 
+            } finally { 
+                // Restaura o botão original (agora não quebra mais!)
+                btn.innerHTML = originalText; 
+                btn.disabled = false; 
+            }
         });
     }
 };
