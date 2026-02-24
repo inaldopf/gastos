@@ -1,60 +1,54 @@
 import { store } from './store.js';
 import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
+import { Goals } from './goals.js';
+import { VA } from './va.js';
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
 
-// Variáveis Globais de Filtro
 let selectedMonths = [];
-let selectedCategory = 'Todas'; // <--- NOVA VARIÁVEL
+let selectedCategory = 'Todas';
 
-// --- 1. PROTEÇÃO DE ROTA ---
+// 1. Auth Logic
 const isLoginPage = window.location.pathname.includes('login.html');
 const authToken = localStorage.getItem('inf_auth_token');
-
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
 if (authToken && isLoginPage) window.location.href = 'index.html';
 
-// --- 2. SETUP GERAL ---
+// 2. Setup Theme
 function setupTheme() {
     const btnTheme = document.getElementById('btnThemeToggle');
     const html = document.documentElement;
     if (localStorage.getItem('theme') === 'dark') html.classList.add('dark');
 
-    if(btnTheme) {
-        btnTheme.addEventListener('click', () => {
-            html.classList.toggle('dark');
-            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-        });
-    }
+    const toggleTheme = () => {
+        html.classList.toggle('dark');
+        localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    };
+
+    if(btnTheme) btnTheme.addEventListener('click', toggleTheme);
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+            e.preventDefault(); toggleTheme();
+        }
+    });
 }
 
-// Preenche o Select de Filtro de Categoria
+// 3. Components Setup
 function setupCategoryFilter() {
     const select = document.getElementById('filterCategory');
     if (!select || !UI || !UI.categories) return;
-
-    // Limpa mantendo a opção "Todas"
     select.innerHTML = '<option value="Todas">📂 Todas Categorias</option>';
-
     UI.categories.forEach(cat => {
         const option = document.createElement('option');
-        option.value = cat.id;
-        option.textContent = `${cat.id}`; // Poderia adicionar emoji aqui se quisesse
+        option.value = cat.id; option.textContent = `${cat.id}`;
         select.appendChild(option);
     });
-
-    // Evento de Mudança
-    select.addEventListener('change', (e) => {
-        selectedCategory = e.target.value;
-        updateAllViews();
-    });
+    select.addEventListener('change', (e) => { selectedCategory = e.target.value; updateAllViews(); });
 }
 
 function setupMonthSelector() {
-    // ... (SEU CÓDIGO DO DROPDOWN DE MESES MANTIDO IGUAL - NÃO MUDE NADA AQUI) ...
-    // Vou resumir para não ocupar espaço, mas mantenha a função setupMonthSelector completa que você já tem.
     const btn = document.getElementById('monthDropdownBtn');
     const menu = document.getElementById('monthDropdownMenu');
     const btnText = document.getElementById('monthBtnText');
@@ -69,47 +63,40 @@ function setupMonthSelector() {
         else if (selectedMonths.length <= 2) { btnText.textContent = `📅 ${selectedMonths.map(m => shortMonths[months.indexOf(m)]).join(', ')}`; btnText.classList.remove('text-red-500'); }
         else { btnText.textContent = `📅 ${selectedMonths.length} meses selecionados`; btnText.classList.remove('text-red-500'); }
     };
-
     menu.innerHTML = '';
     const divAll = document.createElement('div');
     divAll.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer mb-1 border-b border-slate-100 dark:border-slate-700";
-    divAll.innerHTML = `<input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500"><label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200 flex-1 cursor-pointer">Selecionar Todos</label>`;
+    divAll.innerHTML = `<input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200 flex-1 cursor-pointer">Selecionar Todos</label>`;
     divAll.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = divAll.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
     divAll.querySelector('input').addEventListener('change', (e) => { selectedMonths = e.target.checked ? [...months] : []; setupMonthSelector(); updateAllViews(); });
     menu.appendChild(divAll);
-
     months.forEach((m, index) => {
         const div = document.createElement('div');
         div.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer";
-        div.innerHTML = `<input type="checkbox" id="m-${index}" value="${m}" ${selectedMonths.includes(m)?'checked':''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500"><label for="m-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 flex-1 cursor-pointer">${shortMonths[index]}</label>`;
+        div.innerHTML = `<input type="checkbox" id="m-${index}" value="${m}" ${selectedMonths.includes(m)?'checked':''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="m-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 flex-1 cursor-pointer">${shortMonths[index]}</label>`;
         div.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = div.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
-        div.querySelector('input').addEventListener('change', (e) => { 
-            if(e.target.checked) { if(!selectedMonths.includes(m)) selectedMonths.push(m); } 
-            else { selectedMonths = selectedMonths.filter(x => x !== m); }
-            updateButtonText(); updateAllViews(); 
-        });
+        div.querySelector('input').addEventListener('change', (e) => { if(e.target.checked) { if(!selectedMonths.includes(m)) selectedMonths.push(m); } else { selectedMonths = selectedMonths.filter(x => x !== m); } updateButtonText(); updateAllViews(); });
         menu.appendChild(div);
     });
     updateButtonText();
-    
-    // Toggle Menu
     btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
     document.addEventListener('click', (e) => { if (!btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden'); });
 }
 
-// --- 3. ATUALIZAÇÃO ---
+// 4. Update
 function updateAllViews() {
-    // Passamos a Categoria Selecionada para a UI
+    window.currentSelectedMonths = selectedMonths;
     if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
-    
-    // O Dashboard continua recebendo só os meses (ou você pode implementar filtro lá também se quiser)
-    if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths); 
-    
+    if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
+    if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
+    if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
     renderDebts();
 }
 
+// CORREÇÃO: Torna a função updateAllViews acessível globalmente (para o va.js conseguir chamar)
+window.updateAllViews = updateAllViews;
+
 function renderDebts() {
-    // (SEU CÓDIGO DE DÍVIDAS MANTIDO IGUAL)
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
     if(!list) return;
@@ -132,35 +119,111 @@ function renderDebts() {
     if(totalEl) totalEl.innerText = `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
 }
 
-// --- GLOBAIS ---
+// 5. Globals
 window.removeTransaction = async (id) => { if(confirm("Apagar?")) { await store.removeTransaction(id); updateAllViews(); } };
 window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
 window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
+window.removeVATransaction = async (id) => { if(confirm("Apagar registro do VA? (O saldo será revertido)")) { await store.removeVATransaction(id); updateAllViews(); }};
 
-// --- EVENTS ---
+// 6. Events
 function setupEvents() {
     setupTheme();
-    
-    // (SEU CÓDIGO DE ABAS MANTIDO IGUAL)
-    const tabs = { home: document.getElementById('tabHome'), debts: document.getElementById('tabDebts'), dash: document.getElementById('tabDash') };
-    const switchTab = (viewId) => {
-        ['viewHome', 'viewDebts', 'viewDashboard'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-        const t = document.getElementById(viewId);
-        if(t) { t.classList.remove('hidden'); t.classList.remove('animate-fade-in'); void t.offsetWidth; t.classList.add('animate-fade-in'); }
-        
-        Object.values(tabs).forEach(b => b.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition");
-        if(viewId==='viewHome') tabs.home.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        if(viewId==='viewDebts') tabs.debts.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        if(viewId==='viewDashboard') tabs.dash.className = "px-3 sm:px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
 
-        if(viewId === 'viewDashboard') Dashboard.render(selectedMonths);
-        if(viewId === 'viewDebts') renderDebts();
+    const tabs = {
+        home: document.getElementById('tabHome'),
+        debts: document.getElementById('tabDebts'),
+        dash: document.getElementById('tabDash'),
+        goals: document.getElementById('tabGoals'),
+        va: document.getElementById('tabVA')
     };
+
+    const mobileTabs = {
+        home: document.getElementById('btnMobileHome'),
+        debts: document.getElementById('btnMobileDebts'),
+        dash: document.getElementById('btnMobileDash'),
+        goals: document.getElementById('btnMobileGoals'),
+        va: document.getElementById('btnMobileVA')
+    };
+
+    const switchTab = (viewId) => {
+        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.classList.add('hidden');
+        });
+        
+        const target = document.getElementById(viewId);
+        if(target) {
+            target.classList.remove('hidden');
+            target.classList.remove('animate-fade-in');
+            void target.offsetWidth; 
+            target.classList.add('animate-fade-in');
+        }
+
+        Object.values(tabs).forEach(btn => {
+            if(btn) btn.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
+        });
+
+        Object.values(mobileTabs).forEach(btn => {
+            let base = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
+            if (btn === mobileTabs.va) {
+                btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
+            } else {
+                btn.className = base;
+            }
+        });
+
+        const activeDesktop = "px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
+        const activeMobile = "flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16";
+
+        if(viewId === 'viewHome') {
+            if(tabs.home) tabs.home.className = activeDesktop;
+            if(mobileTabs.home) mobileTabs.home.className = activeMobile;
+            UI.renderApp(selectedMonths, selectedCategory); 
+        }
+        if(viewId === 'viewDebts') {
+            if(tabs.debts) tabs.debts.className = activeDesktop;
+            if(mobileTabs.debts) mobileTabs.debts.className = activeMobile;
+            renderDebts();
+        }
+        if(viewId === 'viewDashboard') {
+            if(tabs.dash) tabs.dash.className = activeDesktop;
+            if(mobileTabs.dash) mobileTabs.dash.className = activeMobile;
+            Dashboard.render(selectedMonths);
+        }
+        if(viewId === 'viewGoals') {
+            if(tabs.goals) tabs.goals.className = activeDesktop;
+            if(mobileTabs.goals) mobileTabs.goals.className = activeMobile;
+            Goals.render(selectedMonths);
+        }
+        if(viewId === 'viewVA') {
+            if(tabs.va) tabs.va.className = activeDesktop;
+            if(mobileTabs.va) {
+                mobileTabs.va.classList.add('text-indigo-600', 'dark:text-indigo-400');
+                mobileTabs.va.classList.remove('text-slate-400');
+            }
+            VA.render(selectedMonths);
+        }
+    };
+
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
+    if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
+    if(tabs.va) tabs.va.addEventListener('click', () => switchTab('viewVA'));
 
-    // Transaction Form
+    if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
+    if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
+    if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
+    if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
+    if(mobileTabs.va) mobileTabs.va.addEventListener('click', () => switchTab('viewVA'));
+
+    const inputType = document.getElementById('inputType');
+    if (inputType) {
+        inputType.addEventListener('change', (e) => {
+            UI.populateCategories(e.target.value);
+        });
+    }
+
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
@@ -170,43 +233,45 @@ function setupEvents() {
             const type = document.getElementById('inputType').value;
             const category = document.getElementById('inputCategory').value;
             const btn = transForm.querySelector('button[type="submit"]');
-
             if (!desc || isNaN(amount)) return alert("Preencha corretamente.");
             const oldText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
-
             try {
                 let targetMonth = selectedMonths[selectedMonths.length - 1];
                 if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
                 await store.addTransaction({ desc, amount, type, category, date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
                 updateAllViews();
                 transForm.reset();
+                document.getElementById('inputType').value = 'Despesa';
+                UI.populateCategories('Despesa');
             } catch (err) { console.error(err); } finally { btn.innerHTML = oldText; btn.disabled = false; }
         });
     }
 
-    // Outros botões (Logout, Settings, Import...) - MANTIDOS IGUAIS
     const debtForm = document.getElementById('debtForm');
     if(debtForm) { debtForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('debtName').value; const amount = document.getElementById('debtAmount').value; if(name && amount) { await store.addDebt(name, parseFloat(amount)); renderDebts(); debtForm.reset(); } }); }
+    
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
     const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
     const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
-    const btnImport = document.getElementById('btnImport'); if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
-    const btnCloseModal = document.getElementById('btnCloseModal'); if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
-    const dropZone = document.getElementById('dropZone'); if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+    
+    const btnImport = document.getElementById('btnImport'); 
+    if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
+    
+    const btnCloseModal = document.getElementById('btnCloseModal'); 
+    if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
+    
+    const dropZone = document.getElementById('dropZone'); 
+    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
 }
 
-// --- INIT ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         if(UI && UI.initCategories) UI.initCategories();
-        
         setupMonthSelector();
-        setupCategoryFilter(); // <--- INICIA O FILTRO DE CATEGORIA
+        setupCategoryFilter(); 
         setupEvents();
-
         const hasCache = store.loadFromCache();
         if(!hasCache) document.getElementById('transactionList').innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>';
-
         const token = localStorage.getItem('inf_auth_token');
         if (token) {
             await store.init();
