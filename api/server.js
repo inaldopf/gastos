@@ -1,5 +1,5 @@
 // --- 1. CONFIGURAÇÕES INICIAIS ---
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// Removida a linha: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; (Isso era um risco de segurança)
 
 const express = require('express');
 const { Pool } = require('pg');
@@ -11,20 +11,29 @@ const jwt = require('jsonwebtoken');
 const app = express();
 
 // --- 2. CORS (PERMISSÕES DE ACESSO) ---
+// No futuro, podemos restringir isso, mas por enquanto mantemos funcionando
 app.use(cors({
-    origin: '*', // Libera para Vercel, Localhost, etc.
+    origin: '*', 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(bodyParser.json());
 
-const JWT_SECRET = "sua_chave_secreta_super_segura_123";
+// 🔒 CORREÇÃO DE SEGURANÇA: Usando variável de ambiente para o JWT
+// Se não encontrar no ambiente, usa uma padrão apenas para não quebrar localmente, 
+// mas em produção ELA DEVE existir.
+const JWT_SECRET = process.env.JWT_SECRET || "chave_fallback_apenas_para_desenvolvimento";
 
 // --- 3. BANCO DE DADOS ---
+// 🔒 CORREÇÃO DE SEGURANÇA: Usando variável de ambiente para a URL do Banco
+if (!process.env.DATABASE_URL) {
+    console.warn("⚠️ AVISO: A variável DATABASE_URL não está configurada no ambiente!");
+}
+
 const pool = new Pool({
-    connectionString: "postgres://avnadmin:AVNS_tHRnfzTKgOv5_yTnCfh@gastos-inaldofreitasjr-95a2.c.aivencloud.com:16334/defaultdb",
-    ssl: { rejectUnauthorized: false }
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false } // Necessário para bancos como Heroku/Aiven/Render
 });
 
 // --- 4. MIDDLEWARE DE AUTENTICAÇÃO ---
@@ -155,7 +164,7 @@ app.get('/meta', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- 9. ROTAS DE METAS POR CATEGORIA (NOVO!) ---
+// --- 9. ROTAS DE METAS POR CATEGORIA ---
 app.get('/goals', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query(
@@ -172,7 +181,6 @@ app.get('/goals', authenticateToken, async (req, res) => {
 app.post('/goals', authenticateToken, async (req, res) => {
     const { category, amount } = req.body;
     try {
-        // Usa UPSERT: Insere, mas se já existir conflito (mesmo user e categoria), atualiza o valor
         await pool.query(
             `INSERT INTO category_goals (user_id, category, amount) 
              VALUES ($1, $2, $3)
@@ -205,13 +213,11 @@ app.post('/va', authenticateToken, async (req, res) => {
     try {
         const val = parseFloat(amount);
         
-        // 1. Atualiza o saldo do usuário
         const currentRes = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
         let currentBalance = parseFloat(currentRes.rows[0].va_balance || 0);
         if (type === 'credit') currentBalance += val; else currentBalance -= val;
         await pool.query('UPDATE users SET va_balance = $1 WHERE id = $2', [currentBalance, req.user.id]);
 
-        // 2. Registra o histórico
         const transRes = await pool.query(
             'INSERT INTO va_transactions (user_id, description, amount, type, transaction_date, month) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
             [req.user.id, desc, val, type, date, month]
@@ -223,14 +229,12 @@ app.post('/va', authenticateToken, async (req, res) => {
 
 app.delete('/va/:id', authenticateToken, async (req, res) => {
     try {
-        // Busca a transação para reverter o saldo
         const transRes = await pool.query('SELECT amount, type FROM va_transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
         if (transRes.rows.length > 0) {
             const t = transRes.rows[0];
             const currentRes = await pool.query('SELECT va_balance FROM users WHERE id = $1', [req.user.id]);
             let currentBalance = parseFloat(currentRes.rows[0].va_balance || 0);
 
-            // Se apagou um gasto (debit), o dinheiro volta. Se apagou recarga (credit), tira.
             if (t.type === 'credit') currentBalance -= parseFloat(t.amount);
             else currentBalance += parseFloat(t.amount);
 
