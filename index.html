@@ -268,13 +268,60 @@
             </section>
 
             <section id="viewDashboard" class="space-y-6 hidden animate-fade-in">
-                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg">
-                    <div class="relative z-10"><h2 class="text-2xl font-bold mb-2">Consultoria IA</h2><p class="text-indigo-100 text-sm mb-4 max-w-2xl">Inteligência artificial analisando seus dados.</p><button id="btnGenerateReport" class="bg-white text-indigo-600 font-bold py-2 px-6 rounded-full text-sm hover:bg-indigo-50 transition shadow-md">Gerar Relatório</button></div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="glass p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm">
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Saldo Livre</p>
+                        <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-300" id="dashBalance">R$ 0,00</h2>
+                    </div>
+                    <div class="glass p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Receitas (Mês)</p>
+                        <h2 class="text-xl font-bold text-emerald-600 dark:text-emerald-400" id="dashIncome">R$ 0,00</h2>
+                    </div>
+                    <div class="glass p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Despesas (Mês)</p>
+                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400" id="dashExpense">R$ 0,00</h2>
+                    </div>
+                    <div class="glass p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Investido (Mês)</p>
+                        <h2 class="text-xl font-bold text-blue-600 dark:text-blue-400" id="dashInvest">R$ 0,00</h2>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg mt-4">
+                    <div class="relative z-10">
+                        <h2 class="text-2xl font-bold mb-2">Consultoria IA</h2>
+                        <p class="text-indigo-100 text-sm mb-4 max-w-2xl">Inteligência artificial analisando seus dados e hábitos.</p>
+                        <button id="btnGenerateReport" class="bg-white text-indigo-600 font-bold py-2 px-6 rounded-full text-sm hover:bg-indigo-50 transition shadow-md">Gerar Relatório</button>
+                    </div>
                 </div>
                 <div id="aiResponseArea" class="hidden glass p-6 rounded-xl border-l-4 border-purple-500 animate-fade-in shadow-sm"><div id="aiTextContent" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line prose prose-sm max-w-none"></div></div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Evolução Mensal</h3><div class="h-64"><canvas id="evolutionChart"></canvas></div></div>
-                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm"><h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Top Gastos</h3><ul id="topExpensesList" class="space-y-2"></ul></div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm col-span-1 lg:col-span-2">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-area text-indigo-500"></i> Curva de Saldo (Mês Atual)</h3>
+                        <div class="h-64"><canvas id="dailyBalanceChart"></canvas></div>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-bar text-indigo-500"></i> Evolução Mensal</h3>
+                        <div class="h-64"><canvas id="evolutionChart"></canvas></div>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-balance-scale text-indigo-500"></i> Regra 50/30/20</h3>
+                        <div class="h-64"><canvas id="rule503020Chart"></canvas></div>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-sort-amount-down text-red-500"></i> Ranking de Despesas</h3>
+                        <div class="h-64"><canvas id="rankExpensesChart"></canvas></div>
+                    </div>
+
+                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-wallet text-emerald-500"></i> Panorama do Patrimônio</h3>
+                        <div class="h-64"><canvas id="netWorthChart"></canvas></div>
+                    </div>
                 </div>
             </section>
         </div>
