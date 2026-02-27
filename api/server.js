@@ -274,7 +274,56 @@ app.delete('/objectives/:id', authenticateToken, async (req, res) => {
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
+// --- 11.5 ROTAS DE CARTÃO DE CRÉDITO ---
+app.get('/cards', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM credit_cards WHERE user_id = $1 ORDER BY id ASC', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
+app.post('/cards', authenticateToken, async (req, res) => {
+    const { name, limit_amount, closing_day, due_day } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO credit_cards (user_id, name, limit_amount, closing_day, due_day) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [req.user.id, name, limit_amount, closing_day, due_day]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/cards/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM credit_cards WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/card-transactions', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM card_transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/card-transactions', authenticateToken, async (req, res) => {
+    const { card_id, description, amount, date, month, installments, current_installment } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO card_transactions (user_id, card_id, description, amount, transaction_date, month, installments, current_installment) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [req.user.id, card_id, description, amount, date, month, installments, current_installment]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/card-transactions/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM card_transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
 // --- 12. INICIAR O SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
