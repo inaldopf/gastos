@@ -9,6 +9,8 @@ export const store = {
     meta: 0,
     vaBalance: 0,
     vaTransactions: [],
+    cards: [], // <-- NOVO
+    cardTransactions: [], // <-- NOVO
 
     getToken() { return localStorage.getItem('inf_auth_token'); },
 
@@ -21,6 +23,8 @@ export const store = {
             meta: this.meta,
             vaBalance: this.vaBalance,
             vaTransactions: this.vaTransactions,
+            cards: this.cards, // <-- NOVO
+            cardTransactions: this.cardTransactions, // <-- NOVO
             timestamp: new Date().getTime()
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -38,12 +42,13 @@ export const store = {
                 this.meta = data.meta || 0;
                 this.vaBalance = data.vaBalance || 0;
                 this.vaTransactions = data.vaTransactions || [];
+                this.cards = data.cards || []; // <-- NOVO
+                this.cardTransactions = data.cardTransactions || []; // <-- NOVO
                 return true;
             } catch (e) { return false; }
         }
         return false;
     },
-
     async init() {
         const token = this.getToken();
         if (!token) return;
