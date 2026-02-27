@@ -36,22 +36,37 @@ export async function getFinancialAdvice(summaryData, apiKey) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-        Aja como um consultor financeiro pessoal experiente e direto.
-        Analise o resumo financeiro do usuário abaixo e forneça:
-        1. Um diagnóstico curto da situação.
-        2. 3 dicas práticas para economizar ou melhorar os investimentos.
-        3. Um elogio sobre o que ele está fazendo certo.
+        Aja como um consultor financeiro de alto nível. Sua abordagem mistura pragmatismo financeiro com a sabedoria do Estoicismo (focando naquilo que podemos controlar, moderação e visão de longo prazo).
         
-        DADOS DO USUÁRIO:
-        - Saldo Atual: R$ ${summaryData.balance}
-        - Total Investido: R$ ${summaryData.invested}
-        - Gastos Totais: R$ ${summaryData.expenses}
-        - Top 3 Categorias de Gasto: ${summaryData.topCategories}
-        - Taxa de Poupança: ${summaryData.savingsRate}%
+        Contexto geral (para guiar as dicas):
+        - O usuário está utilizando este sistema para melhorar sua saúde financeira, ter clareza sobre seus gastos e construir patrimônio.
+        - As dicas devem ser universais, lógicas e focadas em otimização de fluxo de caixa, redução de desperdícios e incentivo aos investimentos, baseando-se estritamente nas categorias de maior gasto detectadas.
+        
+        Analise os dados financeiros deste mês:
+        - Saldo Livre (Conta corrente): ${summaryData.balance}
+        - Total Guardado/Investido: ${summaryData.invested}
+        - Gastos Totais no mês: ${summaryData.expenses}
+        - Top Categorias de Gasto: ${summaryData.topCategories}
+        
+        Com base nisso, escreva um relatório em formato Markdown com a seguinte estrutura:
+        
+        ### 📊 Diagnóstico do Mês
+        (Análise direta e honesta do cenário atual. O saldo livre sustenta o custo de vida? O nível de investimento e acúmulo de capital está bom?)
+        
+        ### 💡 Plano de Ação (3 Dicas)
+        (Dicas acionáveis e super específicas baseadas nos números reais e nas categorias de maior gasto. Sugira regras práticas, automações financeiras ou readequação de orçamento para os gargalos identificados).
+        
+        ### 🏛️ Reflexão
+        (Termine com um pensamento estóico curto, citando Sêneca, Marco Aurélio ou Epicteto, relacionando riqueza, tempo e o que realmente importa na vida).
 
-        Seja amigável, use emojis e formatação limpa.
+        Seja conciso, escreva de forma fluida, não invente dados que não foram passados e use formatação em negrito para destacar valores e conceitos importantes.
     `;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    try {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    } catch (error) {
+        console.error("AI Error:", error);
+        throw new Error("Erro ao gerar relatório com a IA.");
+    }
 }

@@ -40,14 +40,19 @@ export const UI = {
         { id: 'Eletrônicos', icon: 'fa-laptop', color: 'text-gray-800', hex: '#1F2937', type: 'Despesa' },
         { id: 'Doações', icon: 'fa-hand-holding-heart', color: 'text-rose-400', hex: '#FB7185', type: 'Despesa' },
         { id: 'Assinaturas', icon: 'fa-file-signature', color: 'text-purple-400', hex: '#C084FC', type: 'Despesa' },
-        { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8', type: 'Despesa' }
+        { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8', type: 'Despesa' },
+        { id: 'Objetivo', icon: 'fa-star', color: 'text-indigo-500', hex: '#6366F1', type: 'Investimento', hidden: true },
+        { id: 'Objetivo', icon: 'fa-star', color: 'text-indigo-500', hex: '#6366F1', type: 'Receita', hidden: true },
+        { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-orange-500', hex: '#F97316', type: 'Despesa' },
+        { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-emerald-500', hex: '#10B981', type: 'Receita' }
     ],
 
     populateCategories(filterType = 'Despesa') {
         const select = document.getElementById('inputCategory');
         if (!select) return;
         select.innerHTML = '';
-        const filtered = this.categories.filter(cat => cat.type === filterType);
+        // Filtra por tipo e também ESCONDE as categorias com hidden: true
+        const filtered = this.categories.filter(cat => cat.type === filterType && !cat.hidden);
         filtered.forEach(cat => {
             const option = document.createElement('option');
             option.value = cat.id; option.textContent = cat.id;

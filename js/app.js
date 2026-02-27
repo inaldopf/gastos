@@ -3,6 +3,7 @@ import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
 import { Goals } from './goals.js';
 import { VA } from './va.js';
+import { Objectives } from './objectives.js';
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
@@ -90,10 +91,10 @@ function updateAllViews() {
     if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
     if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
     if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
+    if (Objectives && typeof Objectives.render === 'function') Objectives.render();
     renderDebts();
 }
 
-// CORREÇÃO: Torna a função updateAllViews acessível globalmente (para o va.js conseguir chamar)
 window.updateAllViews = updateAllViews;
 
 function renderDebts() {
@@ -125,6 +126,69 @@ window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); }
 window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
 window.removeVATransaction = async (id) => { if(confirm("Apagar registro do VA? (O saldo será revertido)")) { await store.removeVATransaction(id); updateAllViews(); }};
 
+window.removeObjective = async (id) => { if(confirm("Apagar objetivo?")) { await store.removeObjective(id); updateAllViews(); }};
+
+window.addMoneyObjective = async (id) => {
+    const obj = store.objectives.find(o => o.id === id);
+    if (!obj) return;
+    
+    const val = prompt(`Quanto deseja GUARDAR para o sonho: '${obj.title}'?`);
+    const numVal = parseFloat(val);
+    
+    if (numVal && numVal > 0) {
+        // Descobre o mês atual sendo visualizado para lançar a transação
+        let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
+            : getMonthName(new Date().getMonth() + 1);
+            
+        // 1. Atualiza o saldo da meta
+        await store.addMoneyToObjective(id, numVal);
+        
+        // 2. Cria a transação de "Investimento" para o dinheiro sair do seu saldo diário
+        await store.addTransaction({ 
+            desc: `Guardado: ${obj.title}`, 
+            amount: numVal, 
+            type: 'Investimento', 
+            category: 'Objetivo', 
+            date: new Date().toLocaleDateString('pt-BR'), 
+            month: targetMonth 
+        });
+        
+        updateAllViews();
+    }
+};
+
+window.removeMoneyObjective = async (id) => {
+    const obj = store.objectives.find(o => o.id === id);
+    if (!obj) return;
+
+    const val = prompt(`Quanto deseja RESGATAR do sonho: '${obj.title}'?\n(Saldo atual: R$ ${obj.current_amount})`);
+    const numVal = parseFloat(val);
+    
+    if (numVal && numVal > 0) {
+        if (numVal > parseFloat(obj.current_amount)) return alert("Você não pode resgatar um valor maior do que o que já guardou!");
+        
+        let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
+            : getMonthName(new Date().getMonth() + 1);
+            
+        // 1. Envia um valor NEGATIVO para a API diminuir o saldo da meta
+        await store.addMoneyToObjective(id, -numVal);
+        
+        // 2. Cria a transação de "Receita" para o dinheiro voltar para o seu saldo diário
+        await store.addTransaction({ 
+            desc: `Resgate: ${obj.title}`, 
+            amount: numVal, 
+            type: 'Receita', 
+            category: 'Objetivo', 
+            date: new Date().toLocaleDateString('pt-BR'), 
+            month: targetMonth 
+        });
+        
+        updateAllViews();
+    }
+};
+
 // 6. Events
 function setupEvents() {
     setupTheme();
@@ -134,7 +198,8 @@ function setupEvents() {
         debts: document.getElementById('tabDebts'),
         dash: document.getElementById('tabDash'),
         goals: document.getElementById('tabGoals'),
-        va: document.getElementById('tabVA')
+        va: document.getElementById('tabVA'),
+        objectives: document.getElementById('tabObjectives')
     };
 
     const mobileTabs = {
@@ -142,11 +207,12 @@ function setupEvents() {
         debts: document.getElementById('btnMobileDebts'),
         dash: document.getElementById('btnMobileDash'),
         goals: document.getElementById('btnMobileGoals'),
-        va: document.getElementById('btnMobileVA')
+        va: document.getElementById('btnMobileVA'),
+        objectives: document.getElementById('btnMobileObjectives')
     };
 
     const switchTab = (viewId) => {
-        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA'].forEach(id => {
+        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA', 'viewObjectives'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.classList.add('hidden');
         });
@@ -164,6 +230,7 @@ function setupEvents() {
         });
 
         Object.values(mobileTabs).forEach(btn => {
+            if(!btn) return;
             let base = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
             if (btn === mobileTabs.va) {
                 btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
@@ -203,6 +270,11 @@ function setupEvents() {
             }
             VA.render(selectedMonths);
         }
+        if(viewId === 'viewObjectives') {
+            if(tabs.objectives) tabs.objectives.className = activeDesktop;
+            if(mobileTabs.objectives) mobileTabs.objectives.className = activeMobile;
+            Objectives.render();
+        }
     };
 
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
@@ -210,12 +282,14 @@ function setupEvents() {
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
     if(tabs.va) tabs.va.addEventListener('click', () => switchTab('viewVA'));
+    if(tabs.objectives) tabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
 
     if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
     if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
     if(mobileTabs.va) mobileTabs.va.addEventListener('click', () => switchTab('viewVA'));
+    if(mobileTabs.objectives) mobileTabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
 
     const inputType = document.getElementById('inputType');
     if (inputType) {
@@ -248,8 +322,42 @@ function setupEvents() {
     }
 
     const debtForm = document.getElementById('debtForm');
-    if(debtForm) { debtForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('debtName').value; const amount = document.getElementById('debtAmount').value; if(name && amount) { await store.addDebt(name, parseFloat(amount)); renderDebts(); debtForm.reset(); } }); }
-    
+    if (debtForm) {
+        debtForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let name = document.getElementById('debtName').value;
+            const baseAmount = parseFloat(document.getElementById('debtAmount').value);
+            const interestInput = document.getElementById('debtInterest');
+            const interest = interestInput && interestInput.value ? parseFloat(interestInput.value) : 0;
+            
+            if (name && baseAmount) {
+                let finalAmount = baseAmount;
+                
+                // Se o usuário digitou alguma porcentagem, calcula o valor final
+                if (interest > 0) {
+                    finalAmount = baseAmount + (baseAmount * interest / 100);
+                    name = `${name} (+${interest}%)`; // Ex: João (+10%)
+                }
+                
+                const btnSubmit = debtForm.querySelector('button');
+                const oldText = btnSubmit.innerHTML;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
+                btnSubmit.disabled = true;
+
+                try {
+                    await store.addDebt(name, finalAmount);
+                    renderDebts();
+                    debtForm.reset();
+                    if (interestInput) interestInput.value = '0';
+                } catch (err) {
+                    alert("Erro ao salvar");
+                } finally {
+                    btnSubmit.innerHTML = oldText;
+                    btnSubmit.disabled = false;
+                }
+            }
+        });
+    }    
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
     const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
     const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
@@ -262,6 +370,101 @@ function setupEvents() {
     
     const dropZone = document.getElementById('dropZone'); 
     if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+
+    // --- 1. LÓGICA DE IMPORTAÇÃO DE EXTRATO EM PDF (IA) ---
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return alert("Configure sua API Key nas configurações (ícone de chave) primeiro!");
+
+            const loadingStatus = document.getElementById('loadingStatus');
+            dropZone.classList.add('hidden');
+            loadingStatus.classList.remove('hidden');
+
+            try {
+                // Importa dinamicamente as funções de IA e Leitura de PDF
+                const { readPdfText } = await import('./pdf.js');
+                const { categorizeWithGemini } = await import('./ai.js');
+                
+                const text = await readPdfText(file);
+                const transactions = await categorizeWithGemini(text, apiKey);
+
+                let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+                    ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
+                    : getMonthName(new Date().getMonth() + 1);
+
+                for (const t of transactions) {
+                    await store.addTransaction({
+                        desc: t.desc,
+                        amount: parseFloat(t.amount),
+                        type: t.type,
+                        category: t.category,
+                        date: t.date || new Date().toLocaleDateString('pt-BR'),
+                        month: targetMonth
+                    });
+                }
+                
+                alert(`${transactions.length} transações importadas com sucesso!`);
+                updateAllViews();
+                document.getElementById('importModal').classList.add('hidden');
+
+            } catch (error) {
+                alert("Erro ao importar. Verifique o console: " + error.message);
+                console.error(error);
+            } finally {
+                loadingStatus.classList.add('hidden');
+                dropZone.classList.remove('hidden');
+                fileInput.value = ''; // Reseta o input para permitir enviar o mesmo arquivo de novo se quiser
+            }
+        });
+    }
+
+    // --- 2. LÓGICA DO RELATÓRIO DA IA NO DASHBOARD ---
+    const btnGenerateReport = document.getElementById('btnGenerateReport');
+    if (btnGenerateReport) {
+        btnGenerateReport.addEventListener('click', async () => {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return alert("Configure sua API Key nas configurações (ícone de chave) primeiro!");
+
+            const originalText = btnGenerateReport.innerHTML;
+            btnGenerateReport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analisando seus hábitos...';
+            btnGenerateReport.disabled = true;
+
+            try {
+                const { getFinancialAdvice } = await import('./ai.js');
+                
+                // Calcula as Top 3 categorias de gasto reais para a IA ler
+                let currentMonths = window.currentSelectedMonths || [getMonthName(new Date().getMonth() + 1)];
+                const expenses = (store.transactions || []).filter(t => t.type === 'Despesa' && currentMonths.includes(t.month));
+                const totals = {};
+                expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount));
+                const topCats = Object.entries(totals).sort((a,b) => b[1]-a[1]).slice(0,3).map(x => x[0]).join(', ') || 'Nenhuma';
+
+                // Prepara os dados pro prompt do gemini
+                const summaryData = {
+                    balance: document.getElementById('dashBalance')?.innerText || 'R$ 0,00',
+                    invested: document.getElementById('dashInvest')?.innerText || 'R$ 0,00',
+                    expenses: document.getElementById('dashExpense')?.innerText || 'R$ 0,00',
+                    topCategories: topCats,
+                    savingsRate: "Calculado pela IA" 
+                };
+
+                const advice = await getFinancialAdvice(summaryData, apiKey);
+                
+                document.getElementById('aiTextContent').innerText = advice;
+                document.getElementById('aiResponseArea').classList.remove('hidden');
+            } catch (err) {
+                alert("Erro ao falar com a IA: " + err.message);
+            } finally {
+                btnGenerateReport.innerHTML = originalText;
+                btnGenerateReport.disabled = false;
+            }
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

@@ -5,9 +5,10 @@ export const store = {
     transactions: [],
     debtors: [],
     goals: [],
+    objectives: [],
     meta: 0,
     vaBalance: 0,
-    vaTransactions: [], // <--- RESTAURADO
+    vaTransactions: [],
 
     getToken() { return localStorage.getItem('inf_auth_token'); },
 
@@ -16,9 +17,10 @@ export const store = {
             transactions: this.transactions,
             debtors: this.debtors,
             goals: this.goals,
+            objectives: this.objectives,
             meta: this.meta,
             vaBalance: this.vaBalance,
-            vaTransactions: this.vaTransactions, // <--- RESTAURADO
+            vaTransactions: this.vaTransactions,
             timestamp: new Date().getTime()
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -32,9 +34,10 @@ export const store = {
                 this.transactions = data.transactions || [];
                 this.debtors = data.debtors || [];
                 this.goals = data.goals || [];
+                this.objectives = data.objectives || [];
                 this.meta = data.meta || 0;
                 this.vaBalance = data.vaBalance || 0;
-                this.vaTransactions = data.vaTransactions || []; // <--- RESTAURADO
+                this.vaTransactions = data.vaTransactions || [];
                 return true;
             } catch (e) { return false; }
         }
@@ -47,12 +50,13 @@ export const store = {
         this.loadFromCache();
 
         try {
-            const [resTrans, resDebt, resMeta, resGoals, resVA] = await Promise.all([
+            const [resTrans, resDebt, resMeta, resGoals, resVA, resObj] = await Promise.all([
                 fetch(`${API_URL}/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/debtors`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/meta`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/goals`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/va`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`${API_URL}/va`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_URL}/objectives`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
 
             if (resTrans.ok) {
@@ -80,12 +84,13 @@ export const store = {
                 this.meta = parseFloat(d.meta) || 0;
             }
             if (resGoals && resGoals.ok) this.goals = await resGoals.json();
-            
-            // CARREGA HISTÓRICO DO VA AQUI
             if (resVA && resVA.ok) {
                 const d = await resVA.json();
                 this.vaBalance = parseFloat(d.balance) || 0;
                 this.vaTransactions = d.transactions || []; 
+            }
+            if (resObj && resObj.ok) {
+                this.objectives = await resObj.json();
             }
             this.saveToCache();
         } catch (error) { 
@@ -199,12 +204,10 @@ export const store = {
         fetch(`${API_URL}/debtors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     },
 
-    // FUNÇÃO VA RESTAURADA (Para salvar no array de extrato também)
     async updateVA(amount, type, desc, date, month) {
         const token = this.getToken();
         const val = parseFloat(amount);
         
-        // Atualização Otimista
         if (type === 'credit') this.vaBalance += val; else this.vaBalance -= val;
         
         const tempId = Date.now();
@@ -229,7 +232,6 @@ export const store = {
         } catch (e) { alert("Erro Sync VA"); }
     },
 
-    // FUNÇÃO PARA DELETAR HISTÓRICO DO VA
     async removeVATransaction(id) {
         const token = this.getToken();
         const t = this.vaTransactions.find(x => x.id === id);
@@ -243,5 +245,48 @@ export const store = {
         try {
             await fetch(`${API_URL}/va/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
         } catch(e) { alert("Erro ao apagar VA"); }
+    },
+
+    async addObjective(title, targetAmount) {
+        const token = this.getToken();
+        const tempId = Date.now();
+        this.objectives.unshift({ id: tempId, title, target_amount: targetAmount, current_amount: 0 });
+        this.saveToCache();
+        try {
+            const res = await fetch(`${API_URL}/objectives`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title, target_amount: targetAmount })
+            });
+            const dbItem = await res.json();
+            const idx = this.objectives.findIndex(o => o.id === tempId);
+            if(idx !== -1) { this.objectives[idx].id = dbItem.id; this.saveToCache(); }
+        } catch(e) { 
+            this.objectives = this.objectives.filter(o => o.id !== tempId); 
+            this.saveToCache(); 
+        }
+    },
+
+    async addMoneyToObjective(id, amountToAdd) {
+        const token = this.getToken();
+        const idx = this.objectives.findIndex(o => o.id === id);
+        if(idx !== -1) { 
+            this.objectives[idx].current_amount = parseFloat(this.objectives[idx].current_amount) + parseFloat(amountToAdd); 
+            this.saveToCache(); 
+        }
+        try {
+            await fetch(`${API_URL}/objectives/${id}/add`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ amountToAdd })
+            });
+        } catch (e) { console.error("Erro ao adicionar saldo", e); }
+    },
+
+    async removeObjective(id) {
+        const token = this.getToken();
+        this.objectives = this.objectives.filter(o => o.id !== id);
+        this.saveToCache();
+        fetch(`${API_URL}/objectives/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     }
 };
