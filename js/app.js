@@ -127,10 +127,64 @@ window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeD
 window.removeVATransaction = async (id) => { if(confirm("Apagar registro do VA? (O saldo será revertido)")) { await store.removeVATransaction(id); updateAllViews(); }};
 
 window.removeObjective = async (id) => { if(confirm("Apagar objetivo?")) { await store.removeObjective(id); updateAllViews(); }};
+
 window.addMoneyObjective = async (id) => {
-    const val = prompt("Quanto deseja adicionar a este objetivo?");
-    if (val && !isNaN(parseFloat(val))) {
-        await store.addMoneyToObjective(id, parseFloat(val));
+    const obj = store.objectives.find(o => o.id === id);
+    if (!obj) return;
+    
+    const val = prompt(`Quanto deseja GUARDAR para o sonho: '${obj.title}'?`);
+    const numVal = parseFloat(val);
+    
+    if (numVal && numVal > 0) {
+        // Descobre o mês atual sendo visualizado para lançar a transação
+        let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
+            : getMonthName(new Date().getMonth() + 1);
+            
+        // 1. Atualiza o saldo da meta
+        await store.addMoneyToObjective(id, numVal);
+        
+        // 2. Cria a transação de "Investimento" para o dinheiro sair do seu saldo diário
+        await store.addTransaction({ 
+            desc: `Guardado: ${obj.title}`, 
+            amount: numVal, 
+            type: 'Investimento', 
+            category: 'Objetivo', 
+            date: new Date().toLocaleDateString('pt-BR'), 
+            month: targetMonth 
+        });
+        
+        updateAllViews();
+    }
+};
+
+window.removeMoneyObjective = async (id) => {
+    const obj = store.objectives.find(o => o.id === id);
+    if (!obj) return;
+
+    const val = prompt(`Quanto deseja RESGATAR do sonho: '${obj.title}'?\n(Saldo atual: R$ ${obj.current_amount})`);
+    const numVal = parseFloat(val);
+    
+    if (numVal && numVal > 0) {
+        if (numVal > parseFloat(obj.current_amount)) return alert("Você não pode resgatar um valor maior do que o que já guardou!");
+        
+        let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
+            : getMonthName(new Date().getMonth() + 1);
+            
+        // 1. Envia um valor NEGATIVO para a API diminuir o saldo da meta
+        await store.addMoneyToObjective(id, -numVal);
+        
+        // 2. Cria a transação de "Receita" para o dinheiro voltar para o seu saldo diário
+        await store.addTransaction({ 
+            desc: `Resgate: ${obj.title}`, 
+            amount: numVal, 
+            type: 'Receita', 
+            category: 'Objetivo', 
+            date: new Date().toLocaleDateString('pt-BR'), 
+            month: targetMonth 
+        });
+        
         updateAllViews();
     }
 };
