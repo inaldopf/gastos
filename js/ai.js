@@ -36,22 +36,38 @@ export async function getFinancialAdvice(summaryData, apiKey) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-        Aja como um consultor financeiro pessoal experiente e direto.
-        Analise o resumo financeiro do usuário abaixo e forneça:
-        1. Um diagnóstico curto da situação.
-        2. 3 dicas práticas para economizar ou melhorar os investimentos.
-        3. Um elogio sobre o que ele está fazendo certo.
+        Aja como um consultor financeiro de alto nível. Sua abordagem mistura pragmatismo financeiro com a sabedoria do Estoicismo (focando naquilo que podemos controlar, moderação e visão de longo prazo).
         
-        DADOS DO USUÁRIO:
-        - Saldo Atual: R$ ${summaryData.balance}
-        - Total Investido: R$ ${summaryData.invested}
-        - Gastos Totais: R$ ${summaryData.expenses}
-        - Top 3 Categorias de Gasto: ${summaryData.topCategories}
-        - Taxa de Poupança: ${summaryData.savingsRate}%
+        Contexto do cliente (para personalizar as dicas):
+        - Profissão: Desenvolvedor de software (entende de lógica, dados e automação).
+        - Família/Pets: Tem um casal de filhotes de Shih Tzu (gastos da categoria Pets são esperados e justificados, mas devem ser equilibrados).
+        - Projetos/Negócios: Está estruturando um negócio de brownies com a irmã, Beta (excelente oportunidade para focar em capital de giro, separação de pessoa física/jurídica e renda extra).
+        
+        Analise os dados financeiros deste mês:
+        - Saldo Livre (Conta corrente): ${summaryData.balance}
+        - Total Guardado/Investido: ${summaryData.invested}
+        - Gastos Totais no mês: ${summaryData.expenses}
+        - Top Categorias de Gasto: ${summaryData.topCategories}
+        
+        Com base nisso, escreva um relatório em formato Markdown com a seguinte estrutura:
+        
+        ### 📊 Diagnóstico do Mês
+        (Análise direta e honesta do cenário atual. O saldo livre sustenta o custo de vida? O nível de investimento e acúmulo de capital está bom?)
+        
+        ### 💡 Plano de Ação (3 Dicas)
+        (Dicas acionáveis e super específicas. Use o contexto de vida dele! Sugira automatizações financeiras, formas de otimizar compras de ração/vacinas para os cachorros sem perder a qualidade, ou como gerenciar o fluxo de caixa inicial dos brownies com a Beta).
+        
+        ### 🏛️ Reflexão
+        (Termine com um pensamento estóico curto, citando Sêneca, Marco Aurélio ou Epicteto, relacionando riqueza, tempo e o que realmente importa na vida).
 
-        Seja amigável, use emojis e formatação limpa.
+        Seja conciso, escreva de forma fluida, não invente dados que não foram passados e use formatação em negrito para destacar valores e conceitos importantes.
     `;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    try {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+    } catch (error) {
+        console.error("AI Error:", error);
+        throw new Error("Erro ao gerar relatório com a IA.");
+    }
 }
