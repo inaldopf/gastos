@@ -54,7 +54,7 @@ export async function getFinancialAdvice(summaryData, apiKey) {
         (Análise direta e honesta do cenário atual. O saldo livre sustenta o custo de vida? O nível de investimento e acúmulo de capital está bom?)
         
         ### 💡 Plano de Ação (3 Dicas)
-        (Dicas acionáveis e super específicas. Use o contexto de vida dele! Sugira automatizações financeiras, formas de otimizar compras de ração/vacinas para os cachorros sem perder a qualidade, ou como gerenciar o fluxo de caixa inicial dos brownies com a Beta).
+        (Dicas acionáveis e super específicas baseadas nos números reais e nas categorias de maior gasto. Sugira regras práticas, automações financeiras ou readequação de orçamento para os gargalos identificados).
         
         ### 🏛️ Reflexão
         (Termine com um pensamento estóico curto, citando Sêneca, Marco Aurélio ou Epicteto, relacionando riqueza, tempo e o que realmente importa na vida).
