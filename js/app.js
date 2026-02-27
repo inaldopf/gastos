@@ -336,6 +336,101 @@ function setupEvents() {
     
     const dropZone = document.getElementById('dropZone'); 
     if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+
+    // --- 1. LÓGICA DE IMPORTAÇÃO DE EXTRATO EM PDF (IA) ---
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return alert("Configure sua API Key nas configurações (ícone de chave) primeiro!");
+
+            const loadingStatus = document.getElementById('loadingStatus');
+            dropZone.classList.add('hidden');
+            loadingStatus.classList.remove('hidden');
+
+            try {
+                // Importa dinamicamente as funções de IA e Leitura de PDF
+                const { readPdfText } = await import('./pdf.js');
+                const { categorizeWithGemini } = await import('./ai.js');
+                
+                const text = await readPdfText(file);
+                const transactions = await categorizeWithGemini(text, apiKey);
+
+                let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+                    ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
+                    : getMonthName(new Date().getMonth() + 1);
+
+                for (const t of transactions) {
+                    await store.addTransaction({
+                        desc: t.desc,
+                        amount: parseFloat(t.amount),
+                        type: t.type,
+                        category: t.category,
+                        date: t.date || new Date().toLocaleDateString('pt-BR'),
+                        month: targetMonth
+                    });
+                }
+                
+                alert(`${transactions.length} transações importadas com sucesso!`);
+                updateAllViews();
+                document.getElementById('importModal').classList.add('hidden');
+
+            } catch (error) {
+                alert("Erro ao importar. Verifique o console: " + error.message);
+                console.error(error);
+            } finally {
+                loadingStatus.classList.add('hidden');
+                dropZone.classList.remove('hidden');
+                fileInput.value = ''; // Reseta o input para permitir enviar o mesmo arquivo de novo se quiser
+            }
+        });
+    }
+
+    // --- 2. LÓGICA DO RELATÓRIO DA IA NO DASHBOARD ---
+    const btnGenerateReport = document.getElementById('btnGenerateReport');
+    if (btnGenerateReport) {
+        btnGenerateReport.addEventListener('click', async () => {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return alert("Configure sua API Key nas configurações (ícone de chave) primeiro!");
+
+            const originalText = btnGenerateReport.innerHTML;
+            btnGenerateReport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analisando seus hábitos...';
+            btnGenerateReport.disabled = true;
+
+            try {
+                const { getFinancialAdvice } = await import('./ai.js');
+                
+                // Calcula as Top 3 categorias de gasto reais para a IA ler
+                let currentMonths = window.currentSelectedMonths || [getMonthName(new Date().getMonth() + 1)];
+                const expenses = (store.transactions || []).filter(t => t.type === 'Despesa' && currentMonths.includes(t.month));
+                const totals = {};
+                expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount));
+                const topCats = Object.entries(totals).sort((a,b) => b[1]-a[1]).slice(0,3).map(x => x[0]).join(', ') || 'Nenhuma';
+
+                // Prepara os dados pro prompt do gemini
+                const summaryData = {
+                    balance: document.getElementById('dashBalance')?.innerText || 'R$ 0,00',
+                    invested: document.getElementById('dashInvest')?.innerText || 'R$ 0,00',
+                    expenses: document.getElementById('dashExpense')?.innerText || 'R$ 0,00',
+                    topCategories: topCats,
+                    savingsRate: "Calculado pela IA" 
+                };
+
+                const advice = await getFinancialAdvice(summaryData, apiKey);
+                
+                document.getElementById('aiTextContent').innerText = advice;
+                document.getElementById('aiResponseArea').classList.remove('hidden');
+            } catch (err) {
+                alert("Erro ao falar com a IA: " + err.message);
+            } finally {
+                btnGenerateReport.innerHTML = originalText;
+                btnGenerateReport.disabled = false;
+            }
+        });
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
