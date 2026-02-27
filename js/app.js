@@ -322,8 +322,42 @@ function setupEvents() {
     }
 
     const debtForm = document.getElementById('debtForm');
-    if(debtForm) { debtForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = document.getElementById('debtName').value; const amount = document.getElementById('debtAmount').value; if(name && amount) { await store.addDebt(name, parseFloat(amount)); renderDebts(); debtForm.reset(); } }); }
-    
+    if (debtForm) {
+        debtForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let name = document.getElementById('debtName').value;
+            const baseAmount = parseFloat(document.getElementById('debtAmount').value);
+            const interestInput = document.getElementById('debtInterest');
+            const interest = interestInput && interestInput.value ? parseFloat(interestInput.value) : 0;
+            
+            if (name && baseAmount) {
+                let finalAmount = baseAmount;
+                
+                // Se o usuário digitou alguma porcentagem, calcula o valor final
+                if (interest > 0) {
+                    finalAmount = baseAmount + (baseAmount * interest / 100);
+                    name = `${name} (+${interest}%)`; // Ex: João (+10%)
+                }
+                
+                const btnSubmit = debtForm.querySelector('button');
+                const oldText = btnSubmit.innerHTML;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
+                btnSubmit.disabled = true;
+
+                try {
+                    await store.addDebt(name, finalAmount);
+                    renderDebts();
+                    debtForm.reset();
+                    if (interestInput) interestInput.value = '0';
+                } catch (err) {
+                    alert("Erro ao salvar");
+                } finally {
+                    btnSubmit.innerHTML = oldText;
+                    btnSubmit.disabled = false;
+                }
+            }
+        });
+    }    
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
     const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
     const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
