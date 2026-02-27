@@ -88,8 +88,11 @@ export const Objectives = {
                 </div>
                 
                 <div class="mt-4 flex gap-2">
-                    <button onclick="window.addMoneyObjective(${obj.id})" class="flex-1 text-sm font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-4 py-2 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800">
-                        <i class="fas fa-plus mr-1"></i> Adicionar Saldo
+                    <button onclick="window.addMoneyObjective(${obj.id})" class="flex-1 text-sm font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-4 py-2 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800 shadow-sm">
+                        <i class="fas fa-plus mr-1"></i> Guardar
+                    </button>
+                    <button onclick="window.removeMoneyObjective(${obj.id})" class="flex-1 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-300 px-4 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition border border-red-100 dark:border-red-800 shadow-sm">
+                        <i class="fas fa-minus mr-1"></i> Resgatar
                     </button>
                 </div>
             `;
