@@ -38,10 +38,9 @@ export async function getFinancialAdvice(summaryData, apiKey) {
     const prompt = `
         Aja como um consultor financeiro de alto nível. Sua abordagem mistura pragmatismo financeiro com a sabedoria do Estoicismo (focando naquilo que podemos controlar, moderação e visão de longo prazo).
         
-        Contexto do cliente (para personalizar as dicas):
-        - Profissão: Desenvolvedor de software (entende de lógica, dados e automação).
-        - Família/Pets: Tem um casal de filhotes de Shih Tzu (gastos da categoria Pets são esperados e justificados, mas devem ser equilibrados).
-        - Projetos/Negócios: Está estruturando um negócio de brownies com a irmã, Beta (excelente oportunidade para focar em capital de giro, separação de pessoa física/jurídica e renda extra).
+        Contexto geral (para guiar as dicas):
+        - O usuário está utilizando este sistema para melhorar sua saúde financeira, ter clareza sobre seus gastos e construir patrimônio.
+        - As dicas devem ser universais, lógicas e focadas em otimização de fluxo de caixa, redução de desperdícios e incentivo aos investimentos, baseando-se estritamente nas categorias de maior gasto detectadas.
         
         Analise os dados financeiros deste mês:
         - Saldo Livre (Conta corrente): ${summaryData.balance}
