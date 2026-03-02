@@ -43,6 +43,7 @@ export const UI = {
         { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8', type: 'Despesa' },
         { id: 'Objetivo', icon: 'fa-star', color: 'text-indigo-500', hex: '#6366F1', type: 'Investimento', hidden: true },
         { id: 'Objetivo', icon: 'fa-star', color: 'text-indigo-500', hex: '#6366F1', type: 'Receita', hidden: true },
+        { id: 'Cartão de Crédito', icon: 'fa-credit-card', color: 'text-purple-600', hex: '#9333EA', type: 'Despesa', hidden: true },
         { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-orange-500', hex: '#F97316', type: 'Despesa' },
         { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-emerald-500', hex: '#10B981', type: 'Receita' }
     ],
