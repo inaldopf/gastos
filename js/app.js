@@ -5,6 +5,7 @@ import { Goals } from './goals.js';
 import { VA } from './va.js';
 import { Objectives } from './objectives.js';
 import { getMonthName } from './utils.js';
+import { Cards } from './cards.js';
 
 console.log("🚀 app.js carregado!");
 
@@ -92,6 +93,7 @@ function updateAllViews() {
     if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
     if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
     if (Objectives && typeof Objectives.render === 'function') Objectives.render();
+    if (Cards && typeof Cards.render === 'function') Cards.render(selectedMonths); // <-- NOVO
     renderDebts();
 }
 
@@ -199,7 +201,8 @@ function setupEvents() {
         dash: document.getElementById('tabDash'),
         goals: document.getElementById('tabGoals'),
         va: document.getElementById('tabVA'),
-        objectives: document.getElementById('tabObjectives')
+        objectives: document.getElementById('tabObjectives'),
+        cards: document.getElementById('tabCards')
     };
 
     const mobileTabs = {
@@ -208,11 +211,13 @@ function setupEvents() {
         dash: document.getElementById('btnMobileDash'),
         goals: document.getElementById('btnMobileGoals'),
         va: document.getElementById('btnMobileVA'),
-        objectives: document.getElementById('btnMobileObjectives')
+        objectives: document.getElementById('btnMobileObjectives'),
+        cards: document.getElementById('btnMobileCards')
+        
     };
 
     const switchTab = (viewId) => {
-        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA', 'viewObjectives'].forEach(id => {
+        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA', 'viewObjectives', 'viewCards'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.classList.add('hidden');
         });
@@ -275,6 +280,11 @@ function setupEvents() {
             if(mobileTabs.objectives) mobileTabs.objectives.className = activeMobile;
             Objectives.render();
         }
+        if(viewId === 'viewCards') {
+            if(tabs.cards) tabs.cards.className = activeDesktop;
+            if(mobileTabs.cards) mobileTabs.cards.className = activeMobile;
+            Cards.render(window.currentSelectedMonths);
+        }
     };
 
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
@@ -283,6 +293,7 @@ function setupEvents() {
     if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
     if(tabs.va) tabs.va.addEventListener('click', () => switchTab('viewVA'));
     if(tabs.objectives) tabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
+    if(tabs.cards) tabs.cards.addEventListener('click', () => switchTab('viewCards'));
 
     if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
@@ -290,6 +301,7 @@ function setupEvents() {
     if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
     if(mobileTabs.va) mobileTabs.va.addEventListener('click', () => switchTab('viewVA'));
     if(mobileTabs.objectives) mobileTabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
+    if(mobileTabs.cards) mobileTabs.cards.addEventListener('click', () => switchTab('viewCards'));
 
     const inputType = document.getElementById('inputType');
     if (inputType) {
