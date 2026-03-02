@@ -49,6 +49,7 @@ export const store = {
         }
         return false;
     },
+
     async init() {
         const token = this.getToken();
         if (!token) return;
@@ -62,45 +63,9 @@ export const store = {
                 fetch(`${API_URL}/goals`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/va`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/objectives`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/cards`, { headers: { 'Authorization': `Bearer ${token}` } }), // <-- NOVO
-                fetch(`${API_URL}/card-transactions`, { headers: { 'Authorization': `Bearer ${token}` } }) // <-- NOVO
+                fetch(`${API_URL}/cards`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_URL}/card-transactions`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
-
-            if (resTrans.ok) { // ... (Mantenha igual o map da transaction)
-                const rawTrans = await resTrans.json();
-                this.transactions = rawTrans.map(dbItem => {
-                    let dateStr = dbItem.transaction_date;
-                    if (dateStr && !dateStr.includes('/')) {
-                        const parts = dateStr.split('-');
-                        if(parts.length === 3) dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-                    return {
-                        id: dbItem.id,
-                        desc: dbItem.description,
-                        amount: parseFloat(dbItem.amount),
-                        type: dbItem.type,
-                        category: dbItem.category,
-                        date: dateStr, 
-                        month: dbItem.month
-                    };
-                });
-            }
-            if (resDebt.ok) this.debtors = await resDebt.json();
-            if (resMeta.ok) {
-                const d = await resMeta.json();
-                this.meta = parseFloat(d.meta) || 0;
-            }
-            if (resGoals && resGoals.ok) this.goals = await resGoals.json();
-            if (resVA && resVA.ok) {
-                const d = await resVA.json();
-                this.vaBalance = parseFloat(d.balance) || 0;
-                this.vaTransactions = d.transactions || []; 
-            }
-            if (resObj && resObj.ok) this.objectives = await resObj.json();
-            if (resCards && resCards.ok) this.cards = await resCards.json(); // <-- NOVO
-            if (resCardTrans && resCardTrans.ok) this.cardTransactions = await resCardTrans.json(); // <-- NOVO
-            
-            this.saveToCache();
 
             if (resTrans.ok) {
                 const rawTrans = await resTrans.json();
@@ -135,6 +100,9 @@ export const store = {
             if (resObj && resObj.ok) {
                 this.objectives = await resObj.json();
             }
+            if (resCards && resCards.ok) this.cards = await resCards.json();
+            if (resCardTrans && resCardTrans.ok) this.cardTransactions = await resCardTrans.json();
+            
             this.saveToCache();
         } catch (error) { 
             console.error("Erro sync:", error); 
