@@ -4,8 +4,8 @@ import { Dashboard } from './dashboard.js';
 import { Goals } from './goals.js';
 import { VA } from './va.js';
 import { Objectives } from './objectives.js';
-import { getMonthName } from './utils.js';
 import { Cards } from './cards.js';
+import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
 
@@ -43,9 +43,11 @@ function setupCategoryFilter() {
     if (!select || !UI || !UI.categories) return;
     select.innerHTML = '<option value="Todas">📂 Todas Categorias</option>';
     UI.categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.id; option.textContent = `${cat.id}`;
-        select.appendChild(option);
+        if (!cat.hidden) {
+            const option = document.createElement('option');
+            option.value = cat.id; option.textContent = `${cat.id}`;
+            select.appendChild(option);
+        }
     });
     select.addEventListener('change', (e) => { selectedCategory = e.target.value; updateAllViews(); });
 }
@@ -93,7 +95,7 @@ function updateAllViews() {
     if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
     if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
     if (Objectives && typeof Objectives.render === 'function') Objectives.render();
-    if (Cards && typeof Cards.render === 'function') Cards.render(selectedMonths); // <-- NOVO
+    if (Cards && typeof Cards.render === 'function') Cards.render(selectedMonths);
     renderDebts();
 }
 
@@ -129,33 +131,16 @@ window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeD
 window.removeVATransaction = async (id) => { if(confirm("Apagar registro do VA? (O saldo será revertido)")) { await store.removeVATransaction(id); updateAllViews(); }};
 
 window.removeObjective = async (id) => { if(confirm("Apagar objetivo?")) { await store.removeObjective(id); updateAllViews(); }};
-
 window.addMoneyObjective = async (id) => {
     const obj = store.objectives.find(o => o.id === id);
     if (!obj) return;
-    
     const val = prompt(`Quanto deseja GUARDAR para o sonho: '${obj.title}'?`);
     const numVal = parseFloat(val);
-    
     if (numVal && numVal > 0) {
-        // Descobre o mês atual sendo visualizado para lançar a transação
         let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
-            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
-            : getMonthName(new Date().getMonth() + 1);
-            
-        // 1. Atualiza o saldo da meta
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] : getMonthName(new Date().getMonth() + 1);
         await store.addMoneyToObjective(id, numVal);
-        
-        // 2. Cria a transação de "Investimento" para o dinheiro sair do seu saldo diário
-        await store.addTransaction({ 
-            desc: `Guardado: ${obj.title}`, 
-            amount: numVal, 
-            type: 'Investimento', 
-            category: 'Objetivo', 
-            date: new Date().toLocaleDateString('pt-BR'), 
-            month: targetMonth 
-        });
-        
+        await store.addTransaction({ desc: `Guardado: ${obj.title}`, amount: numVal, type: 'Investimento', category: 'Objetivo', date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
         updateAllViews();
     }
 };
@@ -163,30 +148,14 @@ window.addMoneyObjective = async (id) => {
 window.removeMoneyObjective = async (id) => {
     const obj = store.objectives.find(o => o.id === id);
     if (!obj) return;
-
-    const val = prompt(`Quanto deseja RESGATAR do sonho: '${obj.title}'?\n(Saldo atual: R$ ${obj.current_amount})`);
+    const val = prompt(`Quanto deseja RESGATAR do sonho: '${obj.title}'?\\n(Saldo atual: R$ ${obj.current_amount})`);
     const numVal = parseFloat(val);
-    
     if (numVal && numVal > 0) {
         if (numVal > parseFloat(obj.current_amount)) return alert("Você não pode resgatar um valor maior do que o que já guardou!");
-        
         let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
-            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
-            : getMonthName(new Date().getMonth() + 1);
-            
-        // 1. Envia um valor NEGATIVO para a API diminuir o saldo da meta
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] : getMonthName(new Date().getMonth() + 1);
         await store.addMoneyToObjective(id, -numVal);
-        
-        // 2. Cria a transação de "Receita" para o dinheiro voltar para o seu saldo diário
-        await store.addTransaction({ 
-            desc: `Resgate: ${obj.title}`, 
-            amount: numVal, 
-            type: 'Receita', 
-            category: 'Objetivo', 
-            date: new Date().toLocaleDateString('pt-BR'), 
-            month: targetMonth 
-        });
-        
+        await store.addTransaction({ desc: `Resgate: ${obj.title}`, amount: numVal, type: 'Receita', category: 'Objetivo', date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
         updateAllViews();
     }
 };
@@ -195,6 +164,42 @@ window.removeMoneyObjective = async (id) => {
 function setupEvents() {
     setupTheme();
 
+    // --- NOVA LÓGICA DO MENU DRAWER MOBILE ---
+    const btnHamburger = document.getElementById('btnHamburger');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const drawerSidebar = document.getElementById('drawerSidebar');
+    const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+
+    const toggleDrawer = (forceClose = false) => {
+        if (!mobileDrawer) return;
+        const isOpen = !mobileDrawer.classList.contains('pointer-events-none');
+        
+        if (isOpen || forceClose) {
+            // Fechar
+            drawerSidebar.classList.remove('translate-x-0');
+            drawerSidebar.classList.add('-translate-x-full');
+            drawerBackdrop.classList.remove('opacity-100');
+            drawerBackdrop.classList.add('opacity-0');
+            setTimeout(() => { mobileDrawer.classList.add('pointer-events-none'); }, 300);
+        } else {
+            // Abrir
+            mobileDrawer.classList.remove('pointer-events-none');
+            // Pequeno delay para a animação do backdrop funcionar após o display block
+            setTimeout(() => {
+                drawerBackdrop.classList.remove('opacity-0');
+                drawerBackdrop.classList.add('opacity-100');
+                drawerSidebar.classList.remove('-translate-x-full');
+                drawerSidebar.classList.add('translate-x-0');
+            }, 10);
+        }
+    };
+
+    if (btnHamburger) btnHamburger.addEventListener('click', () => toggleDrawer());
+    if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', () => toggleDrawer(true));
+    if (drawerBackdrop) drawerBackdrop.addEventListener('click', () => toggleDrawer(true));
+
+    // --- LÓGICA DAS ABAS ---
     const tabs = {
         home: document.getElementById('tabHome'),
         debts: document.getElementById('tabDebts'),
@@ -213,7 +218,6 @@ function setupEvents() {
         va: document.getElementById('btnMobileVA'),
         objectives: document.getElementById('btnMobileObjectives'),
         cards: document.getElementById('btnMobileCards')
-        
     };
 
     const switchTab = (viewId) => {
@@ -230,22 +234,18 @@ function setupEvents() {
             target.classList.add('animate-fade-in');
         }
 
+        // Reseta Desktop Tabs
         Object.values(tabs).forEach(btn => {
             if(btn) btn.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
         });
 
+        // Reseta Mobile Drawer Tabs (Visual novo)
         Object.values(mobileTabs).forEach(btn => {
-            if(!btn) return;
-            let base = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
-            if (btn === mobileTabs.va) {
-                btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
-            } else {
-                btn.className = base;
-            }
+            if(btn) btn.className = "w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition";
         });
 
         const activeDesktop = "px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        const activeMobile = "flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16";
+        const activeMobile = "w-full flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold transition";
 
         if(viewId === 'viewHome') {
             if(tabs.home) tabs.home.className = activeDesktop;
@@ -269,10 +269,7 @@ function setupEvents() {
         }
         if(viewId === 'viewVA') {
             if(tabs.va) tabs.va.className = activeDesktop;
-            if(mobileTabs.va) {
-                mobileTabs.va.classList.add('text-indigo-600', 'dark:text-indigo-400');
-                mobileTabs.va.classList.remove('text-slate-400');
-            }
+            if(mobileTabs.va) mobileTabs.va.className = activeMobile;
             VA.render(selectedMonths);
         }
         if(viewId === 'viewObjectives') {
@@ -285,8 +282,12 @@ function setupEvents() {
             if(mobileTabs.cards) mobileTabs.cards.className = activeMobile;
             Cards.render(window.currentSelectedMonths);
         }
+
+        // SEMPRE fecha o menu mobile quando clicar em alguma aba
+        toggleDrawer(true);
     };
 
+    // Listeners Desktop
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
@@ -295,6 +296,7 @@ function setupEvents() {
     if(tabs.objectives) tabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
     if(tabs.cards) tabs.cards.addEventListener('click', () => switchTab('viewCards'));
 
+    // Listeners Mobile
     if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
     if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
@@ -344,13 +346,10 @@ function setupEvents() {
             
             if (name && baseAmount) {
                 let finalAmount = baseAmount;
-                
-                // Se o usuário digitou alguma porcentagem, calcula o valor final
                 if (interest > 0) {
                     finalAmount = baseAmount + (baseAmount * interest / 100);
-                    name = `${name} (+${interest}%)`; // Ex: João (+10%)
+                    name = `${name} (+${interest}%)`; 
                 }
-                
                 const btnSubmit = debtForm.querySelector('button');
                 const oldText = btnSubmit.innerHTML;
                 btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
@@ -361,29 +360,28 @@ function setupEvents() {
                     renderDebts();
                     debtForm.reset();
                     if (interestInput) interestInput.value = '0';
-                } catch (err) {
-                    alert("Erro ao salvar");
-                } finally {
+                } catch (err) { alert("Erro ao salvar"); } finally {
                     btnSubmit.innerHTML = oldText;
                     btnSubmit.disabled = false;
                 }
             }
         });
-    }    
+    }
+    
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
     const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
     const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
+    
+    const dropZone = document.getElementById('dropZone'); 
+    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
     
     const btnImport = document.getElementById('btnImport'); 
     if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
     
     const btnCloseModal = document.getElementById('btnCloseModal'); 
     if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
-    
-    const dropZone = document.getElementById('dropZone'); 
-    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
 
-    // --- 1. LÓGICA DE IMPORTAÇÃO DE EXTRATO EM PDF (IA) ---
+    // --- LÓGICA DE IMPORTAÇÃO DE EXTRATO EM PDF (IA) ---
     const fileInput = document.getElementById('fileInput');
     if (fileInput) {
         fileInput.addEventListener('change', async (e) => {
@@ -398,7 +396,6 @@ function setupEvents() {
             loadingStatus.classList.remove('hidden');
 
             try {
-                // Importa dinamicamente as funções de IA e Leitura de PDF
                 const { readPdfText } = await import('./pdf.js');
                 const { categorizeWithGemini } = await import('./ai.js');
                 
@@ -430,12 +427,12 @@ function setupEvents() {
             } finally {
                 loadingStatus.classList.add('hidden');
                 dropZone.classList.remove('hidden');
-                fileInput.value = ''; // Reseta o input para permitir enviar o mesmo arquivo de novo se quiser
+                fileInput.value = ''; 
             }
         });
     }
 
-    // --- 2. LÓGICA DO RELATÓRIO DA IA NO DASHBOARD ---
+    // --- LÓGICA DO RELATÓRIO DA IA NO DASHBOARD ---
     const btnGenerateReport = document.getElementById('btnGenerateReport');
     if (btnGenerateReport) {
         btnGenerateReport.addEventListener('click', async () => {
@@ -449,14 +446,12 @@ function setupEvents() {
             try {
                 const { getFinancialAdvice } = await import('./ai.js');
                 
-                // Calcula as Top 3 categorias de gasto reais para a IA ler
                 let currentMonths = window.currentSelectedMonths || [getMonthName(new Date().getMonth() + 1)];
                 const expenses = (store.transactions || []).filter(t => t.type === 'Despesa' && currentMonths.includes(t.month));
                 const totals = {};
                 expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount));
                 const topCats = Object.entries(totals).sort((a,b) => b[1]-a[1]).slice(0,3).map(x => x[0]).join(', ') || 'Nenhuma';
 
-                // Prepara os dados pro prompt do gemini
                 const summaryData = {
                     balance: document.getElementById('dashBalance')?.innerText || 'R$ 0,00',
                     invested: document.getElementById('dashInvest')?.innerText || 'R$ 0,00',
