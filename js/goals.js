@@ -23,8 +23,11 @@ export const Goals = {
         const select = document.getElementById('goalCategoryInput');
         if (select && select.options.length <= 1) {
             select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+            const addedCats = new Set();
             UI.categories.forEach(cat => {
-                if (cat.id !== 'Salário' && cat.id !== 'Renda Extra') {
+                // Esconde rendas, remove os duplicados (Dívida) e esconde categorias de sistema (Objetivo, Cartão)
+                if (cat.id !== 'Salário' && cat.id !== 'Renda Extra' && !cat.hidden && !addedCats.has(cat.id)) {
+                    addedCats.add(cat.id);
                     const opt = document.createElement('option');
                     opt.value = cat.id; opt.textContent = cat.id;
                     select.appendChild(opt);
