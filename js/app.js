@@ -42,8 +42,10 @@ function setupCategoryFilter() {
     const select = document.getElementById('filterCategory');
     if (!select || !UI || !UI.categories) return;
     select.innerHTML = '<option value="Todas">📂 Todas Categorias</option>';
+    const addedCats = new Set();
     UI.categories.forEach(cat => {
-        if (!cat.hidden) {
+        if (!cat.hidden && !addedCats.has(cat.id)) {
+            addedCats.add(cat.id);
             const option = document.createElement('option');
             option.value = cat.id; option.textContent = `${cat.id}`;
             select.appendChild(option);
@@ -51,7 +53,6 @@ function setupCategoryFilter() {
     });
     select.addEventListener('change', (e) => { selectedCategory = e.target.value; updateAllViews(); });
 }
-
 function setupMonthSelector() {
     const btn = document.getElementById('monthDropdownBtn');
     const menu = document.getElementById('monthDropdownMenu');
