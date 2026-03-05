@@ -312,6 +312,12 @@ function setupEvents() {
         });
     }
 
+    // Define a data de hoje como padrão no input
+    const inputDateEl = document.getElementById('inputDate');
+    if (inputDateEl) {
+        inputDateEl.value = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    }
+
     const transForm = document.getElementById('transactionForm');
     if (transForm) {
         transForm.addEventListener('submit', async (e) => {
@@ -320,15 +326,26 @@ function setupEvents() {
             const amount = parseFloat(document.getElementById('inputAmount').value);
             const type = document.getElementById('inputType').value;
             const category = document.getElementById('inputCategory').value;
+            const rawDate = document.getElementById('inputDate').value;
+            
             const btn = transForm.querySelector('button[type="submit"]');
-            if (!desc || isNaN(amount)) return alert("Preencha corretamente.");
+            if (!desc || isNaN(amount) || !rawDate) return alert("Preencha corretamente.");
             const oldText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+            
             try {
+                // Converte a data do HTML (YYYY-MM-DD) para o padrão do nosso banco (DD/MM/YYYY)
+                const [y, m, d] = rawDate.split('-');
+                const formattedDate = `${d}/${m}/${y}`;
+
                 let targetMonth = selectedMonths[selectedMonths.length - 1];
                 if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
-                await store.addTransaction({ desc, amount, type, category, date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
+                
+                await store.addTransaction({ desc, amount, type, category, date: formattedDate, month: targetMonth });
+                
                 updateAllViews();
                 transForm.reset();
+                // Retorna a data para hoje após salvar
+                if (inputDateEl) inputDateEl.value = new Date().toISOString().split('T')[0];
                 document.getElementById('inputType').value = 'Despesa';
                 UI.populateCategories('Despesa');
             } catch (err) { console.error(err); } finally { btn.innerHTML = oldText; btn.disabled = false; }
