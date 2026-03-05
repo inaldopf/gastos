@@ -113,12 +113,17 @@ export const Cards = {
             }
 
             // Calcula a fatura do mês selecionado
+            // Fatura do mês selecionado (Apenas para exibir o valor da parcela/fatura atual)
             const monthTransactions = (store.cardTransactions || []).filter(t => t.card_id === card.id && t.month === targetMonth);
             const invoiceTotal = monthTransactions.reduce((acc, t) => acc + parseFloat(t.amount), 0);
             
+            // Limite comprometido: Soma TODAS as compras já feitas nesse cartão (independente do mês)
+            const allCardTransactions = (store.cardTransactions || []).filter(t => t.card_id === card.id);
+            const totalUsed = allCardTransactions.reduce((acc, t) => acc + parseFloat(t.amount), 0);
+
             const limit = parseFloat(card.limit_amount);
-            const available = limit - invoiceTotal; // Simplificado pro MVP
-            const percentUsed = limit > 0 ? (invoiceTotal / limit) * 100 : 0;
+            const available = limit - totalUsed; 
+            const percentUsed = limit > 0 ? (totalUsed / limit) * 100 : 0;
             const barColor = percentUsed > 80 ? 'bg-red-500' : percentUsed > 50 ? 'bg-yellow-500' : 'bg-purple-500';
 
             const div = document.createElement('div');
