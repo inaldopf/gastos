@@ -14,8 +14,12 @@ console.log("🚀 app.js carregado com sucesso!");
 
 // Função auxiliar para atualizar TUDO
 function updateAllViews(monthFilter) {
-    UI.renderApp(monthFilter);
-    Dashboard.render(); 
+    try {
+        UI.renderApp(monthFilter);
+        Dashboard.render(); 
+    } catch (e) {
+        console.error("Erro ao atualizar interface:", e);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
