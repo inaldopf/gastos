@@ -17,17 +17,19 @@ export const store = {
             console.log("🔄 Buscando dados no servidor...");
 
             // 0. Verifica Recorrências (Cria automáticas se virou o mês)
-            await fetch(`${API_URL}/transactions/check-recurring`, {
+            const resRecur = await fetch(`${API_URL}/transactions/check-recurring`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            // Não precisamos fazer nada com a resposta, apenas garantir que rodou antes de pegar a lista
+            
+            if (resRecur.status === 401 || resRecur.status === 403) throw new Error("UNAUTHORIZED");
 
             // 1. Pega Transações
             const resTrans = await fetch(`${API_URL}/transactions`, { 
                 headers: { 'Authorization': `Bearer ${token}` } 
             });
             
+            if (resTrans.status === 401 || resTrans.status === 403) throw new Error("UNAUTHORIZED");
             if (!resTrans.ok) throw new Error("Falha ao buscar transações");
 
             const rawData = await resTrans.json();
@@ -52,12 +54,13 @@ export const store = {
             const resMeta = await fetch(`${API_URL}/meta`, { 
                 headers: { 'Authorization': `Bearer ${token}` } 
             });
+            if (resMeta.status === 401 || resMeta.status === 403) throw new Error("UNAUTHORIZED");
             const metaData = await resMeta.json();
             this.meta = parseFloat(metaData.meta) || 0;
             
         } catch (error) {
             console.error("❌ Erro ao carregar dados:", error);
-            if (error.message.includes("403") || error.message.includes("401")) {
+            if (error.message === "UNAUTHORIZED" || error.message.includes("403") || error.message.includes("401")) {
                 alert("Sessão expirada. Faça login novamente.");
                 localStorage.removeItem('inf_auth_token');
                 window.location.href = 'login.html';
