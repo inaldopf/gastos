@@ -7,7 +7,7 @@ export async function categorizeWithGemini(text, apiKey) {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `
-        Analise o texto deste extrato bancário e extraia as transações em formato JSON.
+        Analise o texto deste extrato bancário e extraia todas as transações em formato JSON.
         
         REGRA DE OURO (PRIORIDADE MÁXIMA):
         - Se contiver "INALDO PEREIRA FREITA", force: "type": "Investimento", "category": "Investimento".
