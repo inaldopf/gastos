@@ -67,7 +67,7 @@ export const store = {
                 headers: { 'Authorization': `Bearer ${token}` } 
             });
             if (resDebtors.ok) {
-                this.debtors = await resDebtors.json();
+                this.debtors = (await resDebtors.json()) || [];
             }
             
         } catch (error) {
