@@ -2,6 +2,10 @@ const API_URL = "https://financeiro-app-okjm.onrender.com";
 
 export const store = {
     transactions: [],
+    debtors: [],
+    cards: [],
+    objectives: [],
+    vaTransactions: [],
     meta: 0,
 
     getToken() {
@@ -57,6 +61,14 @@ export const store = {
             if (resMeta.status === 401 || resMeta.status === 403) throw new Error("UNAUTHORIZED");
             const metaData = await resMeta.json();
             this.meta = parseFloat(metaData.meta) || 0;
+            
+            // 3. Pega Devedores
+            const resDebtors = await fetch(`${API_URL}/debtors`, { 
+                headers: { 'Authorization': `Bearer ${token}` } 
+            });
+            if (resDebtors.ok) {
+                this.debtors = await resDebtors.json();
+            }
             
         } catch (error) {
             console.error("❌ Erro ao carregar dados:", error);
