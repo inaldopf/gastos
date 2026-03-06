@@ -66,7 +66,8 @@
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const endpoint = isLogin ? 'http://localhost:3000/login' : 'http://localhost:3000/register';
+            const API_URL = 'https://financeiro-app-okjm.onrender.com';
+            const endpoint = isLogin ? `${API_URL}/login` : `${API_URL}/register`;
 
             btnSubmit.disabled = true;
             btnSubmit.innerText = 'Processando...';
