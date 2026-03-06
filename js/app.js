@@ -28,7 +28,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 2. BUSCA DADOS NO BANCO (Aqui estava o problema?)
         console.log("Chamando store.init()...");
         await store.init();
-        console.log("store.init() finalizado.");
+        
+        // Se falhou e não tem transações (e não foi redirecionado), para aqui
+        if (!store.transactions) {
+            console.warn("⚠️ Inicialização interrompida: Sem dados.");
+            return;
+        }
 
         // 3. Renderiza a tela com os dados que chegaram
         updateAllViews('Todos');
