@@ -6,6 +6,10 @@ if (!localStorage.getItem('inf_auth_token')) {
 import { store } from './store.js';
 import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
+import { Goals } from './goals.js';
+import { VA } from './va.js';
+import { Cards } from './cards.js';
+import { Objectives } from './objectives.js';
 import { readPdfText } from './pdf.js';
 import { categorizeWithGemini } from './ai.js';
 import { getMonthName } from './utils.js';
@@ -15,8 +19,17 @@ console.log("🚀 app.js carregado com sucesso!");
 // Função auxiliar para atualizar TUDO
 function updateAllViews(monthFilter) {
     try {
+        // Converte "Todos" ou "Janeiro" para formato Array que os módulos esperam
+        const selectedMonths = monthFilter === 'Todos' ? [] : [monthFilter];
+
         UI.renderApp(monthFilter);
+        UI.renderDebtors(); // Garante que a lista de devedores apareça
         Dashboard.render(); 
+        
+        if (Goals) Goals.render(selectedMonths);
+        if (VA) VA.render(selectedMonths);
+        if (Cards) Cards.render(selectedMonths);
+        if (Objectives) Objectives.render();
     } catch (e) {
         console.error("Erro ao atualizar interface:", e);
     }
