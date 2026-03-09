@@ -10,12 +10,11 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
-// --- 2. CORS (PERMISSÕES DE ACESSO) ---
+// --- 2. CORS ---
 app.use(cors({
-    origin: '*', // Libera para Vercel, Localhost, etc.
+    origin: '*', 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-    // REMOVI A LINHA 'credentials: true' QUE CAUSAVA O CONFLITO
 }));
 
 app.use(bodyParser.json());
@@ -28,10 +27,32 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// --- MIGRATION AUTOMÁTICA (Adiciona coluna se não existir) ---
-pool.query("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE")
-    .then(() => console.log("✅ Schema verificado: Coluna is_recurring existe."))
-    .catch(err => console.error("⚠️ Erro ao verificar schema:", err.message));
+// MIGRATION AUTOMÁTICA (Cria tabelas ausentes automaticamente)
+const initDB = async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE, password VARCHAR(255), meta_sobra NUMERIC(10,2) DEFAULT 0);
+            CREATE TABLE IF NOT EXISTS transactions (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), description VARCHAR(255), amount NUMERIC(10,2), type VARCHAR(50), category VARCHAR(100), transaction_date VARCHAR(20), month VARCHAR(20));
+            ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;
+            
+            CREATE TABLE IF NOT EXISTS debtors (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), name VARCHAR(255), amount NUMERIC(10,2), paid BOOLEAN DEFAULT FALSE);
+            
+            CREATE TABLE IF NOT EXISTS goals (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), category VARCHAR(100), amount NUMERIC(10,2), UNIQUE(user_id, category));
+            
+            CREATE TABLE IF NOT EXISTS va_transactions (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), description VARCHAR(255), amount NUMERIC(10,2), type VARCHAR(20), transaction_date VARCHAR(20), month VARCHAR(20));
+            
+            CREATE TABLE IF NOT EXISTS objectives (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), title VARCHAR(255), target_amount NUMERIC(10,2), current_amount NUMERIC(10,2) DEFAULT 0);
+            
+            CREATE TABLE IF NOT EXISTS credit_cards (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, name VARCHAR(255) NOT NULL, limit_amount NUMERIC(10, 2) NOT NULL, closing_day INTEGER NOT NULL, due_day INTEGER NOT NULL);
+            
+            CREATE TABLE IF NOT EXISTS card_transactions (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, card_id INTEGER REFERENCES credit_cards(id) ON DELETE CASCADE, description VARCHAR(255) NOT NULL, amount NUMERIC(10, 2) NOT NULL, transaction_date VARCHAR(20), month VARCHAR(20) NOT NULL, installments INTEGER DEFAULT 1, current_installment INTEGER DEFAULT 1);
+        `);
+        console.log("✅ Schema verificado e tabelas sincronizadas com sucesso.");
+    } catch(e) {
+        console.error("⚠️ Erro ao verificar schema:", e.message);
+    }
+};
+initDB();
 
 // --- 4. MIDDLEWARE DE AUTENTICAÇÃO ---
 function authenticateToken(req, res, next) {
@@ -53,10 +74,7 @@ app.post('/register', async (req, res) => {
         const hash = await bcrypt.hash(password, 10);
         await pool.query('INSERT INTO users (email, password) VALUES ($1, $2)', [email, hash]);
         res.json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.status(400).json({ success: false, error: "Email já existe ou erro no banco." });
-    }
+    } catch (err) { res.status(400).json({ success: false, error: "Email já existe ou erro no banco." }); }
 });
 
 app.post('/login', async (req, res) => {
@@ -72,13 +90,10 @@ app.post('/login', async (req, res) => {
         } else {
             res.status(401).json({ success: false, message: "Senha incorreta" });
         }
-    } catch (err) { 
-        console.error(err);
-        res.status(500).json({ error: "Erro interno no login" }); 
-    }
+    } catch (err) { res.status(500).json({ error: "Erro interno no login" }); }
 });
 
-// --- 6. ROTAS DE TRANSAÇÕES ---
+// --- 6. ROTAS DE TRANSAÇÕES PRINCIPAIS ---
 app.get('/transactions', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
@@ -94,62 +109,7 @@ app.post('/transactions', authenticateToken, async (req, res) => {
             [req.user.id, desc, amount, type, category, date, month, isRecurring || false]
         );
         res.json(result.rows[0]);
-    } catch (err) { 
-        console.error(err);
-        res.status(500).json({ error: err.message }); 
-    }
-});
-
-// --- NOVO: VERIFICAR E PROCESSAR RECORRÊNCIA ---
-app.post('/transactions/check-recurring', authenticateToken, async (req, res) => {
-    try {
-        // 1. Define datas (Mês Atual e Mês Anterior)
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
-        
-        // Helper para nome do mês em PT-BR (igual ao frontend)
-        const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-        const currentMonthName = monthNames[currentMonth];
-
-        // 2. Busca transações recorrentes do passado que NÃO estão no mês atual
-        // Lógica: Pega tudo que é recorrente. Verifica se já existe uma cópia no mês atual.
-        const query = `
-            SELECT t.* 
-            FROM transactions t
-            WHERE t.user_id = $1 
-              AND t.is_recurring = true
-              AND t.month != $2 -- Não pega as que já são deste mês
-              AND NOT EXISTS (
-                  SELECT 1 FROM transactions t2 
-                  WHERE t2.user_id = t.user_id 
-                    AND t2.description = t.description 
-                    AND t2.amount = t.amount 
-                    AND t2.month = $2
-              )
-        `;
-        
-        const recurring = await pool.query(query, [req.user.id, currentMonthName]);
-        const newTransactions = [];
-
-        // 3. Cria as cópias para o mês atual
-        for (const tx of recurring.rows) {
-            // Mantém o dia original, mas muda para mês/ano atual
-            const originalDate = new Date(tx.transaction_date);
-            const newDate = new Date(currentYear, currentMonth, originalDate.getDate());
-            
-            const insert = await pool.query(
-                'INSERT INTO transactions (user_id, description, amount, type, category, transaction_date, month, is_recurring) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-                [req.user.id, tx.description, tx.amount, tx.type, tx.category, newDate, currentMonthName, true]
-            );
-            newTransactions.push(insert.rows[0]);
-        }
-
-        res.json({ processed: newTransactions.length, items: newTransactions });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.delete('/transactions/:id', authenticateToken, async (req, res) => {
@@ -170,10 +130,7 @@ app.get('/debtors', authenticateToken, async (req, res) => {
 app.post('/debtors', authenticateToken, async (req, res) => {
     const { name, amount } = req.body;
     try {
-        const result = await pool.query(
-            'INSERT INTO debtors (user_id, name, amount) VALUES ($1, $2, $3) RETURNING *',
-            [req.user.id, name, amount]
-        );
+        const result = await pool.query('INSERT INTO debtors (user_id, name, amount) VALUES ($1, $2, $3) RETURNING *', [req.user.id, name, amount]);
         res.json(result.rows[0]);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -182,10 +139,7 @@ app.put('/debtors/:id/toggle', authenticateToken, async (req, res) => {
     try {
         const current = await pool.query('SELECT paid FROM debtors WHERE id = $1', [req.params.id]);
         const newStatus = !current.rows[0].paid;
-        const result = await pool.query(
-            'UPDATE debtors SET paid = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
-            [newStatus, req.params.id, req.user.id]
-        );
+        const result = await pool.query('UPDATE debtors SET paid = $1 WHERE id = $2 AND user_id = $3 RETURNING *', [newStatus, req.params.id, req.user.id]);
         res.json(result.rows[0]);
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -197,11 +151,10 @@ app.delete('/debtors/:id', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- 8. ROTAS DE META ---
+// --- 8. ROTAS DE METAS E GASTO FIXO ---
 app.post('/meta', authenticateToken, async (req, res) => {
-    const { meta } = req.body;
     try {
-        await pool.query('UPDATE users SET meta_sobra = $1 WHERE id = $2', [meta, req.user.id]);
+        await pool.query('UPDATE users SET meta_sobra = $1 WHERE id = $2', [req.body.meta, req.user.id]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -213,7 +166,144 @@ app.get('/meta', authenticateToken, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- 9. INICIAR O SERVIDOR ---
+app.get('/goals', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM goals WHERE user_id = $1', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/goals', authenticateToken, async (req, res) => {
+    const { category, amount } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO goals (user_id, category, amount) VALUES ($1, $2, $3) ON CONFLICT (user_id, category) DO UPDATE SET amount = $3',
+            [req.user.id, category, amount]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- 9. ROTAS DE VA/VR ---
+app.get('/va', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM va_transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
+        let balance = 0;
+        result.rows.forEach(t => { if(t.type === 'credit') balance += parseFloat(t.amount); else balance -= parseFloat(t.amount); });
+        res.json({ balance, transactions: result.rows });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/va', authenticateToken, async (req, res) => {
+    const { amount, type, desc, date, month } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO va_transactions (user_id, description, amount, type, transaction_date, month) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [req.user.id, desc, amount, type, date, month]
+        );
+        const all = await pool.query('SELECT amount, type FROM va_transactions WHERE user_id = $1', [req.user.id]);
+        let balance = 0;
+        all.rows.forEach(t => { if(t.type === 'credit') balance += parseFloat(t.amount); else balance -= parseFloat(t.amount); });
+        res.json({ transaction: result.rows[0], newBalance: balance });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/va/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM va_transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- 10. ROTAS DE OBJETIVOS (SONHOS) ---
+app.get('/objectives', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM objectives WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/objectives', authenticateToken, async (req, res) => {
+    const { title, target_amount } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO objectives (user_id, title, target_amount, current_amount) VALUES ($1, $2, $3, 0) RETURNING *',
+            [req.user.id, title, target_amount]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/objectives/:id/add', authenticateToken, async (req, res) => {
+    const { amountToAdd } = req.body;
+    try {
+        const result = await pool.query(
+            'UPDATE objectives SET current_amount = current_amount + $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+            [amountToAdd, req.params.id, req.user.id]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/objectives/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM objectives WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- 11. ROTAS DE CARTÃO DE CRÉDITO ---
+app.get('/cards', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM credit_cards WHERE user_id = $1 ORDER BY id ASC', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/cards', authenticateToken, async (req, res) => {
+    const { name, limit_amount, closing_day, due_day } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO credit_cards (user_id, name, limit_amount, closing_day, due_day) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [req.user.id, name, limit_amount, closing_day, due_day]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/cards/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM credit_cards WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/card-transactions', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM card_transactions WHERE user_id = $1 ORDER BY id DESC', [req.user.id]);
+        res.json(result.rows);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/card-transactions', authenticateToken, async (req, res) => {
+    const { card_id, description, amount, date, month, installments, current_installment } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO card_transactions (user_id, card_id, description, amount, transaction_date, month, installments, current_installment) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [req.user.id, card_id, description, amount, date, month, installments, current_installment]
+        );
+        res.json(result.rows[0]);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/card-transactions/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM card_transactions WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- 12. INICIAR O SERVIDOR ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`✅ Servidor rodando na porta ${PORT}`);
