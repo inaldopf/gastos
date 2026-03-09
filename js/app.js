@@ -18,7 +18,7 @@ const authToken = localStorage.getItem('inf_auth_token');
 if (!authToken && !isLoginPage) window.location.href = 'login.html';
 if (authToken && isLoginPage) window.location.href = 'index.html';
 
-// 2. Setup Theme
+// 2. Setup Theme e Privacy Mode
 function setupTheme() {
     const btnTheme = document.getElementById('btnThemeToggle');
     const html = document.documentElement;
@@ -33,6 +33,34 @@ function setupTheme() {
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
             e.preventDefault(); toggleTheme();
+        }
+    });
+
+    // MODO PRIVACIDADE (BLUR)
+    const btnPrivacy = document.getElementById('btnPrivacyToggle');
+    const body = document.body;
+    
+    // Inicia checando o localStorage
+    if (localStorage.getItem('privacy_mode') === 'true') {
+        body.classList.add('privacy-mode');
+        if (btnPrivacy) btnPrivacy.innerHTML = '<i class="fas fa-eye text-indigo-500"></i>';
+    }
+
+    const togglePrivacy = () => {
+        body.classList.toggle('privacy-mode');
+        const isPrivacy = body.classList.contains('privacy-mode');
+        localStorage.setItem('privacy_mode', isPrivacy);
+        if (btnPrivacy) {
+            btnPrivacy.innerHTML = isPrivacy ? '<i class="fas fa-eye text-indigo-500"></i>' : '<i class="fas fa-eye-slash"></i>';
+        }
+    };
+
+    if (btnPrivacy) btnPrivacy.addEventListener('click', togglePrivacy);
+    
+    // Atalho: Ctrl + B para Blur
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault(); togglePrivacy();
         }
     });
 }
@@ -132,7 +160,7 @@ function renderDebts() {
         tr.className = `hover:bg-slate-50 dark:hover:bg-slate-700 transition ${d.paid?'opacity-50':''} border-b border-slate-50 dark:border-slate-700`;
         tr.innerHTML = `
             <td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">${d.name}</td>
-            <td class="px-6 py-4 text-right font-bold text-slate-600 dark:text-slate-300">R$ ${parseFloat(d.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-600 dark:text-slate-300"><span class="blur-target">R$ ${parseFloat(d.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
             <td class="px-6 py-4 text-center">${d.paid ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">PAGO</span>' : '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">PENDENTE</span>'}</td>
             <td class="px-6 py-4 text-center flex justify-center gap-2">
                 <button onclick="window.toggleDebt(${d.id})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400"><i class="fas fa-check-circle"></i></button>
