@@ -11,12 +11,42 @@ export const Goals = {
         this.setupInputs();
 
         const income = this.calculateIncome(selectedMonths);
-        const goalsData = this.calculateGoalsData(selectedMonths);
-        const totalPlannedSpend = goalsData.reduce((acc, item) => acc + item.goal, 0); 
+        document.getElementById('goalTotalIncome').innerText = `R$ ${income.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+        const inputMeta = document.getElementById('goalSavingsInput');
+        if (inputMeta && inputMeta.dataset.listener !== 'true') {
+            inputMeta.value = store.getMeta() || '';
+            inputMeta.dataset.listener = 'true';
+            inputMeta.addEventListener('change', async (e) => {
+                const val = parseFloat(e.target.value) || 0;
+                await store.setMeta(val);
+                this.render(selectedMonths);
+            });
+        }
+
+        const meta = store.getMeta();
+        document.getElementById('goalTargetDisplay').innerText = `R$ ${meta.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+        const fixedExpenses = this.calculateFixedExpenses(selectedMonths);
+        const surplus = income - fixedExpenses;
         
-        this.renderBudgetOverview(income, totalPlannedSpend, selectedMonths.length || 1);
-        this.renderProgressCards(goalsData);
-        this.renderChart(goalsData);
+        const surplusEl = document.getElementById('goalProjectedSurplus');
+        surplusEl.innerText = `R$ ${surplus.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        surplusEl.className = `text-xl font-bold blur-target ${surplus >= meta ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`;
+
+        const progress = income > 0 ? ((income - fixedExpenses) / income) * 100 : 0;
+        const bar = document.getElementById('goalBudgetBar');
+        bar.style.width = `${Math.min(Math.max(progress, 0), 100)}%`;
+        bar.className = `h-1.5 rounded-full transition-all duration-500 ${surplus >= meta ? 'bg-emerald-500' : 'bg-red-500'}`;
+
+        const msg = document.getElementById('goalBudgetMsg');
+        if (surplus >= meta) {
+            msg.innerText = "Planejamento Seguro"; msg.className = "text-xs font-bold text-emerald-600 mt-1 text-right";
+        } else {
+            msg.innerText = "Alerta: Meta Comprometida"; msg.className = "text-xs font-bold text-red-500 mt-1 text-right";
+        }
+
+        this.renderGoalsList(selectedMonths);
     },
 
     setupInputs() {
@@ -25,7 +55,6 @@ export const Goals = {
             select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
             const addedCats = new Set();
             UI.categories.forEach(cat => {
-                // Esconde rendas, remove os duplicados (Dívida) e esconde categorias de sistema (Objetivo, Cartão)
                 if (cat.id !== 'Salário' && cat.id !== 'Renda Extra' && !cat.hidden && !addedCats.has(cat.id)) {
                     addedCats.add(cat.id);
                     const opt = document.createElement('option');
@@ -35,248 +64,132 @@ export const Goals = {
             });
         }
 
-        const savingsInput = document.getElementById('goalSavingsInput');
-        if (savingsInput) {
-            const newInput = savingsInput.cloneNode(true);
-            savingsInput.parentNode.replaceChild(newInput, savingsInput);
-            newInput.value = store.getMeta() > 0 ? store.getMeta() : '';
-            newInput.addEventListener('change', (e) => {
-                const val = parseFloat(e.target.value);
-                store.setMeta(val);
-                this.render(window.currentSelectedMonths); 
-                const dashInput = document.getElementById('inputMeta');
-                if(dashInput) dashInput.value = val;
-            });
-        }
-
         const form = document.getElementById('goalsForm');
-        if (form) {
-            const newForm = form.cloneNode(true);
-            form.parentNode.replaceChild(newForm, form);
-            newForm.addEventListener('submit', (e) => {
+        if (form && form.dataset.listener !== 'true') {
+            form.dataset.listener = 'true';
+            form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const cat = document.getElementById('goalCategoryInput').value;
-                const amount = document.getElementById('goalAmountInput').value;
-                if (cat && amount) {
-                    store.setCategoryGoal(cat, amount);
-                    document.getElementById('goalAmountInput').value = '';
-                    this.render(window.currentSelectedMonths);
+                const amt = parseFloat(document.getElementById('goalAmountInput').value);
+                if (cat && !isNaN(amt)) {
+                    const btn = form.querySelector('button');
+                    const oldText = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+                    await store.setCategoryGoal(cat, amt);
+                    form.reset();
+                    btn.innerHTML = oldText; btn.disabled = false;
+                    window.updateAllViews();
                 }
             });
         }
     },
 
     calculateIncome(selectedMonths) {
-        const transactions = store.transactions || [];
-        let totalIncome = 0;
-        const filtered = (selectedMonths && selectedMonths.length > 0) 
-            ? transactions.filter(t => selectedMonths.includes(t.month))
-            : transactions;
-
-        filtered.forEach(t => {
-            if (t.type === 'Receita') totalIncome += parseFloat(t.amount);
-        });
-        return totalIncome;
+        const filtered = store.transactions.filter(t => selectedMonths.includes(t.month));
+        return filtered.reduce((acc, t) => t.type === 'Receita' ? acc + parseFloat(t.amount || 0) : acc, 0);
     },
 
-renderBudgetOverview(income, totalPlannedSpend, monthsCount) {
-        const monthlySavingsGoal = store.getMeta();
-        const totalSavingsGoal = monthlySavingsGoal * monthsCount;
-        const projectedSurplus = income - totalPlannedSpend;
-
-        document.getElementById('goalTotalIncome').innerText = `R$ ${income.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        document.getElementById('goalProjectedSurplus').innerText = `R$ ${projectedSurplus.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        document.getElementById('goalTargetDisplay').innerText = `R$ ${totalSavingsGoal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-
-        const bar = document.getElementById('goalBudgetBar');
-        const msg = document.getElementById('goalBudgetMsg');
-        const card = document.getElementById('goalBudgetCard');
-        const valueEl = document.getElementById('goalProjectedSurplus');
-
-        // --- CÓDIGO NOVO: Positivo = Verde, Negativo = Vermelho ---
-        if (projectedSurplus >= 0) {
-            valueEl.className = "text-xl font-bold text-emerald-600 dark:text-emerald-400";
-        } else {
-            valueEl.className = "text-xl font-bold text-red-600 dark:text-red-400";
-        }
-
-        if (income <= 0) {
-            bar.style.width = '0%';
-            msg.innerText = "Sem receita registrada.";
-            msg.className = "text-xs font-bold text-slate-400 mt-1 text-right";
-            card.className = "glass p-5 rounded-xl border-l-4 border-slate-400 shadow-sm";
-            return;
-        }
-
-        if (projectedSurplus < totalSavingsGoal) {
-            bar.style.width = '100%';
-            bar.className = 'h-1.5 rounded-full bg-red-500 transition-all duration-500';
-            const shortfall = totalSavingsGoal - projectedSurplus;
-            msg.innerText = `Faltam R$ ${shortfall.toLocaleString('pt-BR')} na meta!`;
-            msg.className = "text-xs font-bold text-red-500 mt-1 text-right";
-            card.className = "glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm";
-        } else {
-            bar.style.width = '100%';
-            bar.className = 'h-1.5 rounded-full bg-emerald-500 transition-all duration-500';
-            const extra = projectedSurplus - totalSavingsGoal;
-            msg.innerText = extra > 0 ? `Vai sobrar + R$ ${extra.toLocaleString('pt-BR')}` : "Planejamento na meta.";
-            msg.className = "text-xs font-bold text-emerald-600 mt-1 text-right";
-            card.className = "glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm";
-        }
+    calculateFixedExpenses(selectedMonths) {
+        const filtered = store.transactions.filter(t => selectedMonths.includes(t.month));
+        const expenses = filtered.filter(t => t.type === 'Despesa');
+        let totalFixed = 0;
+        store.goals.forEach(g => {
+            const spent = expenses.filter(t => t.category === g.category).reduce((acc, t) => acc + parseFloat(t.amount || 0), 0);
+            totalFixed += Math.max(spent, parseFloat(g.amount)); 
+        });
+        const unbudgeted = expenses.filter(t => !store.goals.find(g => g.category === t.category)).reduce((acc, t) => acc + parseFloat(t.amount || 0), 0);
+        return totalFixed + unbudgeted;
     },
 
-    calculateGoalsData(selectedMonths) {
-        const transactions = store.transactions || [];
-        let filteredTrans = transactions;
-        if (selectedMonths && selectedMonths.length > 0) {
-            filteredTrans = transactions.filter(t => selectedMonths.includes(t.month));
-        }
+    renderGoalsList(selectedMonths) {
+        const list = document.getElementById('goalsList');
+        if (!list) return;
+        list.innerHTML = '';
+        
+        const filtered = store.transactions.filter(t => selectedMonths.includes(t.month));
+        const expenses = filtered.filter(t => t.type === 'Despesa');
+        
+        const chartLabels = [];
+        const chartSpent = [];
+        const chartBudget = [];
 
-        const spending = {};
-        filteredTrans.forEach(t => {
-            if (t.type === 'Despesa' || t.type === 'Investimento') {
-                spending[t.category] = (spending[t.category] || 0) + parseFloat(t.amount);
-            }
-        });
-
-        const comparison = [];
-        const monthsCount = (selectedMonths && selectedMonths.length > 0) ? selectedMonths.length : 1;
-
-        UI.categories.forEach(cat => {
-            const monthlyGoal = store.getGoal(cat.id);
-            if (cat.id === 'Salário' || cat.id === 'Renda Extra') return;
-            if (monthlyGoal > 0 || spending[cat.id] > 0) {
-                const totalGoal = monthlyGoal * monthsCount;
-                comparison.push({
-                    category: cat.id,
-                    icon: cat.icon,
-                    color: cat.color,
-                    spent: spending[cat.id] || 0,
-                    goal: totalGoal,
-                    percent: totalGoal > 0 ? ((spending[cat.id] || 0) / totalGoal) * 100 : 0
-                });
-            }
-        });
-        return comparison.sort((a, b) => b.percent - a.percent);
-    },
-
-    renderProgressCards(data) {
-        const container = document.getElementById('goalsList');
-        if (!container) return;
-        container.innerHTML = '';
-        if (data.length === 0) {
-            container.innerHTML = '<p class="text-slate-400 dark:text-slate-500 text-center py-10 text-sm">Cadastre uma meta acima para começar.</p>';
-            return;
-        }
-
-        data.forEach(item => {
+        store.goals.forEach(g => {
+            const spent = expenses.filter(t => t.category === g.category).reduce((acc, t) => acc + parseFloat(t.amount || 0), 0);
+            const budget = parseFloat(g.amount);
+            const pct = budget > 0 ? (spent / budget) * 100 : 0;
             let barColor = 'bg-emerald-500';
-            let statusText = 'OK';
-            let statusColor = 'text-emerald-600 dark:text-emerald-400';
+            if (pct > 80) barColor = 'bg-yellow-500';
+            if (pct > 100) barColor = 'bg-red-500';
 
-            if (item.percent >= 100) {
-                barColor = 'bg-red-500'; statusText = 'Atingido/Estourado'; statusColor = 'text-red-500 dark:text-red-400';
-            } else if (item.percent >= 80) {
-                barColor = 'bg-yellow-400'; statusText = 'Perto do limite'; statusColor = 'text-yellow-600 dark:text-yellow-400';
-            }
-
-            const visualPercent = Math.min(item.percent, 100);
+            chartLabels.push(g.category);
+            chartSpent.push(spent);
+            chartBudget.push(budget);
 
             const div = document.createElement('div');
-            div.className = "glass p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm mb-3";
+            div.className = "bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 relative group overflow-hidden";
             div.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center ${item.color}">
-                            <i class="fas ${item.icon}"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-slate-700 dark:text-slate-200 text-sm">${item.category}</h4>
-                            <p class="text-xs ${statusColor} font-semibold">${statusText}</p>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs text-slate-400 font-bold uppercase">Realizado / Meta</p>
-                        <p class="text-sm font-bold text-slate-800 dark:text-slate-100">
-                            R$ ${item.spent.toLocaleString('pt-BR')} <span class="text-slate-400 dark:text-slate-500 text-xs">/ ${item.goal.toLocaleString('pt-BR')}</span>
-                        </p>
-                    </div>
+                <div class="flex justify-between text-sm mb-2 relative z-10">
+                    <span class="font-bold text-slate-700 dark:text-slate-300">${g.category}</span>
+                    <span class="font-semibold text-slate-500 dark:text-slate-400 blur-target">
+                        <span class="${pct > 100 ? 'text-red-500' : ''}">R$ ${spent.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span> / R$ ${budget.toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                    </span>
                 </div>
-                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                    <div class="${barColor} h-2 rounded-full transition-all duration-1000" style="width: ${visualPercent}%"></div>
+                <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 relative z-10 overflow-hidden">
+                    <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${Math.min(pct, 100)}%"></div>
                 </div>
+                <button onclick="window.removeGoal('${g.category}')" class="absolute top-0 right-0 h-full px-4 bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center translate-x-full group-hover:translate-x-0 duration-300 z-20">
+                    <i class="fas fa-trash"></i>
+                </button>
             `;
-            container.appendChild(div);
+            list.appendChild(div);
         });
-    },
 
-    renderChart(data, tentativas = 0) {
-        // CORREÇÃO: Retry para o Chart.js na aba Metas
-        if (typeof Chart === 'undefined') {
-            if (tentativas < 10) setTimeout(() => this.renderChart(data, tentativas + 1), 300);
-            return;
+        if (store.goals.length === 0) {
+            list.innerHTML = '<p class="text-sm text-slate-400 p-4 text-center">Nenhum gasto fixo definido.</p>';
         }
 
+        this.updateChart(chartLabels, chartSpent, chartBudget);
+    },
+
+    updateChart(labels, spent, budget) {
+        if (typeof Chart === 'undefined') return;
         const ctx = document.getElementById('goalsChart');
         if (!ctx) return;
 
-        const topData = data.slice(0, 6); 
-        const labels = topData.map(d => d.category);
-        const dataSpent = topData.map(d => d.spent);
-        const dataGoal = topData.map(d => d.goal);
+        if (goalsChart) goalsChart.destroy();
 
-        if (goalsChart) {
-            goalsChart.destroy();
-            goalsChart = null;
-        }
-        
-        if (labels.length === 0) return; // Se não tem dado, não quebra
+        if (labels.length === 0) return;
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const gridColor = isDark ? '#334155' : '#e2e8f0';
+        const textColor = isDark ? '#94a3b8' : '#64748b';
 
         goalsChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        label: 'Realizado',
-                        data: dataSpent,
-                        backgroundColor: '#EF4444',
-                        borderRadius: 4,
-                        barPercentage: 0.6,
-                        order: 1
-                    },
-                    {
-                        label: 'Meta',
-                        data: dataGoal,
-                        backgroundColor: document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0', 
-                        borderRadius: 4,
-                        barPercentage: 0.8, 
-                        categoryPercentage: 0.9,
-                        order: 2 
-                    }
+                    { label: 'Gasto Atual', data: spent, backgroundColor: '#6366f1', borderRadius: 4 },
+                    { label: 'Limite', data: budget, backgroundColor: isDark ? '#334155' : '#cbd5e1', borderRadius: 4 }
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: {
-                    y: { 
-                        beginAtZero: true, 
-                        grid: { color: document.documentElement.classList.contains('dark') ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
-                        ticks: { color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b' }
-                    },
-                    x: { display: false }
+                    x: { grid: { display: false }, ticks: { color: textColor } },
+                    y: { grid: { color: gridColor }, ticks: { color: textColor } }
                 },
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { 
-                            usePointStyle: true,
-                            color: document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#64748b' 
-                        }
-                    }
-                }
+                plugins: { legend: { labels: { color: textColor, usePointStyle: true, boxWidth: 8 } } }
             }
         });
+    }
+};
+
+window.removeGoal = async (cat) => {
+    if(confirm(`Remover limite de ${cat}?`)) {
+        const btnText = document.querySelector(`button[onclick="window.removeGoal('${cat}')"]`);
+        if(btnText) btnText.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        await store.setCategoryGoal(cat, 0); 
+        window.updateAllViews();
     }
 };
