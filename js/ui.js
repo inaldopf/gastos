@@ -128,7 +128,7 @@ export const UI = {
                 <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${t.desc}</td>
                 <td class="px-4 py-3"><span class="${catData.color} text-xs font-bold uppercase"><i class="fas ${catData.icon}"></i> ${t.category}</span></td>
                 <td class="px-4 py-3 font-semibold text-right ${t.type === 'Receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">
-                    ${t.type === 'Receita' ? '+' : '-'} R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    <span class="blur-target">${t.type === 'Receita' ? '+' : '-'} R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </td>
                 <td class="px-4 py-3 text-center"><button onclick="window.removeTransaction(${t.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td>
             `;
@@ -143,7 +143,8 @@ export const UI = {
         const balEl = document.getElementById('kpiBalance');
         if(balEl) {
             balEl.innerText = `R$ ${accumulatedBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            balEl.className = `text-3xl font-bold ${accumulatedBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`;
+            // Adicionado a tag blur-target aqui também para não perder quando atualizar o número
+            balEl.className = `text-3xl font-bold blur-target ${accumulatedBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`;
         }
         const invEl = document.getElementById('kpiInvest');
         if(invEl) invEl.innerText = `R$ ${inv.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
