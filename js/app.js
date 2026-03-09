@@ -4,6 +4,7 @@ import { Dashboard } from './dashboard.js';
 import { Goals } from './goals.js';
 import { VA } from './va.js';
 import { Objectives } from './objectives.js';
+import { Cards } from './cards.js';
 import { getMonthName } from './utils.js';
 
 console.log("🚀 app.js carregado!");
@@ -41,10 +42,14 @@ function setupCategoryFilter() {
     const select = document.getElementById('filterCategory');
     if (!select || !UI || !UI.categories) return;
     select.innerHTML = '<option value="Todas">📂 Todas Categorias</option>';
+    const addedCats = new Set();
     UI.categories.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.id; option.textContent = `${cat.id}`;
-        select.appendChild(option);
+        if (!cat.hidden && !addedCats.has(cat.id)) {
+            addedCats.add(cat.id);
+            const option = document.createElement('option');
+            option.value = cat.id; option.textContent = `${cat.id}`;
+            select.appendChild(option);
+        }
     });
     select.addEventListener('change', (e) => { selectedCategory = e.target.value; updateAllViews(); });
 }
@@ -56,7 +61,8 @@ function setupMonthSelector() {
     if (!btn || !menu) return;
     const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
     const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    if (selectedMonths.length === 0) selectedMonths = [months[new Date().getMonth()]];
+    
+    if (!selectedMonths || selectedMonths.length === 0) selectedMonths = [months[new Date().getMonth()]];
 
     const updateButtonText = () => {
         if (selectedMonths.length === 0) { btnText.textContent = "Selecione um mês"; btnText.classList.add('text-red-500'); }
@@ -64,6 +70,7 @@ function setupMonthSelector() {
         else if (selectedMonths.length <= 2) { btnText.textContent = `📅 ${selectedMonths.map(m => shortMonths[months.indexOf(m)]).join(', ')}`; btnText.classList.remove('text-red-500'); }
         else { btnText.textContent = `📅 ${selectedMonths.length} meses selecionados`; btnText.classList.remove('text-red-500'); }
     };
+    
     menu.innerHTML = '';
     const divAll = document.createElement('div');
     divAll.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer mb-1 border-b border-slate-100 dark:border-slate-700";
@@ -71,12 +78,21 @@ function setupMonthSelector() {
     divAll.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = divAll.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
     divAll.querySelector('input').addEventListener('change', (e) => { selectedMonths = e.target.checked ? [...months] : []; setupMonthSelector(); updateAllViews(); });
     menu.appendChild(divAll);
+    
     months.forEach((m, index) => {
         const div = document.createElement('div');
         div.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer";
         div.innerHTML = `<input type="checkbox" id="m-${index}" value="${m}" ${selectedMonths.includes(m)?'checked':''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="m-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 flex-1 cursor-pointer">${shortMonths[index]}</label>`;
         div.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = div.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
-        div.querySelector('input').addEventListener('change', (e) => { if(e.target.checked) { if(!selectedMonths.includes(m)) selectedMonths.push(m); } else { selectedMonths = selectedMonths.filter(x => x !== m); } updateButtonText(); updateAllViews(); });
+        div.querySelector('input').addEventListener('change', (e) => { 
+            if(e.target.checked) { 
+                if(!selectedMonths.includes(m)) selectedMonths.push(m); 
+            } else { 
+                selectedMonths = selectedMonths.filter(x => x !== m); 
+            } 
+            updateButtonText(); 
+            updateAllViews(); 
+        });
         menu.appendChild(div);
     });
     updateButtonText();
@@ -86,13 +102,20 @@ function setupMonthSelector() {
 
 // 4. Update
 function updateAllViews() {
+    if (!Array.isArray(selectedMonths)) {
+        selectedMonths = typeof selectedMonths === 'string' ? [selectedMonths] : [];
+    }
     window.currentSelectedMonths = selectedMonths;
-    if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
-    if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
-    if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
-    if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
-    if (Objectives && typeof Objectives.render === 'function') Objectives.render();
-    renderDebts();
+
+    try {
+        if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
+        if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
+        if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
+        if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
+        if (Objectives && typeof Objectives.render === 'function') Objectives.render();
+        if (Cards && typeof Cards.render === 'function') Cards.render(selectedMonths);
+        renderDebts();
+    } catch (e) { console.error("Erro ao atualizar interface:", e); }
 }
 
 window.updateAllViews = updateAllViews;
@@ -127,33 +150,16 @@ window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeD
 window.removeVATransaction = async (id) => { if(confirm("Apagar registro do VA? (O saldo será revertido)")) { await store.removeVATransaction(id); updateAllViews(); }};
 
 window.removeObjective = async (id) => { if(confirm("Apagar objetivo?")) { await store.removeObjective(id); updateAllViews(); }};
-
 window.addMoneyObjective = async (id) => {
     const obj = store.objectives.find(o => o.id === id);
     if (!obj) return;
-    
     const val = prompt(`Quanto deseja GUARDAR para o sonho: '${obj.title}'?`);
     const numVal = parseFloat(val);
-    
     if (numVal && numVal > 0) {
-        // Descobre o mês atual sendo visualizado para lançar a transação
         let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
-            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
-            : getMonthName(new Date().getMonth() + 1);
-            
-        // 1. Atualiza o saldo da meta
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] : getMonthName(new Date().getMonth() + 1);
         await store.addMoneyToObjective(id, numVal);
-        
-        // 2. Cria a transação de "Investimento" para o dinheiro sair do seu saldo diário
-        await store.addTransaction({ 
-            desc: `Guardado: ${obj.title}`, 
-            amount: numVal, 
-            type: 'Investimento', 
-            category: 'Objetivo', 
-            date: new Date().toLocaleDateString('pt-BR'), 
-            month: targetMonth 
-        });
-        
+        await store.addTransaction({ desc: `Guardado: ${obj.title}`, amount: numVal, type: 'Investimento', category: 'Objetivo', date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
         updateAllViews();
     }
 };
@@ -161,30 +167,14 @@ window.addMoneyObjective = async (id) => {
 window.removeMoneyObjective = async (id) => {
     const obj = store.objectives.find(o => o.id === id);
     if (!obj) return;
-
-    const val = prompt(`Quanto deseja RESGATAR do sonho: '${obj.title}'?\n(Saldo atual: R$ ${obj.current_amount})`);
+    const val = prompt(`Quanto deseja RESGATAR do sonho: '${obj.title}'?\\n(Saldo atual: R$ ${obj.current_amount})`);
     const numVal = parseFloat(val);
-    
     if (numVal && numVal > 0) {
         if (numVal > parseFloat(obj.current_amount)) return alert("Você não pode resgatar um valor maior do que o que já guardou!");
-        
         let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
-            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
-            : getMonthName(new Date().getMonth() + 1);
-            
-        // 1. Envia um valor NEGATIVO para a API diminuir o saldo da meta
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] : getMonthName(new Date().getMonth() + 1);
         await store.addMoneyToObjective(id, -numVal);
-        
-        // 2. Cria a transação de "Receita" para o dinheiro voltar para o seu saldo diário
-        await store.addTransaction({ 
-            desc: `Resgate: ${obj.title}`, 
-            amount: numVal, 
-            type: 'Receita', 
-            category: 'Objetivo', 
-            date: new Date().toLocaleDateString('pt-BR'), 
-            month: targetMonth 
-        });
-        
+        await store.addTransaction({ desc: `Resgate: ${obj.title}`, amount: numVal, type: 'Receita', category: 'Objetivo', date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
         updateAllViews();
     }
 };
@@ -193,13 +183,45 @@ window.removeMoneyObjective = async (id) => {
 function setupEvents() {
     setupTheme();
 
+    const btnHamburger = document.getElementById('btnHamburger');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const drawerSidebar = document.getElementById('drawerSidebar');
+    const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+
+    const toggleDrawer = (forceClose = false) => {
+        if (!mobileDrawer) return;
+        const isOpen = !mobileDrawer.classList.contains('pointer-events-none');
+        
+        if (isOpen || forceClose) {
+            drawerSidebar.classList.remove('translate-x-0');
+            drawerSidebar.classList.add('-translate-x-full');
+            drawerBackdrop.classList.remove('opacity-100');
+            drawerBackdrop.classList.add('opacity-0');
+            setTimeout(() => { mobileDrawer.classList.add('pointer-events-none'); }, 300);
+        } else {
+            mobileDrawer.classList.remove('pointer-events-none');
+            setTimeout(() => {
+                drawerBackdrop.classList.remove('opacity-0');
+                drawerBackdrop.classList.add('opacity-100');
+                drawerSidebar.classList.remove('-translate-x-full');
+                drawerSidebar.classList.add('translate-x-0');
+            }, 10);
+        }
+    };
+
+    if (btnHamburger) btnHamburger.addEventListener('click', () => toggleDrawer());
+    if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', () => toggleDrawer(true));
+    if (drawerBackdrop) drawerBackdrop.addEventListener('click', () => toggleDrawer(true));
+
     const tabs = {
         home: document.getElementById('tabHome'),
         debts: document.getElementById('tabDebts'),
         dash: document.getElementById('tabDash'),
         goals: document.getElementById('tabGoals'),
         va: document.getElementById('tabVA'),
-        objectives: document.getElementById('tabObjectives')
+        objectives: document.getElementById('tabObjectives'),
+        cards: document.getElementById('tabCards')
     };
 
     const mobileTabs = {
@@ -208,11 +230,12 @@ function setupEvents() {
         dash: document.getElementById('btnMobileDash'),
         goals: document.getElementById('btnMobileGoals'),
         va: document.getElementById('btnMobileVA'),
-        objectives: document.getElementById('btnMobileObjectives')
+        objectives: document.getElementById('btnMobileObjectives'),
+        cards: document.getElementById('btnMobileCards')
     };
 
     const switchTab = (viewId) => {
-        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA', 'viewObjectives'].forEach(id => {
+        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA', 'viewObjectives', 'viewCards'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.classList.add('hidden');
         });
@@ -230,17 +253,11 @@ function setupEvents() {
         });
 
         Object.values(mobileTabs).forEach(btn => {
-            if(!btn) return;
-            let base = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
-            if (btn === mobileTabs.va) {
-                btn.className = "flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16";
-            } else {
-                btn.className = base;
-            }
+            if(btn) btn.className = "w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition";
         });
 
         const activeDesktop = "px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
-        const activeMobile = "flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16";
+        const activeMobile = "w-full flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold transition";
 
         if(viewId === 'viewHome') {
             if(tabs.home) tabs.home.className = activeDesktop;
@@ -264,10 +281,7 @@ function setupEvents() {
         }
         if(viewId === 'viewVA') {
             if(tabs.va) tabs.va.className = activeDesktop;
-            if(mobileTabs.va) {
-                mobileTabs.va.classList.add('text-indigo-600', 'dark:text-indigo-400');
-                mobileTabs.va.classList.remove('text-slate-400');
-            }
+            if(mobileTabs.va) mobileTabs.va.className = activeMobile;
             VA.render(selectedMonths);
         }
         if(viewId === 'viewObjectives') {
@@ -275,6 +289,13 @@ function setupEvents() {
             if(mobileTabs.objectives) mobileTabs.objectives.className = activeMobile;
             Objectives.render();
         }
+        if(viewId === 'viewCards') {
+            if(tabs.cards) tabs.cards.className = activeDesktop;
+            if(mobileTabs.cards) mobileTabs.cards.className = activeMobile;
+            Cards.render(window.currentSelectedMonths);
+        }
+
+        toggleDrawer(true);
     };
 
     if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
@@ -283,6 +304,7 @@ function setupEvents() {
     if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
     if(tabs.va) tabs.va.addEventListener('click', () => switchTab('viewVA'));
     if(tabs.objectives) tabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
+    if(tabs.cards) tabs.cards.addEventListener('click', () => switchTab('viewCards'));
 
     if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
     if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
@@ -290,12 +312,18 @@ function setupEvents() {
     if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
     if(mobileTabs.va) mobileTabs.va.addEventListener('click', () => switchTab('viewVA'));
     if(mobileTabs.objectives) mobileTabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
+    if(mobileTabs.cards) mobileTabs.cards.addEventListener('click', () => switchTab('viewCards'));
 
     const inputType = document.getElementById('inputType');
     if (inputType) {
         inputType.addEventListener('change', (e) => {
             UI.populateCategories(e.target.value);
         });
+    }
+
+    const inputDateEl = document.getElementById('inputDate');
+    if (inputDateEl) {
+        inputDateEl.value = new Date().toISOString().split('T')[0];
     }
 
     const transForm = document.getElementById('transactionForm');
@@ -306,15 +334,24 @@ function setupEvents() {
             const amount = parseFloat(document.getElementById('inputAmount').value);
             const type = document.getElementById('inputType').value;
             const category = document.getElementById('inputCategory').value;
+            const rawDate = document.getElementById('inputDate').value;
+            
             const btn = transForm.querySelector('button[type="submit"]');
-            if (!desc || isNaN(amount)) return alert("Preencha corretamente.");
+            if (!desc || isNaN(amount) || !rawDate) return alert("Preencha corretamente.");
             const oldText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+            
             try {
+                const [y, m, d] = rawDate.split('-');
+                const formattedDate = `${d}/${m}/${y}`;
+
                 let targetMonth = selectedMonths[selectedMonths.length - 1];
                 if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
-                await store.addTransaction({ desc, amount, type, category, date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
+                
+                await store.addTransaction({ desc, amount, type, category, date: formattedDate, month: targetMonth });
+                
                 updateAllViews();
                 transForm.reset();
+                if (inputDateEl) inputDateEl.value = new Date().toISOString().split('T')[0];
                 document.getElementById('inputType').value = 'Despesa';
                 UI.populateCategories('Despesa');
             } catch (err) { console.error(err); } finally { btn.innerHTML = oldText; btn.disabled = false; }
@@ -332,13 +369,10 @@ function setupEvents() {
             
             if (name && baseAmount) {
                 let finalAmount = baseAmount;
-                
-                // Se o usuário digitou alguma porcentagem, calcula o valor final
                 if (interest > 0) {
                     finalAmount = baseAmount + (baseAmount * interest / 100);
-                    name = `${name} (+${interest}%)`; // Ex: João (+10%)
+                    name = `${name} (+${interest}%)`; 
                 }
-                
                 const btnSubmit = debtForm.querySelector('button');
                 const oldText = btnSubmit.innerHTML;
                 btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
@@ -349,29 +383,27 @@ function setupEvents() {
                     renderDebts();
                     debtForm.reset();
                     if (interestInput) interestInput.value = '0';
-                } catch (err) {
-                    alert("Erro ao salvar");
-                } finally {
+                } catch (err) { alert("Erro ao salvar"); } finally {
                     btnSubmit.innerHTML = oldText;
                     btnSubmit.disabled = false;
                 }
             }
         });
-    }    
+    }
+    
     const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
     const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
     const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
+    
+    const dropZone = document.getElementById('dropZone'); 
+    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
     
     const btnImport = document.getElementById('btnImport'); 
     if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
     
     const btnCloseModal = document.getElementById('btnCloseModal'); 
     if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
-    
-    const dropZone = document.getElementById('dropZone'); 
-    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
 
-    // --- 1. LÓGICA DE IMPORTAÇÃO DE EXTRATO EM PDF (IA) ---
     const fileInput = document.getElementById('fileInput');
     if (fileInput) {
         fileInput.addEventListener('change', async (e) => {
@@ -386,7 +418,6 @@ function setupEvents() {
             loadingStatus.classList.remove('hidden');
 
             try {
-                // Importa dinamicamente as funções de IA e Leitura de PDF
                 const { readPdfText } = await import('./pdf.js');
                 const { categorizeWithGemini } = await import('./ai.js');
                 
@@ -418,12 +449,11 @@ function setupEvents() {
             } finally {
                 loadingStatus.classList.add('hidden');
                 dropZone.classList.remove('hidden');
-                fileInput.value = ''; // Reseta o input para permitir enviar o mesmo arquivo de novo se quiser
+                fileInput.value = ''; 
             }
         });
     }
 
-    // --- 2. LÓGICA DO RELATÓRIO DA IA NO DASHBOARD ---
     const btnGenerateReport = document.getElementById('btnGenerateReport');
     if (btnGenerateReport) {
         btnGenerateReport.addEventListener('click', async () => {
@@ -437,14 +467,12 @@ function setupEvents() {
             try {
                 const { getFinancialAdvice } = await import('./ai.js');
                 
-                // Calcula as Top 3 categorias de gasto reais para a IA ler
                 let currentMonths = window.currentSelectedMonths || [getMonthName(new Date().getMonth() + 1)];
                 const expenses = (store.transactions || []).filter(t => t.type === 'Despesa' && currentMonths.includes(t.month));
                 const totals = {};
                 expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount));
                 const topCats = Object.entries(totals).sort((a,b) => b[1]-a[1]).slice(0,3).map(x => x[0]).join(', ') || 'Nenhuma';
 
-                // Prepara os dados pro prompt do gemini
                 const summaryData = {
                     balance: document.getElementById('dashBalance')?.innerText || 'R$ 0,00',
                     invested: document.getElementById('dashInvest')?.innerText || 'R$ 0,00',
@@ -482,5 +510,5 @@ document.addEventListener('DOMContentLoaded', async () => {
             const inputMeta = document.getElementById('inputMeta');
             if(inputMeta) inputMeta.value = store.getMeta();
         }
-    } catch (error) { console.error("Erro fatal:", error); }
+    } catch (error) { console.error("Erro fatal na inicialização:", error); }
 });

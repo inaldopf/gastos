@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Infinity Finance | AI Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f172a'/%3E%3Cpath d='M352 160c-38.5 0-71.6 21.3-96 53.3-24.4-32-57.5-53.3-96-53.3-61.9 0-112 50.1-112 112s50.1 112 112 112c38.5 0 71.6-21.3 96-53.3 24.4 32 57.5 53.3 96 53.3 61.9 0 112-50.1 112-112s-50.1-112-112-112zm0 176c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64zm-192 0c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64z' fill='%236366f1'/%3E%3C/svg%3E" type="image/svg+xml">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { slate: { 850: '#151e2e' } } } } }
@@ -19,27 +20,33 @@
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
         .dark .glass { background: rgba(30, 41, 59, 0.7); border-color: rgba(51, 65, 85, 0.5); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900 font-sans transition-colors duration-300">
 
-    <nav class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 flex-none z-40 shadow-sm transition-colors duration-300">
+    <nav class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 flex-none z-40 shadow-sm transition-colors duration-300 relative">
         <div class="max-w-7xl mx-auto px-4 h-full flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-indigo-200 dark:shadow-none shadow-md">
-                    <i class="fas fa-chart-line"></i>
+            <div class="flex items-center gap-3">
+                <button id="btnHamburger" class="sm:hidden text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-xl w-8 h-8 flex items-center justify-center transition-colors">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-indigo-200 dark:shadow-none shadow-md">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h1 class="font-bold text-lg text-slate-800 dark:text-white tracking-tight hidden min-[360px]:block">Infinity <span class="text-indigo-600 dark:text-indigo-400">Pro</span></h1>
                 </div>
-                <h1 class="font-bold text-lg text-slate-800 dark:text-white tracking-tight">Infinity <span class="text-indigo-600 dark:text-indigo-400">Pro</span></h1>
             </div>
             
-            <div class="flex gap-3 items-center">
+            <div class="flex gap-2 sm:gap-3 items-center">
                 <div class="hidden sm:flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg gap-1 mr-4 transition-colors">
                     <button id="tabHome" class="px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition">Lançamentos</button>
                     <button id="tabGoals" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Gasto Fixo</button>
                     <button id="tabVA" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">VA/VR</button>
                     <button id="tabDebts" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">A Receber</button>
                     <button id="tabObjectives" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Sonhos</button>
+                    <button id="tabCards" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Cartões</button>
                     <button id="tabDash" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Dash</button>
                 </div>
 
@@ -55,7 +62,49 @@
         </div>
     </nav>
 
-    <main class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pb-24 sm:pb-6 bg-slate-50/50 dark:bg-slate-900/50 transition-colors duration-300">
+    <div id="mobileDrawer" class="fixed inset-0 z-50 pointer-events-none">
+        <div id="drawerBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm opacity-0 transition-opacity duration-300"></div>
+        
+        <div id="drawerSidebar" class="absolute top-0 left-0 w-64 h-full bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col border-r border-slate-200 dark:border-slate-800 pointer-events-auto">
+            <div class="p-5 flex justify-between items-center border-b border-slate-100 dark:border-slate-800/50">
+                <div class="flex items-center gap-2">
+                    <div class="bg-indigo-600 text-white p-1.5 rounded-lg shadow-md text-xs"><i class="fas fa-chart-line"></i></div>
+                    <h2 class="font-bold text-slate-800 dark:text-white">Menu</h2>
+                </div>
+                <button id="btnCloseDrawer" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
+                <button id="btnMobileHome" class="w-full flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold transition">
+                    <i class="fas fa-list w-5 text-center"></i> Lançamentos
+                </button>
+                <button id="btnMobileGoals" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
+                    <i class="fas fa-bullseye w-5 text-center"></i> Gasto Fixo
+                </button>
+                <button id="btnMobileVA" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
+                    <i class="fas fa-utensils w-5 text-center"></i> VA/VR
+                </button>
+                <button id="btnMobileDebts" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
+                    <i class="fas fa-hand-holding-usd w-5 text-center"></i> A Receber
+                </button>
+                <button id="btnMobileObjectives" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
+                    <i class="fas fa-star w-5 text-center"></i> Sonhos
+                </button>
+                <button id="btnMobileCards" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
+                    <i class="fas fa-credit-card w-5 text-center"></i> Cartões
+                </button>
+                <button id="btnMobileDash" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
+                    <i class="fas fa-chart-pie w-5 text-center"></i> Dashboard
+                </button>
+            </div>
+            
+            <div class="p-4 border-t border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/50">
+                <p class="text-[10px] text-slate-400 text-center font-bold uppercase tracking-wider">Infinity Finance v2.0</p>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pb-6 bg-slate-50/50 dark:bg-slate-900/50 transition-colors duration-300 relative z-0">
         <div class="max-w-7xl mx-auto">
             
             <section id="viewHome" class="space-y-4 sm:space-y-6 animate-fade-in">
@@ -65,9 +114,9 @@
                         <h2 class="text-3xl font-bold text-indigo-900 dark:text-indigo-300" id="kpiBalance">R$ 0,00</h2>
                     </div>
                     <div class="grid grid-cols-2 gap-3 md:col-span-2 md:grid-cols-2">
-                        <div class="glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
+                        <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
                             <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Investido</p>
-                            <h2 class="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-400" id="kpiInvest">R$ 0,00</h2>
+                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400" id="kpiInvest">R$ 0,00</h2>
                         </div>
                         <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
                             <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Gastos</p>
@@ -95,15 +144,20 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 space-y-4">
                         <div class="glass p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <form id="transactionForm" class="flex flex-col sm:flex-row flex-wrap gap-3 items-end">
-                                <div class="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex-1">
+                            <form id="transactionForm" class="flex flex-col lg:flex-row flex-wrap gap-3 items-end">
+                                <div class="grid grid-cols-3 gap-2 w-full lg:w-auto lg:flex-[2]">
+                                    <input type="date" id="inputDate" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200 w-full" required>
                                     <select id="inputType" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 dark:text-slate-200 w-full">
                                         <option value="Despesa">🔴 Despesa</option><option value="Receita">🟢 Receita</option><option value="Investimento">🔵 Invest.</option>
                                     </select>
-                                    <input type="number" step="0.01" id="inputAmount" placeholder="R$ 0,00" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200 w-full">
+                                    <input type="number" step="0.01" id="inputAmount" placeholder="R$ 0,00" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200 w-full" required>
                                 </div>
-                                <div class="w-full sm:flex-[2]"><input type="text" id="inputDesc" placeholder="Descrição (ex: Mercado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200"></div>
-                                <div class="flex gap-2 w-full sm:flex-1"><select id="inputCategory" class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200"></select><button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg px-5 hover:bg-indigo-700 transition shadow-md active:scale-95"><i class="fas fa-plus"></i></button></div>
+                                <div class="w-full lg:flex-[2]"><input type="text" id="inputDesc" placeholder="Descrição (ex: Mercado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200" required></div>
+                                <div class="flex gap-2 w-full lg:flex-[1.5]"><select id="inputCategory" class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200"></select><button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg px-5 hover:bg-indigo-700 transition shadow-md active:scale-95"><i class="fas fa-plus"></i></button></div>
+                                <div class="w-full flex items-center gap-2 mt-1 px-1">
+                                    <input type="checkbox" id="inputRecurring" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer accent-indigo-600">
+                                    <label for="inputRecurring" class="text-xs font-bold text-slate-500 dark:text-slate-400 cursor-pointer select-none">Repetir todo mês (Fixo)</label>
+                                </div>
                             </form>
                         </div>
                         <div class="glass rounded-xl overflow-hidden min-h-[300px] border border-slate-100 dark:border-slate-700 shadow-sm">
@@ -151,7 +205,7 @@
                     <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-indigo-500"></i> Definir Gasto Fixo Categoria</h3>
                     <form id="goalsForm" class="flex flex-col sm:flex-row gap-4 items-end">
                         <div class="w-full sm:w-1/3"><label class="text-xs font-bold text-slate-400 uppercase">Categoria</label><select id="goalCategoryInput" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-3 rounded-lg outline-none focus:border-indigo-500 transition mt-1"></select></div>
-                        <div class="w-full sm:w-1/3"><label class="text-xs font-bold text-slate-400 uppercase">Limite Mensal</label><input type="number" id="goalAmountInput" placeholder="Ex: 500.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-3 rounded-lg outline-none focus:border-indigo-500 transition mt-1" required></div>
+                        <div class="w-full sm:w-1/3"><label class="text-xs font-bold text-slate-400 uppercase">Limite Mensal</label><input type="number" step="0.01" id="goalAmountInput" placeholder="Ex: 500.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-3 rounded-lg outline-none focus:border-indigo-500 transition mt-1" required></div>
                         <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md h-fit">Salvar</button>
                     </form>
                 </div>
@@ -205,7 +259,6 @@
                         </table>
                     </div>
                 </div>
-
             </section>
 
             <section id="viewDebts" class="space-y-6 hidden animate-fade-in">
@@ -265,13 +318,70 @@
                         </form>
                     </div>
 
-                    <div class="md:col-span-2 space-y-4" id="objectivesList">
+                    <div class="md:col-span-2 space-y-4" id="objectivesList"></div>
+                </div>
+            </section>
+
+            <section id="viewCards" class="space-y-6 hidden animate-fade-in">
+                <div class="bg-gradient-to-r from-purple-800 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-1"><i class="fas fa-credit-card text-purple-300 mr-2"></i> Controle de Cartões</h2>
+                            <p class="text-purple-200 text-sm">Gerencie faturas e não perca o controle do limite.</p>
                         </div>
+                    </div>
+                    <div class="absolute -right-10 -bottom-10 opacity-20"><i class="fas fa-wallet text-9xl"></i></div>
+                </div>
+
+                <div id="cardsOverview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="space-y-6">
+                        <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm"><i class="fas fa-shopping-bag text-purple-500 mr-1"></i> Passar Cartão</h3>
+                            <form id="cardExpenseForm" class="space-y-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Qual Cartão?</label><select id="expenseCardId" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200" required></select></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Descrição</label><input type="text" id="expenseCardDesc" placeholder="Ex: Mercado Livre" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200" required></div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Valor Total</label><input type="number" step="0.01" id="expenseCardAmount" placeholder="R$ 0,00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200" required></div>
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Parcelas</label><input type="number" id="expenseCardInstallments" value="1" min="1" max="48" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200"></div>
+                                </div>
+                                <button type="submit" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition shadow-md">Registrar Compra</button>
+                            </form>
+                        </div>
+
+                        <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                            <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm"><i class="fas fa-plus text-slate-400 mr-1"></i> Cadastrar Cartão</h3>
+                            <form id="newCardForm" class="space-y-4">
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Apelido (Ex: Nubank)</label><input type="text" id="newCardName" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
+                                <div><label class="text-xs font-bold text-slate-500 uppercase">Limite Total</label><input type="number" step="0.01" id="newCardLimit" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Dia Fechamento</label><input type="number" id="newCardClosing" min="1" max="31" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
+                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Dia Vencimento</label><input type="number" id="newCardDue" min="1" max="31" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
+                                </div>
+                                <button type="submit" class="w-full bg-slate-800 dark:bg-slate-700 text-white font-bold py-2.5 rounded-lg hover:bg-slate-900 transition shadow-md">Salvar Cartão</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 glass rounded-xl overflow-hidden min-h-[400px] border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col">
+                        <div class="p-4 border-b border-slate-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-700 dark:text-slate-200 text-sm"><i class="fas fa-list text-purple-500 mr-2"></i> Fatura do Mês</h3>
+                            <span class="text-xs font-bold text-slate-400" id="cardMonthDisplay">...</span>
+                        </div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-sm text-left whitespace-nowrap">
+                                <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
+                                    <tr><th class="px-4 py-3 font-semibold">Cartão</th><th class="px-4 py-3 font-semibold">Descrição</th><th class="px-4 py-3 font-semibold text-center">Parc.</th><th class="px-4 py-3 font-semibold text-right">Valor</th><th class="px-4 py-3 text-center w-10"><i class="fas fa-trash"></i></th></tr>
+                                </thead>
+                                <tbody id="cardTransactionList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </section>
 
             <section id="viewDashboard" class="space-y-6 hidden animate-fade-in">
-                
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="glass p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm">
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Saldo Livre</p>
@@ -285,9 +395,9 @@
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Despesas (Mês)</p>
                         <h2 class="text-xl font-bold text-red-600 dark:text-red-400" id="dashExpense">R$ 0,00</h2>
                     </div>
-                    <div class="glass p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
+                    <div class="glass p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Investido (Mês)</p>
-                        <h2 class="text-xl font-bold text-blue-600 dark:text-blue-400" id="dashInvest">R$ 0,00</h2>
+                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400" id="dashInvest">R$ 0,00</h2>
                     </div>
                 </div>
 
@@ -329,24 +439,6 @@
             </section>
         </div>
     </main>
-
-    <nav id="mobileNav" class="sm:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 flex justify-around items-center p-2 z-50 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-        <button id="btnMobileHome" class="flex flex-col items-center justify-center p-2 text-indigo-600 dark:text-indigo-400 transition-colors w-16"><i class="fas fa-list text-xl mb-1"></i><span class="text-[10px] font-bold">Início</span></button>
-        <button id="btnMobileGoals" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16"><i class="fas fa-bullseye text-xl mb-1"></i><span class="text-[10px] font-bold">Gasto fixo</span></button>
-        
-        <button id="btnMobileVA" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16">
-            <div class="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center -mt-6 border-4 border-slate-50 dark:border-slate-900 shadow-lg">
-                <i class="fas fa-utensils text-sm"></i>
-            </div>
-            <span class="text-[10px] font-bold mt-1">VA/VR</span>
-        </button>
-
-        <button id="btnMobileDebts" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16"><i class="fas fa-hand-holding-usd text-xl mb-1"></i><span class="text-[10px] font-bold">A Receber</span></button>
-        
-        <button id="btnMobileObjectives" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16"><i class="fas fa-star text-xl mb-1"></i><span class="text-[10px] font-bold">Sonhos</span></button>
-
-        <button id="btnMobileDash" class="flex flex-col items-center justify-center p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-16"><i class="fas fa-chart-pie text-xl mb-1"></i><span class="text-[10px] font-bold">Dash</span></button>
-    </nav>
 
     <div id="importModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 text-center animate-scale-in relative">

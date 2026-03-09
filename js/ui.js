@@ -43,6 +43,7 @@ export const UI = {
         { id: 'Outros', icon: 'fa-ellipsis-h', color: 'text-slate-400', hex: '#94A3B8', type: 'Despesa' },
         { id: 'Objetivo', icon: 'fa-star', color: 'text-indigo-500', hex: '#6366F1', type: 'Investimento', hidden: true },
         { id: 'Objetivo', icon: 'fa-star', color: 'text-indigo-500', hex: '#6366F1', type: 'Receita', hidden: true },
+        { id: 'Cartão de Crédito', icon: 'fa-credit-card', color: 'text-purple-600', hex: '#9333EA', type: 'Despesa', hidden: true },
         { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-orange-500', hex: '#F97316', type: 'Despesa' },
         { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-emerald-500', hex: '#10B981', type: 'Receita' }
     ],
@@ -51,7 +52,6 @@ export const UI = {
         const select = document.getElementById('inputCategory');
         if (!select) return;
         select.innerHTML = '';
-        // Filtra por tipo e também ESCONDE as categorias com hidden: true
         const filtered = this.categories.filter(cat => cat.type === filterType && !cat.hidden);
         filtered.forEach(cat => {
             const option = document.createElement('option');
@@ -76,7 +76,6 @@ export const UI = {
         list.innerHTML = '';
         const transactions = store.transactions || [];
 
-        // Lógica Saldo Acumulado (Global)
         const allMonths = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let maxMonthIndex = -1;
         selectedMonths.forEach(m => {
@@ -95,7 +94,6 @@ export const UI = {
             }
         });
 
-        // FILTRAGEM
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
@@ -103,7 +101,6 @@ export const UI = {
 
         let totalRec = 0, totalInv = 0, totalDesp = 0;
         
-        // Se houver filtro de categoria selecionado, a tabela reduz
         let tableFiltered = [...filtered];
         if (selectedCategory && selectedCategory !== 'Todas') {
             tableFiltered = tableFiltered.filter(t => t.category === selectedCategory);
@@ -118,7 +115,7 @@ export const UI = {
         if (tableFiltered.length === 0) {
             list.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 dark:text-slate-500">Nenhum lançamento encontrado.</td></tr>';
             this.updateKPIs(accumulatedBalance, 0, 0, 0); 
-            this.updateChart(filtered); // Passa a lista não-filtrada-por-categoria para não sumir o gráfico
+            this.updateChart(filtered); 
             return;
         }
 
@@ -130,21 +127,22 @@ export const UI = {
                 <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${t.date}</td>
                 <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${t.desc}</td>
                 <td class="px-4 py-3"><span class="${catData.color} text-xs font-bold uppercase"><i class="fas ${catData.icon}"></i> ${t.category}</span></td>
-                <td class="px-4 py-3 text-right font-bold text-sm ${t.type === 'Despesa' ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}">R$ ${t.amount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td class="px-4 py-3 font-semibold text-right ${t.type === 'Receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">
+                    ${t.type === 'Receita' ? '+' : '-'} R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </td>
                 <td class="px-4 py-3 text-center"><button onclick="window.removeTransaction(${t.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td>
             `;
             list.appendChild(tr);
         });
 
         this.updateKPIs(accumulatedBalance, totalRec, totalDesp, totalInv);
-        this.updateChart(filtered); // Gráfico sempre exibe a proporção inteira do mês
+        this.updateChart(filtered); 
     },
 
     updateKPIs(accumulatedBalance, rec, desp, inv) {
         const balEl = document.getElementById('kpiBalance');
         if(balEl) {
             balEl.innerText = `R$ ${accumulatedBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            // --- CÓDIGO NOVO: Alterado de 'text-indigo-900' para 'text-emerald-600' ---
             balEl.className = `text-3xl font-bold ${accumulatedBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`;
         }
         const invEl = document.getElementById('kpiInvest');
@@ -154,7 +152,6 @@ export const UI = {
     },
 
     updateChart(transactions, tentativas = 0) {
-        // CORREÇÃO: Sistema de Retry para garantir que o Chart.js baixou
         if (typeof Chart === 'undefined') {
             if (tentativas < 10) setTimeout(() => this.updateChart(transactions, tentativas + 1), 300);
             return;
@@ -163,7 +160,6 @@ export const UI = {
         const ctx = document.getElementById('categoryChart');
         if (!ctx) return;
 
-        // Filtra apenas despesas para o gráfico
         const expenses = transactions.filter(t => t.type === 'Despesa');
         const totals = {};
         expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount || 0));
@@ -174,11 +170,10 @@ export const UI = {
         }
 
         const labels = Object.keys(totals);
-        if (labels.length === 0) return; // Se não tem dado, o gráfico não quebra
+        if (labels.length === 0) return; 
 
         const dataValues = Object.values(totals);
         
-        // CORREÇÃO: Cores dinâmicas combinando perfeitamente com as categorias!
         const bgColors = labels.map(label => {
             const catObj = this.categories.find(c => c.id === label);
             return catObj ? catObj.hex : '#94A3B8';

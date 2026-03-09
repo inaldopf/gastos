@@ -9,6 +9,8 @@ export const store = {
     meta: 0,
     vaBalance: 0,
     vaTransactions: [],
+    cards: [],
+    cardTransactions: [],
 
     getToken() { return localStorage.getItem('inf_auth_token'); },
 
@@ -21,6 +23,8 @@ export const store = {
             meta: this.meta,
             vaBalance: this.vaBalance,
             vaTransactions: this.vaTransactions,
+            cards: this.cards,
+            cardTransactions: this.cardTransactions,
             timestamp: new Date().getTime()
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -38,6 +42,8 @@ export const store = {
                 this.meta = data.meta || 0;
                 this.vaBalance = data.vaBalance || 0;
                 this.vaTransactions = data.vaTransactions || [];
+                this.cards = data.cards || [];
+                this.cardTransactions = data.cardTransactions || [];
                 return true;
             } catch (e) { return false; }
         }
@@ -50,13 +56,15 @@ export const store = {
         this.loadFromCache();
 
         try {
-            const [resTrans, resDebt, resMeta, resGoals, resVA, resObj] = await Promise.all([
+            const [resTrans, resDebt, resMeta, resGoals, resVA, resObj, resCards, resCardTrans] = await Promise.all([
                 fetch(`${API_URL}/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/debtors`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/meta`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/goals`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/va`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/objectives`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`${API_URL}/objectives`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_URL}/cards`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_URL}/card-transactions`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
 
             if (resTrans.ok) {
@@ -92,6 +100,9 @@ export const store = {
             if (resObj && resObj.ok) {
                 this.objectives = await resObj.json();
             }
+            if (resCards && resCards.ok) this.cards = await resCards.json();
+            if (resCardTrans && resCardTrans.ok) this.cardTransactions = await resCardTrans.json();
+            
             this.saveToCache();
         } catch (error) { 
             console.error("Erro sync:", error); 
@@ -288,5 +299,48 @@ export const store = {
         this.objectives = this.objectives.filter(o => o.id !== id);
         this.saveToCache();
         fetch(`${API_URL}/objectives/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    },
+
+    async addCard(name, limit_amount, closing_day, due_day) {
+        const token = this.getToken();
+        try {
+            const res = await fetch(`${API_URL}/cards`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ name, limit_amount: parseFloat(limit_amount), closing_day: parseInt(closing_day), due_day: parseInt(due_day) })
+            });
+            const dbItem = await res.json();
+            this.cards.push(dbItem);
+            this.saveToCache();
+        } catch(e) { console.error(e); }
+    },
+
+    async removeCard(id) {
+        const token = this.getToken();
+        this.cards = this.cards.filter(c => c.id !== id);
+        this.cardTransactions = this.cardTransactions.filter(t => t.card_id !== id); 
+        this.saveToCache();
+        fetch(`${API_URL}/cards/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+    },
+
+    async addCardTransaction(data) {
+        const token = this.getToken();
+        try {
+            const res = await fetch(`${API_URL}/card-transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(data)
+            });
+            const dbItem = await res.json();
+            this.cardTransactions.unshift(dbItem);
+            this.saveToCache();
+        } catch(e) { console.error(e); }
+    },
+
+    async removeCardTransaction(id) {
+        const token = this.getToken();
+        this.cardTransactions = this.cardTransactions.filter(t => t.id !== id);
+        this.saveToCache();
+        fetch(`${API_URL}/card-transactions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
     }
 };
