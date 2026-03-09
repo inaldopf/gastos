@@ -1,347 +1,514 @@
-const API_URL = "https://financeiro-app-okjm.onrender.com";
-const CACHE_KEY = 'finance_data_cache';
+import { store } from './store.js';
+import { UI } from './ui.js';
+import { Dashboard } from './dashboard.js';
+import { Goals } from './goals.js';
+import { VA } from './va.js';
+import { Objectives } from './objectives.js';
+import { Cards } from './cards.js';
+import { getMonthName } from './utils.js';
 
-export const store = {
-    transactions: [],
-    debtors: [],
-    goals: [],
-    objectives: [],
-    meta: 0,
-    vaBalance: 0,
-    vaTransactions: [],
-    cards: [],
-    cardTransactions: [],
+console.log("🚀 app.js carregado!");
 
-    getToken() { return localStorage.getItem('inf_auth_token'); },
+let selectedMonths = [];
+let selectedCategory = 'Todas';
 
-    saveToCache() {
-        const data = {
-            transactions: this.transactions,
-            debtors: this.debtors,
-            goals: this.goals,
-            objectives: this.objectives,
-            meta: this.meta,
-            vaBalance: this.vaBalance,
-            vaTransactions: this.vaTransactions,
-            cards: this.cards,
-            cardTransactions: this.cardTransactions,
-            timestamp: new Date().getTime()
-        };
-        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    },
+// 1. Auth Logic
+const isLoginPage = window.location.pathname.includes('login.html');
+const authToken = localStorage.getItem('inf_auth_token');
+if (!authToken && !isLoginPage) window.location.href = 'login.html';
+if (authToken && isLoginPage) window.location.href = 'index.html';
 
-    loadFromCache() {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-            try {
-                const data = JSON.parse(cached);
-                this.transactions = data.transactions || [];
-                this.debtors = data.debtors || [];
-                this.goals = data.goals || [];
-                this.objectives = data.objectives || [];
-                this.meta = data.meta || 0;
-                this.vaBalance = data.vaBalance || 0;
-                this.vaTransactions = data.vaTransactions || [];
-                this.cards = data.cards || [];
-                this.cardTransactions = data.cardTransactions || [];
-                return true;
-            } catch (e) { return false; }
+// 2. Setup Theme
+function setupTheme() {
+    const btnTheme = document.getElementById('btnThemeToggle');
+    const html = document.documentElement;
+    if (localStorage.getItem('theme') === 'dark') html.classList.add('dark');
+
+    const toggleTheme = () => {
+        html.classList.toggle('dark');
+        localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    };
+
+    if(btnTheme) btnTheme.addEventListener('click', toggleTheme);
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+            e.preventDefault(); toggleTheme();
         }
-        return false;
-    },
+    });
+}
 
-    async init() {
-        const token = this.getToken();
-        if (!token) return;
-        this.loadFromCache();
-
-        try {
-            const [resTrans, resDebt, resMeta, resGoals, resVA, resObj, resCards, resCardTrans] = await Promise.all([
-                fetch(`${API_URL}/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/debtors`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/meta`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/goals`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/va`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/objectives`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/cards`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/card-transactions`, { headers: { 'Authorization': `Bearer ${token}` } })
-            ]);
-
-            if (resTrans.ok) {
-                const rawTrans = await resTrans.json();
-                this.transactions = rawTrans.map(dbItem => {
-                    let dateStr = dbItem.transaction_date;
-                    if (dateStr && !dateStr.includes('/')) {
-                        const parts = dateStr.split('-');
-                        if(parts.length === 3) dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
-                    return {
-                        id: dbItem.id,
-                        desc: dbItem.description,
-                        amount: parseFloat(dbItem.amount),
-                        type: dbItem.type,
-                        category: dbItem.category,
-                        date: dateStr, 
-                        month: dbItem.month
-                    };
-                });
-            }
-            if (resDebt.ok) this.debtors = await resDebt.json();
-            if (resMeta.ok) {
-                const d = await resMeta.json();
-                this.meta = parseFloat(d.meta) || 0;
-            }
-            if (resGoals && resGoals.ok) this.goals = await resGoals.json();
-            if (resVA && resVA.ok) {
-                const d = await resVA.json();
-                this.vaBalance = parseFloat(d.balance) || 0;
-                this.vaTransactions = d.transactions || []; 
-            }
-            if (resObj && resObj.ok) {
-                this.objectives = await resObj.json();
-            }
-            if (resCards && resCards.ok) this.cards = await resCards.json();
-            if (resCardTrans && resCardTrans.ok) this.cardTransactions = await resCardTrans.json();
-            
-            this.saveToCache();
-        } catch (error) { 
-            console.error("Erro sync:", error); 
-            if (error.message === "UNAUTHORIZED") {
-                localStorage.removeItem('inf_auth_token');
-                window.location.href = 'login.html';
-            }
+// 3. Components Setup
+function setupCategoryFilter() {
+    const select = document.getElementById('filterCategory');
+    if (!select || !UI || !UI.categories) return;
+    select.innerHTML = '<option value="Todas">📂 Todas Categorias</option>';
+    const addedCats = new Set();
+    UI.categories.forEach(cat => {
+        if (!cat.hidden && !addedCats.has(cat.id)) {
+            addedCats.add(cat.id);
+            const option = document.createElement('option');
+            option.value = cat.id; option.textContent = `${cat.id}`;
+            select.appendChild(option);
         }
-    },
+    });
+    select.addEventListener('change', (e) => { selectedCategory = e.target.value; updateAllViews(); });
+}
 
-    async addTransaction(data) {
-        const token = this.getToken();
-        const tempId = Date.now();
-        const newItem = { ...data, id: tempId, isTemp: true };
-        this.transactions.unshift(newItem);
-        this.saveToCache();
-        try {
-            const res = await fetch(`${API_URL}/transactions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(data)
-            });
-            const dbItem = await res.json();
-            const index = this.transactions.findIndex(t => t.id === tempId);
-            if(index !== -1) {
-                this.transactions[index].id = dbItem.id;
-                delete this.transactions[index].isTemp;
-                this.saveToCache();
-            }
-        } catch (error) {
-            this.transactions = this.transactions.filter(t => t.id !== tempId);
-            this.saveToCache();
-            alert("Erro ao salvar.");
-        }
-    },
+function setupMonthSelector() {
+    const btn = document.getElementById('monthDropdownBtn');
+    const menu = document.getElementById('monthDropdownMenu');
+    const btnText = document.getElementById('monthBtnText');
+    if (!btn || !menu) return;
+    const months = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+    const shortMonths = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    
+    if (!selectedMonths || selectedMonths.length === 0) selectedMonths = [months[new Date().getMonth()]];
 
-    async removeTransaction(id) {
-        const token = this.getToken();
-        const backup = [...this.transactions];
-        this.transactions = this.transactions.filter(t => t.id !== id);
-        this.saveToCache();
-        try {
-            await fetch(`${API_URL}/transactions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-        } catch (err) {
-            this.transactions = backup;
-            this.saveToCache();
-            alert("Erro ao apagar.");
-        }
-    },
-
-    async setMeta(valor) {
-        const token = this.getToken();
-        this.meta = valor;
-        this.saveToCache();
-        fetch(`${API_URL}/meta`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ meta: valor })
+    const updateButtonText = () => {
+        if (selectedMonths.length === 0) { btnText.textContent = "Selecione um mês"; btnText.classList.add('text-red-500'); }
+        else if (selectedMonths.length === 12) { btnText.textContent = "📅 Ano Completo"; btnText.classList.remove('text-red-500'); }
+        else if (selectedMonths.length <= 2) { btnText.textContent = `📅 ${selectedMonths.map(m => shortMonths[months.indexOf(m)]).join(', ')}`; btnText.classList.remove('text-red-500'); }
+        else { btnText.textContent = `📅 ${selectedMonths.length} meses selecionados`; btnText.classList.remove('text-red-500'); }
+    };
+    
+    menu.innerHTML = '';
+    const divAll = document.createElement('div');
+    divAll.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer mb-1 border-b border-slate-100 dark:border-slate-700";
+    divAll.innerHTML = `<input type="checkbox" id="checkAll" class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="checkAll" class="ml-2 text-sm font-bold text-slate-700 dark:text-slate-200 flex-1 cursor-pointer">Selecionar Todos</label>`;
+    divAll.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = divAll.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
+    divAll.querySelector('input').addEventListener('change', (e) => { selectedMonths = e.target.checked ? [...months] : []; setupMonthSelector(); updateAllViews(); });
+    menu.appendChild(divAll);
+    
+    months.forEach((m, index) => {
+        const div = document.createElement('div');
+        div.className = "flex items-center p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg cursor-pointer";
+        div.innerHTML = `<input type="checkbox" id="m-${index}" value="${m}" ${selectedMonths.includes(m)?'checked':''} class="w-4 h-4 text-indigo-600 rounded border-gray-300 dark:bg-slate-700 focus:ring-indigo-500 cursor-pointer"><label for="m-${index}" class="ml-2 text-sm text-slate-600 dark:text-slate-300 flex-1 cursor-pointer">${shortMonths[index]}</label>`;
+        div.onclick = (e) => { if(e.target.tagName !== 'INPUT') { const chk = div.querySelector('input'); chk.checked = !chk.checked; chk.dispatchEvent(new Event('change')); }};
+        div.querySelector('input').addEventListener('change', (e) => { 
+            if(e.target.checked) { 
+                if(!selectedMonths.includes(m)) selectedMonths.push(m); 
+            } else { 
+                selectedMonths = selectedMonths.filter(x => x !== m); 
+            } 
+            updateButtonText(); 
+            updateAllViews(); 
         });
-    },
-    getMeta() { return this.meta; },
+        menu.appendChild(div);
+    });
+    updateButtonText();
+    btn.onclick = (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); };
+    document.addEventListener('click', (e) => { if (!btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden'); });
+}
 
-    async setCategoryGoal(category, amount) {
-        const token = this.getToken();
-        this.goals = this.goals.filter(g => g.category !== category);
-        if (amount > 0) this.goals.push({ category, amount: parseFloat(amount) });
-        this.saveToCache();
-        try {
-            await fetch(`${API_URL}/goals`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ category, amount: parseFloat(amount) })
-            });
-        } catch (error) { console.error("Erro goal:", error); }
-    },
+// 4. Update
+function updateAllViews() {
+    if (!Array.isArray(selectedMonths)) {
+        selectedMonths = typeof selectedMonths === 'string' ? [selectedMonths] : [];
+    }
+    window.currentSelectedMonths = selectedMonths;
 
-    getGoal(category) {
-        const g = this.goals.find(g => g.category === category);
-        return g ? g.amount : 0;
-    },
+    try {
+        if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
+        if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
+        if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
+        if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
+        if (Objectives && typeof Objectives.render === 'function') Objectives.render();
+        if (Cards && typeof Cards.render === 'function') Cards.render(selectedMonths);
+        renderDebts();
+    } catch (e) { console.error("Erro ao atualizar interface:", e); }
+}
 
-    async addDebt(name, amount) {
-        const token = this.getToken();
-        const tempId = Date.now();
-        this.debtors.unshift({ id: tempId, name, amount, paid: false });
-        this.saveToCache();
-        try {
-            const res = await fetch(`${API_URL}/debtors`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ name, amount })
-            });
-            const realItem = await res.json();
-            const idx = this.debtors.findIndex(d => d.id === tempId);
-            if(idx !== -1) { this.debtors[idx].id = realItem.id; this.saveToCache(); }
-        } catch(e) { this.debtors = this.debtors.filter(d => d.id !== tempId); this.saveToCache(); }
-    },
+window.updateAllViews = updateAllViews;
 
-    async toggleDebt(id) {
-        const token = this.getToken();
-        const idx = this.debtors.findIndex(d => d.id === id);
-        if(idx !== -1) { this.debtors[idx].paid = !this.debtors[idx].paid; this.saveToCache(); }
-        fetch(`${API_URL}/debtors/${id}/toggle`, { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } });
-    },
+function renderDebts() {
+    const list = document.getElementById('debtList');
+    const totalEl = document.getElementById('totalDebtAmount');
+    if(!list) return;
+    list.innerHTML = '';
+    let total = 0;
+    (store.debtors||[]).forEach(d => {
+        if(!d.paid) total += parseFloat(d.amount||0);
+        const tr = document.createElement('tr');
+        tr.className = `hover:bg-slate-50 dark:hover:bg-slate-700 transition ${d.paid?'opacity-50':''} border-b border-slate-50 dark:border-slate-700`;
+        tr.innerHTML = `
+            <td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">${d.name}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-600 dark:text-slate-300">R$ ${parseFloat(d.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+            <td class="px-6 py-4 text-center">${d.paid ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">PAGO</span>' : '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">PENDENTE</span>'}</td>
+            <td class="px-6 py-4 text-center flex justify-center gap-2">
+                <button onclick="window.toggleDebt(${d.id})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400"><i class="fas fa-check-circle"></i></button>
+                <button onclick="window.deleteDebt(${d.id})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
+            </td>`;
+        list.appendChild(tr);
+    });
+    if(totalEl) totalEl.innerText = `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+}
 
-    async removeDebt(id) {
-        const token = this.getToken();
-        this.debtors = this.debtors.filter(d => d.id !== id);
-        this.saveToCache();
-        fetch(`${API_URL}/debtors/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    },
+// 5. Globals
+window.removeTransaction = async (id) => { if(confirm("Apagar?")) { await store.removeTransaction(id); updateAllViews(); } };
+window.toggleDebt = async (id) => { await store.toggleDebt(id); renderDebts(); };
+window.deleteDebt = async (id) => { if(confirm("Apagar?")) { await store.removeDebt(id); renderDebts(); }};
+window.removeVATransaction = async (id) => { if(confirm("Apagar registro do VA? (O saldo será revertido)")) { await store.removeVATransaction(id); updateAllViews(); }};
 
-    async updateVA(amount, type, desc, date, month) {
-        const token = this.getToken();
-        const val = parseFloat(amount);
-        
-        if (type === 'credit') this.vaBalance += val; else this.vaBalance -= val;
-        
-        const tempId = Date.now();
-        this.vaTransactions.unshift({ id: tempId, description: desc, amount: val, type, transaction_date: date, month, isTemp: true });
-        this.saveToCache();
-
-        try {
-            const res = await fetch(`${API_URL}/va`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amount: val, type, desc, date, month })
-            });
-            const d = await res.json();
-            this.vaBalance = d.newBalance;
-            
-            const idx = this.vaTransactions.findIndex(t => t.id === tempId);
-            if (idx !== -1 && d.transaction) {
-                this.vaTransactions[idx].id = d.transaction.id;
-                delete this.vaTransactions[idx].isTemp;
-            }
-            this.saveToCache();
-        } catch (e) { alert("Erro Sync VA"); }
-    },
-
-    async removeVATransaction(id) {
-        const token = this.getToken();
-        const t = this.vaTransactions.find(x => x.id === id);
-        if(t) {
-            if(t.type === 'credit') this.vaBalance -= parseFloat(t.amount);
-            else this.vaBalance += parseFloat(t.amount);
-        }
-        this.vaTransactions = this.vaTransactions.filter(x => x.id !== id);
-        this.saveToCache();
-
-        try {
-            await fetch(`${API_URL}/va/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }});
-        } catch(e) { alert("Erro ao apagar VA"); }
-    },
-
-    async addObjective(title, targetAmount) {
-        const token = this.getToken();
-        const tempId = Date.now();
-        this.objectives.unshift({ id: tempId, title, target_amount: targetAmount, current_amount: 0 });
-        this.saveToCache();
-        try {
-            const res = await fetch(`${API_URL}/objectives`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ title, target_amount: targetAmount })
-            });
-            const dbItem = await res.json();
-            const idx = this.objectives.findIndex(o => o.id === tempId);
-            if(idx !== -1) { this.objectives[idx].id = dbItem.id; this.saveToCache(); }
-        } catch(e) { 
-            this.objectives = this.objectives.filter(o => o.id !== tempId); 
-            this.saveToCache(); 
-        }
-    },
-
-    async addMoneyToObjective(id, amountToAdd) {
-        const token = this.getToken();
-        const idx = this.objectives.findIndex(o => o.id === id);
-        if(idx !== -1) { 
-            this.objectives[idx].current_amount = parseFloat(this.objectives[idx].current_amount) + parseFloat(amountToAdd); 
-            this.saveToCache(); 
-        }
-        try {
-            await fetch(`${API_URL}/objectives/${id}/add`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amountToAdd })
-            });
-        } catch (e) { console.error("Erro ao adicionar saldo", e); }
-    },
-
-    async removeObjective(id) {
-        const token = this.getToken();
-        this.objectives = this.objectives.filter(o => o.id !== id);
-        this.saveToCache();
-        fetch(`${API_URL}/objectives/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    },
-
-    // --- MÉTODOS DE CARTÃO DE CRÉDITO ---
-    async addCard(name, limit_amount, closing_day, due_day) {
-        const token = this.getToken();
-        try {
-            const res = await fetch(`${API_URL}/cards`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ name, limit_amount: parseFloat(limit_amount), closing_day: parseInt(closing_day), due_day: parseInt(due_day) })
-            });
-            const dbItem = await res.json();
-            this.cards.push(dbItem);
-            this.saveToCache();
-        } catch(e) { console.error(e); }
-    },
-
-    async removeCard(id) {
-        const token = this.getToken();
-        this.cards = this.cards.filter(c => c.id !== id);
-        this.cardTransactions = this.cardTransactions.filter(t => t.card_id !== id); // Remove compras atreladas
-        this.saveToCache();
-        fetch(`${API_URL}/cards/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
-    },
-
-    async addCardTransaction(data) {
-        const token = this.getToken();
-        try {
-            const res = await fetch(`${API_URL}/card-transactions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(data)
-            });
-            const dbItem = await res.json();
-            this.cardTransactions.unshift(dbItem);
-            this.saveToCache();
-        } catch(e) { console.error(e); }
-    },
-
-    async removeCardTransaction(id) {
-        const token = this.getToken();
-        this.cardTransactions = this.cardTransactions.filter(t => t.id !== id);
-        this.saveToCache();
-        fetch(`${API_URL}/card-transactions/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+window.removeObjective = async (id) => { if(confirm("Apagar objetivo?")) { await store.removeObjective(id); updateAllViews(); }};
+window.addMoneyObjective = async (id) => {
+    const obj = store.objectives.find(o => o.id === id);
+    if (!obj) return;
+    const val = prompt(`Quanto deseja GUARDAR para o sonho: '${obj.title}'?`);
+    const numVal = parseFloat(val);
+    if (numVal && numVal > 0) {
+        let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] : getMonthName(new Date().getMonth() + 1);
+        await store.addMoneyToObjective(id, numVal);
+        await store.addTransaction({ desc: `Guardado: ${obj.title}`, amount: numVal, type: 'Investimento', category: 'Objetivo', date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
+        updateAllViews();
     }
 };
+
+window.removeMoneyObjective = async (id) => {
+    const obj = store.objectives.find(o => o.id === id);
+    if (!obj) return;
+    const val = prompt(`Quanto deseja RESGATAR do sonho: '${obj.title}'?\\n(Saldo atual: R$ ${obj.current_amount})`);
+    const numVal = parseFloat(val);
+    if (numVal && numVal > 0) {
+        if (numVal > parseFloat(obj.current_amount)) return alert("Você não pode resgatar um valor maior do que o que já guardou!");
+        let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+            ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] : getMonthName(new Date().getMonth() + 1);
+        await store.addMoneyToObjective(id, -numVal);
+        await store.addTransaction({ desc: `Resgate: ${obj.title}`, amount: numVal, type: 'Receita', category: 'Objetivo', date: new Date().toLocaleDateString('pt-BR'), month: targetMonth });
+        updateAllViews();
+    }
+};
+
+// 6. Events
+function setupEvents() {
+    setupTheme();
+
+    const btnHamburger = document.getElementById('btnHamburger');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const drawerSidebar = document.getElementById('drawerSidebar');
+    const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+
+    const toggleDrawer = (forceClose = false) => {
+        if (!mobileDrawer) return;
+        const isOpen = !mobileDrawer.classList.contains('pointer-events-none');
+        
+        if (isOpen || forceClose) {
+            drawerSidebar.classList.remove('translate-x-0');
+            drawerSidebar.classList.add('-translate-x-full');
+            drawerBackdrop.classList.remove('opacity-100');
+            drawerBackdrop.classList.add('opacity-0');
+            setTimeout(() => { mobileDrawer.classList.add('pointer-events-none'); }, 300);
+        } else {
+            mobileDrawer.classList.remove('pointer-events-none');
+            setTimeout(() => {
+                drawerBackdrop.classList.remove('opacity-0');
+                drawerBackdrop.classList.add('opacity-100');
+                drawerSidebar.classList.remove('-translate-x-full');
+                drawerSidebar.classList.add('translate-x-0');
+            }, 10);
+        }
+    };
+
+    if (btnHamburger) btnHamburger.addEventListener('click', () => toggleDrawer());
+    if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', () => toggleDrawer(true));
+    if (drawerBackdrop) drawerBackdrop.addEventListener('click', () => toggleDrawer(true));
+
+    const tabs = {
+        home: document.getElementById('tabHome'),
+        debts: document.getElementById('tabDebts'),
+        dash: document.getElementById('tabDash'),
+        goals: document.getElementById('tabGoals'),
+        va: document.getElementById('tabVA'),
+        objectives: document.getElementById('tabObjectives'),
+        cards: document.getElementById('tabCards')
+    };
+
+    const mobileTabs = {
+        home: document.getElementById('btnMobileHome'),
+        debts: document.getElementById('btnMobileDebts'),
+        dash: document.getElementById('btnMobileDash'),
+        goals: document.getElementById('btnMobileGoals'),
+        va: document.getElementById('btnMobileVA'),
+        objectives: document.getElementById('btnMobileObjectives'),
+        cards: document.getElementById('btnMobileCards')
+    };
+
+    const switchTab = (viewId) => {
+        ['viewHome', 'viewDebts', 'viewDashboard', 'viewGoals', 'viewVA', 'viewObjectives', 'viewCards'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.classList.add('hidden');
+        });
+        
+        const target = document.getElementById(viewId);
+        if(target) {
+            target.classList.remove('hidden');
+            target.classList.remove('animate-fade-in');
+            void target.offsetWidth; 
+            target.classList.add('animate-fade-in');
+        }
+
+        Object.values(tabs).forEach(btn => {
+            if(btn) btn.className = "px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition";
+        });
+
+        Object.values(mobileTabs).forEach(btn => {
+            if(btn) btn.className = "w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition";
+        });
+
+        const activeDesktop = "px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition";
+        const activeMobile = "w-full flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold transition";
+
+        if(viewId === 'viewHome') {
+            if(tabs.home) tabs.home.className = activeDesktop;
+            if(mobileTabs.home) mobileTabs.home.className = activeMobile;
+            UI.renderApp(selectedMonths, selectedCategory); 
+        }
+        if(viewId === 'viewDebts') {
+            if(tabs.debts) tabs.debts.className = activeDesktop;
+            if(mobileTabs.debts) mobileTabs.debts.className = activeMobile;
+            renderDebts();
+        }
+        if(viewId === 'viewDashboard') {
+            if(tabs.dash) tabs.dash.className = activeDesktop;
+            if(mobileTabs.dash) mobileTabs.dash.className = activeMobile;
+            Dashboard.render(selectedMonths);
+        }
+        if(viewId === 'viewGoals') {
+            if(tabs.goals) tabs.goals.className = activeDesktop;
+            if(mobileTabs.goals) mobileTabs.goals.className = activeMobile;
+            Goals.render(selectedMonths);
+        }
+        if(viewId === 'viewVA') {
+            if(tabs.va) tabs.va.className = activeDesktop;
+            if(mobileTabs.va) mobileTabs.va.className = activeMobile;
+            VA.render(selectedMonths);
+        }
+        if(viewId === 'viewObjectives') {
+            if(tabs.objectives) tabs.objectives.className = activeDesktop;
+            if(mobileTabs.objectives) mobileTabs.objectives.className = activeMobile;
+            Objectives.render();
+        }
+        if(viewId === 'viewCards') {
+            if(tabs.cards) tabs.cards.className = activeDesktop;
+            if(mobileTabs.cards) mobileTabs.cards.className = activeMobile;
+            Cards.render(window.currentSelectedMonths);
+        }
+
+        toggleDrawer(true);
+    };
+
+    if(tabs.home) tabs.home.addEventListener('click', () => switchTab('viewHome'));
+    if(tabs.debts) tabs.debts.addEventListener('click', () => switchTab('viewDebts'));
+    if(tabs.dash) tabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
+    if(tabs.goals) tabs.goals.addEventListener('click', () => switchTab('viewGoals'));
+    if(tabs.va) tabs.va.addEventListener('click', () => switchTab('viewVA'));
+    if(tabs.objectives) tabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
+    if(tabs.cards) tabs.cards.addEventListener('click', () => switchTab('viewCards'));
+
+    if(mobileTabs.home) mobileTabs.home.addEventListener('click', () => switchTab('viewHome'));
+    if(mobileTabs.debts) mobileTabs.debts.addEventListener('click', () => switchTab('viewDebts'));
+    if(mobileTabs.dash) mobileTabs.dash.addEventListener('click', () => switchTab('viewDashboard'));
+    if(mobileTabs.goals) mobileTabs.goals.addEventListener('click', () => switchTab('viewGoals'));
+    if(mobileTabs.va) mobileTabs.va.addEventListener('click', () => switchTab('viewVA'));
+    if(mobileTabs.objectives) mobileTabs.objectives.addEventListener('click', () => switchTab('viewObjectives'));
+    if(mobileTabs.cards) mobileTabs.cards.addEventListener('click', () => switchTab('viewCards'));
+
+    const inputType = document.getElementById('inputType');
+    if (inputType) {
+        inputType.addEventListener('change', (e) => {
+            UI.populateCategories(e.target.value);
+        });
+    }
+
+    const inputDateEl = document.getElementById('inputDate');
+    if (inputDateEl) {
+        inputDateEl.value = new Date().toISOString().split('T')[0];
+    }
+
+    const transForm = document.getElementById('transactionForm');
+    if (transForm) {
+        transForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const desc = document.getElementById('inputDesc').value;
+            const amount = parseFloat(document.getElementById('inputAmount').value);
+            const type = document.getElementById('inputType').value;
+            const category = document.getElementById('inputCategory').value;
+            const rawDate = document.getElementById('inputDate').value;
+            
+            const btn = transForm.querySelector('button[type="submit"]');
+            if (!desc || isNaN(amount) || !rawDate) return alert("Preencha corretamente.");
+            const oldText = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
+            
+            try {
+                const [y, m, d] = rawDate.split('-');
+                const formattedDate = `${d}/${m}/${y}`;
+
+                let targetMonth = selectedMonths[selectedMonths.length - 1];
+                if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
+                
+                await store.addTransaction({ desc, amount, type, category, date: formattedDate, month: targetMonth });
+                
+                updateAllViews();
+                transForm.reset();
+                if (inputDateEl) inputDateEl.value = new Date().toISOString().split('T')[0];
+                document.getElementById('inputType').value = 'Despesa';
+                UI.populateCategories('Despesa');
+            } catch (err) { console.error(err); } finally { btn.innerHTML = oldText; btn.disabled = false; }
+        });
+    }
+
+    const debtForm = document.getElementById('debtForm');
+    if (debtForm) {
+        debtForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let name = document.getElementById('debtName').value;
+            const baseAmount = parseFloat(document.getElementById('debtAmount').value);
+            const interestInput = document.getElementById('debtInterest');
+            const interest = interestInput && interestInput.value ? parseFloat(interestInput.value) : 0;
+            
+            if (name && baseAmount) {
+                let finalAmount = baseAmount;
+                if (interest > 0) {
+                    finalAmount = baseAmount + (baseAmount * interest / 100);
+                    name = `${name} (+${interest}%)`; 
+                }
+                const btnSubmit = debtForm.querySelector('button');
+                const oldText = btnSubmit.innerHTML;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
+                btnSubmit.disabled = true;
+
+                try {
+                    await store.addDebt(name, finalAmount);
+                    renderDebts();
+                    debtForm.reset();
+                    if (interestInput) interestInput.value = '0';
+                } catch (err) { alert("Erro ao salvar"); } finally {
+                    btnSubmit.innerHTML = oldText;
+                    btnSubmit.disabled = false;
+                }
+            }
+        });
+    }
+    
+    const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
+    const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
+    const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
+    
+    const dropZone = document.getElementById('dropZone'); 
+    if(dropZone) dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+    
+    const btnImport = document.getElementById('btnImport'); 
+    if(btnImport) btnImport.addEventListener('click', () => document.getElementById('importModal').classList.remove('hidden'));
+    
+    const btnCloseModal = document.getElementById('btnCloseModal'); 
+    if(btnCloseModal) btnCloseModal.addEventListener('click', () => document.getElementById('importModal').classList.add('hidden'));
+
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return alert("Configure sua API Key nas configurações (ícone de chave) primeiro!");
+
+            const loadingStatus = document.getElementById('loadingStatus');
+            dropZone.classList.add('hidden');
+            loadingStatus.classList.remove('hidden');
+
+            try {
+                const { readPdfText } = await import('./pdf.js');
+                const { categorizeWithGemini } = await import('./ai.js');
+                
+                const text = await readPdfText(file);
+                const transactions = await categorizeWithGemini(text, apiKey);
+
+                let targetMonth = window.currentSelectedMonths && window.currentSelectedMonths.length > 0 
+                    ? window.currentSelectedMonths[window.currentSelectedMonths.length - 1] 
+                    : getMonthName(new Date().getMonth() + 1);
+
+                for (const t of transactions) {
+                    await store.addTransaction({
+                        desc: t.desc,
+                        amount: parseFloat(t.amount),
+                        type: t.type,
+                        category: t.category,
+                        date: t.date || new Date().toLocaleDateString('pt-BR'),
+                        month: targetMonth
+                    });
+                }
+                
+                alert(`${transactions.length} transações importadas com sucesso!`);
+                updateAllViews();
+                document.getElementById('importModal').classList.add('hidden');
+
+            } catch (error) {
+                alert("Erro ao importar. Verifique o console: " + error.message);
+                console.error(error);
+            } finally {
+                loadingStatus.classList.add('hidden');
+                dropZone.classList.remove('hidden');
+                fileInput.value = ''; 
+            }
+        });
+    }
+
+    const btnGenerateReport = document.getElementById('btnGenerateReport');
+    if (btnGenerateReport) {
+        btnGenerateReport.addEventListener('click', async () => {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) return alert("Configure sua API Key nas configurações (ícone de chave) primeiro!");
+
+            const originalText = btnGenerateReport.innerHTML;
+            btnGenerateReport.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analisando seus hábitos...';
+            btnGenerateReport.disabled = true;
+
+            try {
+                const { getFinancialAdvice } = await import('./ai.js');
+                
+                let currentMonths = window.currentSelectedMonths || [getMonthName(new Date().getMonth() + 1)];
+                const expenses = (store.transactions || []).filter(t => t.type === 'Despesa' && currentMonths.includes(t.month));
+                const totals = {};
+                expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount));
+                const topCats = Object.entries(totals).sort((a,b) => b[1]-a[1]).slice(0,3).map(x => x[0]).join(', ') || 'Nenhuma';
+
+                const summaryData = {
+                    balance: document.getElementById('dashBalance')?.innerText || 'R$ 0,00',
+                    invested: document.getElementById('dashInvest')?.innerText || 'R$ 0,00',
+                    expenses: document.getElementById('dashExpense')?.innerText || 'R$ 0,00',
+                    topCategories: topCats,
+                    savingsRate: "Calculado pela IA" 
+                };
+
+                const advice = await getFinancialAdvice(summaryData, apiKey);
+                
+                document.getElementById('aiTextContent').innerText = advice;
+                document.getElementById('aiResponseArea').classList.remove('hidden');
+            } catch (err) {
+                alert("Erro ao falar com a IA: " + err.message);
+            } finally {
+                btnGenerateReport.innerHTML = originalText;
+                btnGenerateReport.disabled = false;
+            }
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        if(UI && UI.initCategories) UI.initCategories();
+        setupMonthSelector();
+        setupCategoryFilter(); 
+        setupEvents();
+        const hasCache = store.loadFromCache();
+        if(!hasCache) document.getElementById('transactionList').innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>';
+        const token = localStorage.getItem('inf_auth_token');
+        if (token) {
+            await store.init();
+            updateAllViews();
+            const inputMeta = document.getElementById('inputMeta');
+            if(inputMeta) inputMeta.value = store.getMeta();
+        }
+    } catch (error) { console.error("Erro fatal na inicialização:", error); }
+});
