@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Infinity Finance | AI Dashboard</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f172a'/%3E%3Cpath d='M352 160c-38.5 0-71.6 21.3-96 53.3-24.4-32-57.5-53.3-96-53.3-61.9 0-112 50.1-112 112s50.1 112 112 112c38.5 0 71.6-21.3 96-53.3 24.4 32 57.5 53.3 96 53.3 61.9 0 112-50.1 112-112s-50.1-112-112-112zm0 176c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64zm-192 0c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64z' fill='%236366f1'/%3E%3C/svg%3E" type="image/svg+xml">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { slate: { 850: '#151e2e' } } } } }
@@ -20,6 +19,20 @@
         .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
         .dark .glass { background: rgba(30, 41, 59, 0.7); border-color: rgba(51, 65, 85, 0.5); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* MODO PRIVACIDADE (BLUR) */
+        .privacy-mode .blur-target {
+            filter: blur(6px);
+            opacity: 0.6;
+            transition: filter 0.3s ease, opacity 0.3s ease;
+            user-select: none;
+            cursor: pointer;
+        }
+        .privacy-mode .blur-target:hover,
+        .privacy-mode input.blur-target:focus {
+            filter: blur(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900 font-sans transition-colors duration-300">
@@ -39,7 +52,7 @@
                 </div>
             </div>
             
-            <div class="flex gap-2 sm:gap-3 items-center">
+            <div class="flex gap-1 sm:gap-2 items-center">
                 <div class="hidden sm:flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg gap-1 mr-4 transition-colors">
                     <button id="tabHome" class="px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition">Lançamentos</button>
                     <button id="tabGoals" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Gasto Fixo</button>
@@ -52,6 +65,10 @@
 
                 <div class="hidden sm:block h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
+                <button id="btnPrivacyToggle" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center justify-center" title="Modo Privacidade">
+                    <i class="fas fa-eye-slash"></i>
+                </button>
+                
                 <button id="btnThemeToggle" class="text-slate-400 hover:text-yellow-500 dark:hover:text-yellow-300 w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center justify-center">
                     <i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:inline"></i>
                 </button>
@@ -111,16 +128,16 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                     <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm">
                         <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Saldo Atual</p>
-                        <h2 class="text-3xl font-bold text-indigo-900 dark:text-indigo-300" id="kpiBalance">R$ 0,00</h2>
+                        <h2 class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 blur-target" id="kpiBalance">R$ 0,00</h2>
                     </div>
                     <div class="grid grid-cols-2 gap-3 md:col-span-2 md:grid-cols-2">
                         <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
                             <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Investido</p>
-                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400" id="kpiInvest">R$ 0,00</h2>
+                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 blur-target" id="kpiInvest">R$ 0,00</h2>
                         </div>
                         <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
                             <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Gastos</p>
-                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400" id="kpiExpense">R$ 0,00</h2>
+                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 blur-target" id="kpiExpense">R$ 0,00</h2>
                         </div>
                     </div>
                 </div>
@@ -154,10 +171,6 @@
                                 </div>
                                 <div class="w-full lg:flex-[2]"><input type="text" id="inputDesc" placeholder="Descrição (ex: Mercado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200" required></div>
                                 <div class="flex gap-2 w-full lg:flex-[1.5]"><select id="inputCategory" class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200"></select><button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg px-5 hover:bg-indigo-700 transition shadow-md active:scale-95"><i class="fas fa-plus"></i></button></div>
-                                <div class="w-full flex items-center gap-2 mt-1 px-1">
-                                    <input type="checkbox" id="inputRecurring" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer accent-indigo-600">
-                                    <label for="inputRecurring" class="text-xs font-bold text-slate-500 dark:text-slate-400 cursor-pointer select-none">Repetir todo mês (Fixo)</label>
-                                </div>
                             </form>
                         </div>
                         <div class="glass rounded-xl overflow-hidden min-h-[300px] border border-slate-100 dark:border-slate-700 shadow-sm">
@@ -173,7 +186,7 @@
                     </div>
                     <div class="glass p-5 rounded-xl h-fit border border-slate-100 dark:border-slate-700 shadow-sm sticky top-6">
                         <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-pie text-indigo-500"></i> Gastos por Categoria</h3>
-                        <div class="h-64 relative"><canvas id="categoryChart"></canvas></div>
+                        <div class="h-64 relative"><canvas id="categoryChart" class="blur-target"></canvas></div>
                     </div>
                 </div>
             </section>
@@ -182,20 +195,20 @@
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                         <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Receita Real</p>
-                        <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400" id="goalTotalIncome">R$ 0,00</h2>
+                        <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 blur-target" id="goalTotalIncome">R$ 0,00</h2>
                     </div>
                     <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm">
                         <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Renda Fixa</p>
                         <div class="flex items-center gap-2">
                             <span class="text-slate-400 font-bold">R$</span>
-                            <input type="number" id="goalSavingsInput" class="font-bold text-2xl text-indigo-900 dark:text-indigo-300 bg-transparent outline-none w-full border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-indigo-500 transition" placeholder="0.00">
+                            <input type="number" id="goalSavingsInput" class="font-bold text-2xl text-indigo-900 dark:text-indigo-300 bg-transparent outline-none w-full border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-indigo-500 transition blur-target" placeholder="0.00">
                         </div>
                     </div>
                     <div class="glass p-5 rounded-xl border-l-4 border-slate-400 shadow-sm" id="goalBudgetCard">
                         <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Projeção</p>
                         <div class="flex justify-between items-end">
-                            <div><span class="text-xs text-slate-500 font-semibold">Vai Sobrar:</span><h2 class="text-xl font-bold text-slate-800 dark:text-slate-200" id="goalProjectedSurplus">R$ 0,00</h2></div>
-                            <div class="text-right"><span class="text-xs text-slate-500 font-semibold">Meta:</span><h2 class="text-xl font-bold text-slate-400" id="goalTargetDisplay">R$ 0,00</h2></div>
+                            <div><span class="text-xs text-slate-500 font-semibold">Vai Sobrar:</span><h2 class="text-xl font-bold text-slate-800 dark:text-slate-200 blur-target" id="goalProjectedSurplus">R$ 0,00</h2></div>
+                            <div class="text-right"><span class="text-xs text-slate-500 font-semibold">Meta:</span><h2 class="text-xl font-bold text-slate-400 blur-target" id="goalTargetDisplay">R$ 0,00</h2></div>
                         </div>
                         <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-2 overflow-hidden"><div id="goalBudgetBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div>
                         <p id="goalBudgetMsg" class="text-xs font-bold text-emerald-600 mt-1 text-right">Planejamento Seguro</p>
@@ -211,7 +224,7 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-4"><h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1">Progresso</h3><div id="goalsList" class="space-y-3"></div></div>
-                    <div><h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1 mb-4">Gráfico</h3><div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm h-80"><canvas id="goalsChart"></canvas></div></div>
+                    <div><h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1 mb-4">Gráfico</h3><div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm h-80"><canvas id="goalsChart" class="blur-target"></canvas></div></div>
                 </div>
             </section>
 
@@ -220,7 +233,7 @@
                     <div class="relative z-10">
                         <div class="bg-white/20 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4 mx-auto backdrop-blur-sm"><i class="fas fa-utensils text-3xl"></i></div>
                         <p class="text-orange-100 font-bold uppercase tracking-wider text-sm mb-1">Saldo Vale Alimentação</p>
-                        <h2 class="text-5xl font-bold mb-6" id="vaBalanceDisplay">R$ 0,00</h2>
+                        <h2 class="text-5xl font-bold mb-6 blur-target" id="vaBalanceDisplay">R$ 0,00</h2>
                     </div>
                     <div class="absolute -top-10 -left-10 w-48 h-48 bg-white opacity-10 rounded-full blur-3xl"></div>
                     <div class="absolute bottom-0 right-0 w-64 h-64 bg-yellow-400 opacity-20 rounded-full blur-3xl"></div>
@@ -265,7 +278,7 @@
                <div class="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                     <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div><h2 class="text-2xl font-bold mb-1">A Receber / Empréstimos</h2><p class="text-slate-400 text-sm">Controle o dinheiro que deve voltar para o seu bolso.</p></div>
-                        <div class="text-right"><p class="text-slate-400 text-xs font-bold uppercase">Total a Receber</p><h2 class="text-4xl font-bold text-emerald-400" id="totalDebtAmount">R$ 0,00</h2></div>
+                        <div class="text-right"><p class="text-slate-400 text-xs font-bold uppercase">Total a Receber</p><h2 class="text-4xl font-bold text-emerald-400 blur-target" id="totalDebtAmount">R$ 0,00</h2></div>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -385,19 +398,19 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div class="glass p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm">
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Saldo Livre</p>
-                        <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-300" id="dashBalance">R$ 0,00</h2>
+                        <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-300 blur-target" id="dashBalance">R$ 0,00</h2>
                     </div>
                     <div class="glass p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Receitas (Mês)</p>
-                        <h2 class="text-xl font-bold text-emerald-600 dark:text-emerald-400" id="dashIncome">R$ 0,00</h2>
+                        <h2 class="text-xl font-bold text-emerald-600 dark:text-emerald-400 blur-target" id="dashIncome">R$ 0,00</h2>
                     </div>
                     <div class="glass p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Despesas (Mês)</p>
-                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400" id="dashExpense">R$ 0,00</h2>
+                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400 blur-target" id="dashExpense">R$ 0,00</h2>
                     </div>
                     <div class="glass p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Investido (Mês)</p>
-                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400" id="dashInvest">R$ 0,00</h2>
+                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400 blur-target" id="dashInvest">R$ 0,00</h2>
                     </div>
                 </div>
 
@@ -413,27 +426,27 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm col-span-1 lg:col-span-2">
                         <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-area text-indigo-500"></i> Curva de Saldo (Mês Atual)</h3>
-                        <div class="h-64"><canvas id="dailyBalanceChart"></canvas></div>
+                        <div class="h-64"><canvas id="dailyBalanceChart" class="blur-target"></canvas></div>
                     </div>
 
                     <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                         <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-bar text-indigo-500"></i> Evolução Mensal</h3>
-                        <div class="h-64"><canvas id="evolutionChart"></canvas></div>
+                        <div class="h-64"><canvas id="evolutionChart" class="blur-target"></canvas></div>
                     </div>
 
                     <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                         <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-balance-scale text-indigo-500"></i> Regra 50/30/20</h3>
-                        <div class="h-64"><canvas id="rule503020Chart"></canvas></div>
+                        <div class="h-64"><canvas id="rule503020Chart" class="blur-target"></canvas></div>
                     </div>
 
                     <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                         <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-sort-amount-down text-red-500"></i> Ranking de Despesas</h3>
-                        <div class="h-64"><canvas id="rankExpensesChart"></canvas></div>
+                        <div class="h-64"><canvas id="rankExpensesChart" class="blur-target"></canvas></div>
                     </div>
 
                     <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
                         <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-wallet text-emerald-500"></i> Panorama do Patrimônio</h3>
-                        <div class="h-64"><canvas id="netWorthChart"></canvas></div>
+                        <div class="h-64"><canvas id="netWorthChart" class="blur-target"></canvas></div>
                     </div>
                 </div>
             </section>
