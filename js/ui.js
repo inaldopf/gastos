@@ -66,6 +66,19 @@ export const UI = {
     },
 
     initCategories() {
+        // MÁGICA DA REBECKA: Altera as cores hexadecimais de base para os gráficos
+        if (window.IS_PINK_THEME) {
+            this.categories = this.categories.map(cat => {
+                let newHex = cat.hex;
+                if (cat.hex.toUpperCase() === '#4F46E5') newHex = '#db2777'; // indigo-600 vira pink-600
+                if (cat.hex.toUpperCase() === '#6366F1') newHex = '#ec4899'; // indigo-500 vira pink-500
+                if (cat.hex.toUpperCase() === '#818CF8') newHex = '#f472b6'; // indigo-400 vira pink-400
+                if (cat.hex.toUpperCase() === '#A855F7') newHex = '#d946ef'; // purple-500 vira fuchsia-500
+                if (cat.hex.toUpperCase() === '#9333EA') newHex = '#c026d3'; // purple-600 vira fuchsia-600
+                if (cat.hex.toUpperCase() === '#C084FC') newHex = '#e879f9'; // purple-400 vira fuchsia-400
+                return { ...cat, hex: newHex };
+            });
+        }
         this.populateCategories('Despesa');
     },
 
@@ -143,7 +156,6 @@ export const UI = {
         const balEl = document.getElementById('kpiBalance');
         if(balEl) {
             balEl.innerText = `R$ ${accumulatedBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            // Adicionado a tag blur-target aqui também para não perder quando atualizar o número
             balEl.className = `text-3xl font-bold blur-target ${accumulatedBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`;
         }
         const invEl = document.getElementById('kpiInvest');
