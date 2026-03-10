@@ -59,9 +59,8 @@
                     .glass { background: rgba(253, 242, 248, 0.8) !important; border-color: rgba(251, 207, 232, 0.6) !important; }
                     .dark .glass { background: rgba(80, 7, 36, 0.7) !important; border-color: rgba(157, 23, 77, 0.3) !important; }
                     
-                    /* Tinta os quadros que eram brancos puros com um rosa microscópico */
-                    .bg-white { background-color: #fffafa !important; }
-                    .dark .bg-slate-800 { background-color: #500724 !important; }
+                    /* CORREÇÃO: Tinta os quadros que eram brancos APENAS no Modo Claro. Assim o Modo Escuro volta a funcionar! */
+                    html:not(.dark) .bg-white { background-color: #fffafa !important; }
                     
                     /* Barra de scroll rosa */
                     ::-webkit-scrollbar-thumb { background-color: #f472b6 !important; border-radius: 10px; }
