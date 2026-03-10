@@ -18,7 +18,6 @@ export const Cards = {
     },
 
     setupForms() {
-        // Form: Novo Cartão
         const formNew = document.getElementById('newCardForm');
         if (formNew && formNew.dataset.listener !== 'true') {
             formNew.dataset.listener = 'true';
@@ -39,7 +38,6 @@ export const Cards = {
             });
         }
 
-        // Form: Passar Cartão (Lançar Despesa)
         const formExp = document.getElementById('cardExpenseForm');
         if (formExp && formExp.dataset.listener !== 'true') {
             formExp.dataset.listener = 'true';
@@ -55,9 +53,8 @@ export const Cards = {
                 const btn = formExp.querySelector('button');
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
 
-                // Lógica de Parcelamento (Se for em 3x, divide o valor e joga 1 parcela pra cada mês subsequente)
                 const partAmount = amount / installments;
-                let currentMonthIdx = new Date().getMonth() + 1; // 1 a 12
+                let currentMonthIdx = new Date().getMonth() + 1;
                 let year = new Date().getFullYear();
 
                 const dateStr = new Date().toLocaleDateString('pt-BR');
@@ -76,7 +73,6 @@ export const Cards = {
                         current_installment: i
                     });
 
-                    // Avança o mês pra próxima parcela
                     currentMonthIdx++;
                     if (currentMonthIdx > 12) { currentMonthIdx = 1; year++; }
                 }
@@ -105,19 +101,15 @@ export const Cards = {
         }
 
         cards.forEach(card => {
-            // Popula o Select do formulário
             if (selectCard) {
                 const opt = document.createElement('option');
                 opt.value = card.id; opt.textContent = card.name;
                 selectCard.appendChild(opt);
             }
 
-            // Calcula a fatura do mês selecionado
-            // Fatura do mês selecionado (Apenas para exibir o valor da parcela/fatura atual)
             const monthTransactions = (store.cardTransactions || []).filter(t => t.card_id === card.id && t.month === targetMonth);
             const invoiceTotal = monthTransactions.reduce((acc, t) => acc + parseFloat(t.amount), 0);
             
-            // Limite comprometido: Soma TODAS as compras já feitas nesse cartão (independente do mês)
             const allCardTransactions = (store.cardTransactions || []).filter(t => t.card_id === card.id);
             const totalUsed = allCardTransactions.reduce((acc, t) => acc + parseFloat(t.amount), 0);
 
@@ -137,16 +129,16 @@ export const Cards = {
                     </div>
                     <div class="text-right">
                         <p class="text-[10px] font-bold text-slate-400 uppercase">Fatura Atual</p>
-                        <p class="text-xl font-bold text-slate-800 dark:text-slate-200">R$ ${invoiceTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        <p class="text-xl font-bold text-slate-800 dark:text-slate-200 blur-target">R$ ${invoiceTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                 </div>
                 
                 <div class="mb-2 flex justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
                     <span>Limite Usado: ${percentUsed.toFixed(1)}%</span>
-                    <span>Disp: R$ ${available.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                    <span class="blur-target">Disp: R$ ${available.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
                 <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                    <div class="${barColor} h-1.5 rounded-full" style="width: ${Math.min(percentUsed, 100)}%"></div>
+                    <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(percentUsed, 100)}%"></div>
                 </div>
 
                 <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex gap-2">
@@ -167,21 +159,21 @@ export const Cards = {
         const transactions = (store.cardTransactions || []).filter(t => t.month === targetMonth);
         
         if (transactions.length === 0) {
-            list.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Nenhuma compra parcelada ou registrada neste mês.</td></tr>';
+            list.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Nenhuma compra parcelada ou registada neste mês.</td></tr>';
             return;
         }
 
         transactions.forEach(t => {
             const cardObj = (store.cards || []).find(c => c.id === t.card_id);
-            const cardName = cardObj ? cardObj.name : 'Cartão Deletado';
+            const cardName = cardObj ? cardObj.name : 'Cartão Eliminado';
 
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
             tr.innerHTML = `
                 <td class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300"><span class="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded text-[10px] uppercase">${cardName}</span></td>
                 <td class="px-4 py-3 text-slate-800 dark:text-slate-200">${t.description}</td>
-                <td class="px-4 py-3 text-center text-xs text-slate-500">${t.installments > 1 ? `${t.current_installment}/${t.installments}` : 'À vista'}</td>
-                <td class="px-4 py-3 text-right font-bold text-red-500">R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                <td class="px-4 py-3 text-center text-xs text-slate-500">${t.installments > 1 ? `${t.current_installment}/${t.installments}` : 'A pronto'}</td>
+                <td class="px-4 py-3 text-right font-bold text-red-500"><span class="blur-target">R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
                 <td class="px-4 py-3 text-center">
                     <button onclick="window.deleteCardTransaction(${t.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
                 </td>
@@ -191,9 +183,8 @@ export const Cards = {
     }
 };
 
-// Funções globais para botões
 window.deleteCard = async (id) => {
-    if (confirm("Deletar este cartão e TODAS as compras atreladas a ele?")) {
+    if (confirm("Eliminar este cartão e TODAS as compras a ele associadas?")) {
         await store.removeCard(id);
         window.updateAllViews();
     }
@@ -207,10 +198,8 @@ window.deleteCardTransaction = async (id) => {
 };
 
 window.payInvoice = async (cardId, cardName, invoiceTotal, month) => {
-    if (invoiceTotal <= 0) return alert("A fatura deste mês está zerada!");
+    if (invoiceTotal <= 0) return alert("A fatura deste mês está a zero!");
     if (confirm(`Pagar a fatura de R$ ${invoiceTotal.toLocaleString('pt-BR')} do cartão ${cardName} e descontar do saldo principal?`)) {
-        
-        // Lança como uma Despesa na conta principal!
         await store.addTransaction({
             desc: `Fatura Cartão: ${cardName}`,
             amount: invoiceTotal,
@@ -220,7 +209,7 @@ window.payInvoice = async (cardId, cardName, invoiceTotal, month) => {
             month: month
         });
 
-        alert("Fatura paga! O valor foi descontado do seu Saldo Atual na tela de Lançamentos.");
+        alert("Fatura paga! O valor foi descontado do seu Saldo Atual no ecrã de Lançamentos.");
         window.updateAllViews();
     }
 };
