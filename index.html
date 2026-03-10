@@ -5,9 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Infinity Finance | AI Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { slate: { 850: '#151e2e' } } } } }
+        window.IS_PINK_THEME = false;
+        try {
+            const token = localStorage.getItem('inf_auth_token');
+            if (token) {
+                // Descriptografa o JWT para ver o e-mail de quem está logado
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                const payload = JSON.parse(jsonPayload);
+                
+                if (payload && payload.email && payload.email.toLowerCase().includes('rebecka.freitas')) {
+                    window.IS_PINK_THEME = true; // Ativa o modo rosa globalmente
+                }
+            }
+        } catch(e) { console.error("Falha ao verificar tema:", e); }
+
+        const twTheme = {
+            darkMode: 'class',
+            theme: { extend: { colors: { slate: { 850: '#151e2e' } } } }
+        };
+
+        // Se for a Rebecka, injetamos tons de Rosa no lugar do Indigo e Purple
+        if (window.IS_PINK_THEME) {
+            twTheme.theme.extend.colors.indigo = {
+                50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', 300: '#f9a8d4', 400: '#f472b6', 500: '#ec4899', 600: '#db2777', 700: '#be185d', 800: '#9d174d', 900: '#831843'
+            };
+            twTheme.theme.extend.colors.purple = {
+                50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf', 800: '#86198f', 900: '#701a75'
+            };
+        }
+        tailwind.config = twTheme;
     </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
