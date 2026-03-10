@@ -11,32 +11,23 @@ export const Objectives = {
 
     setupForm() {
         const form = document.getElementById('objectiveForm');
-        if (!form) return;
-        
-        if (form.dataset.listenerAttached === 'true') return;
-        form.dataset.listenerAttached = 'true';
+        if (!form || form.dataset.listener === 'true') return;
 
+        form.dataset.listener = 'true';
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const title = document.getElementById('objTitle').value;
-            const target = parseFloat(document.getElementById('objTarget').value);
-            
-            if (!title || isNaN(target) || target <= 0) return alert("Preencha corretamente.");
+            const targetAmount = parseFloat(document.getElementById('objTarget').value);
 
-            const btn = form.querySelector('button');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; 
-            btn.disabled = true;
+            if (title && !isNaN(targetAmount)) {
+                const btn = form.querySelector('button');
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; btn.disabled = true;
 
-            try {
-                await store.addObjective(title, target);
+                await store.addObjective(title, targetAmount);
                 form.reset();
-                this.renderList();
-            } catch (err) { 
-                console.error(err); 
-            } finally { 
-                btn.innerHTML = originalText; 
-                btn.disabled = false; 
+                btn.innerHTML = oldText; btn.disabled = false;
+                window.updateAllViews();
             }
         });
     },
@@ -44,59 +35,61 @@ export const Objectives = {
     renderList() {
         const list = document.getElementById('objectivesList');
         if (!list) return;
-        list.innerHTML = '';
 
+        list.innerHTML = '';
         const objectives = store.objectives || [];
 
         if (objectives.length === 0) {
-            list.innerHTML = '<p class="text-slate-400 dark:text-slate-500 text-center py-10 text-sm">Nenhum sonho cadastrado ainda. Qual o seu próximo alvo?</p>';
+            list.innerHTML = '<div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 text-center text-slate-400">Você ainda não definiu nenhum sonho.</div>';
             return;
         }
 
         objectives.forEach(obj => {
-            const current = parseFloat(obj.current_amount) || 0;
-            const target = parseFloat(obj.target_amount) || 0;
-            const remaining = target - current;
-            const percent = target > 0 ? (current / target) * 100 : 0;
-            const visualPercent = Math.min(Math.max(percent, 0), 100); // Trava entre 0 e 100%
+            const target = parseFloat(obj.target_amount);
+            const current = parseFloat(obj.current_amount);
+            const pct = target > 0 ? (current / target) * 100 : 0;
+            const isCompleted = current >= target;
 
-            const card = document.createElement('div');
-            card.className = "glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm mb-4 relative";
+            const div = document.createElement('div');
+            div.className = "glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group";
             
-            card.innerHTML = `
-                <button onclick="window.removeObjective(${obj.id})" class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
-                
-                <div class="flex justify-between items-end mb-2 pr-6">
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-3 relative z-10">
                     <div>
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 text-lg">${obj.title}</h3>
-                        <p class="text-xs font-semibold mt-1 ${remaining > 0 ? 'text-slate-500' : 'text-emerald-500'}">
-                            ${remaining > 0 ? `Faltam R$ ${remaining.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Meta Alcançada! 🎉'}
+                        <h3 class="font-bold text-slate-800 dark:text-slate-200 text-lg flex items-center gap-2">
+                            ${isCompleted ? '<i class="fas fa-check-circle text-emerald-500"></i>' : '<i class="fas fa-star text-indigo-400"></i>'}
+                            ${obj.title}
+                        </h3>
+                        <p class="text-xs font-bold text-slate-400 uppercase mt-1">
+                            Meta: <span class="blur-target">R$ ${target.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                         </p>
                     </div>
                     <div class="text-right">
-                        <span class="text-xs text-slate-400 font-bold uppercase">Guardado</span>
-                        <h2 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">
-                            R$ ${current.toLocaleString('pt-BR', {minimumFractionDigits: 2})} 
-                            <span class="text-sm text-slate-400 dark:text-slate-500 block sm:inline"> / R$ ${target.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                        </h2>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Guardado</p>
+                        <p class="text-xl font-bold ${isCompleted ? 'text-emerald-500' : 'text-indigo-600 dark:text-indigo-400'} blur-target">
+                            R$ ${current.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                        </p>
                     </div>
                 </div>
-                
-                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-4 overflow-hidden mt-4 relative border border-slate-300 dark:border-slate-600">
-                    <div class="${percent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'} h-4 rounded-full transition-all duration-1000" style="width: ${visualPercent}%"></div>
-                    <span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-800 dark:text-white drop-shadow-md z-10">${percent.toFixed(1)}%</span>
+
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-4 relative z-10 overflow-hidden">
+                    <div class="${isCompleted ? 'bg-emerald-500' : 'bg-indigo-500'} h-2 rounded-full transition-all duration-1000" style="width: ${Math.min(pct, 100)}%"></div>
                 </div>
-                
-                <div class="mt-4 flex gap-2">
-                    <button onclick="window.addMoneyObjective(${obj.id})" class="flex-1 text-sm font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-300 px-4 py-2 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition border border-indigo-100 dark:border-indigo-800 shadow-sm">
+
+                <div class="flex gap-2 relative z-10">
+                    <button onclick="window.addMoneyObjective(${obj.id})" class="flex-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold py-2 rounded-lg text-xs hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition border border-indigo-100 dark:border-indigo-800/50">
                         <i class="fas fa-plus mr-1"></i> Guardar
                     </button>
-                    <button onclick="window.removeMoneyObjective(${obj.id})" class="flex-1 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-300 px-4 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition border border-red-100 dark:border-red-800 shadow-sm">
+                    <button onclick="window.removeMoneyObjective(${obj.id})" class="flex-1 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 font-bold py-2 rounded-lg text-xs hover:bg-rose-100 dark:hover:bg-rose-900/40 transition border border-rose-100 dark:border-rose-800/50">
                         <i class="fas fa-minus mr-1"></i> Resgatar
                     </button>
                 </div>
+
+                <button onclick="window.removeObjective(${obj.id})" class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100 z-20">
+                    <i class="fas fa-trash"></i>
+                </button>
             `;
-            list.appendChild(card);
+            list.appendChild(div);
         });
     }
 };
