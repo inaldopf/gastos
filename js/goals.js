@@ -169,7 +169,7 @@ export const Goals = {
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Gasto Atual', data: spent, backgroundColor: '#6366f1', borderRadius: 4 },
+                    { label: 'Gasto Atual', data: spent, backgroundColor: window.IS_PINK_THEME ? '#ec4899' : '#6366f1', borderRadius: 4 },
                     { label: 'Limite', data: budget, backgroundColor: isDark ? '#334155' : '#cbd5e1', borderRadius: 4 }
                 ]
             },
