@@ -11,14 +11,13 @@
         try {
             const token = localStorage.getItem('inf_auth_token');
             if (token) {
-                // Descriptografa o JWT para ver o e-mail de quem está logado
                 const base64Url = token.split('.')[1];
                 const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
                 const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
                 const payload = JSON.parse(jsonPayload);
                 
                 if (payload && payload.email && payload.email.toLowerCase().includes('rebecka.freitas')) {
-                    window.IS_PINK_THEME = true; // Ativa o modo rosa globalmente
+                    window.IS_PINK_THEME = true; 
                 }
             }
         } catch(e) { console.error("Falha ao verificar tema:", e); }
@@ -28,14 +27,48 @@
             theme: { extend: { colors: { slate: { 850: '#151e2e' } } } }
         };
 
-        // Se for a Rebecka, injetamos tons de Rosa no lugar do Indigo e Purple
         if (window.IS_PINK_THEME) {
+            // 1. Troca os azuis e roxos dos botões
             twTheme.theme.extend.colors.indigo = {
                 50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', 300: '#f9a8d4', 400: '#f472b6', 500: '#ec4899', 600: '#db2777', 700: '#be185d', 800: '#9d174d', 900: '#831843'
             };
             twTheme.theme.extend.colors.purple = {
                 50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf', 800: '#86198f', 900: '#701a75'
             };
+            
+            // 2. O GRANDE TRUQUE: Substitui os fundos e textos cinzas por tons de Rosa e Vinho!
+            twTheme.theme.extend.colors.slate = {
+                50: '#fdf2f8',   // Fundo do App (Light Mode) -> Rosa super clarinho
+                100: '#fce7f3',  // Bordas claras
+                200: '#fbcfe8',  // Texto principal no Dark Mode -> Rosa claro
+                300: '#f9a8d4',  // Tons médios
+                400: '#f472b6',  // Texto secundário (Muted)
+                500: '#db2777',  
+                600: '#be185d',  
+                700: '#9d174d',  // Texto escuro
+                800: '#500724',  // Fundo dos Cards no Dark Mode / Texto Principal no Light Mode -> Vinho elegante
+                900: '#2a0412',  // Fundo do App (Dark Mode) -> Vinho super escuro (quase preto)
+                850: '#3f061b'   // Tons intermediários
+            };
+
+            // 3. Ajusta o Glassmorfismo e a barra de scroll para combinar com o fundo
+            document.addEventListener("DOMContentLoaded", () => {
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    /* Fundo de vidro refinado para o rosa */
+                    .glass { background: rgba(253, 242, 248, 0.8) !important; border-color: rgba(251, 207, 232, 0.6) !important; }
+                    .dark .glass { background: rgba(80, 7, 36, 0.7) !important; border-color: rgba(157, 23, 77, 0.3) !important; }
+                    
+                    /* Tinta os quadros que eram brancos puros com um rosa microscópico */
+                    .bg-white { background-color: #fffafa !important; }
+                    .dark .bg-slate-800 { background-color: #500724 !important; }
+                    
+                    /* Barra de scroll rosa */
+                    ::-webkit-scrollbar-thumb { background-color: #f472b6 !important; border-radius: 10px; }
+                    .dark ::-webkit-scrollbar-thumb { background-color: #9d174d !important; }
+                `;
+                document.head.appendChild(style);
+            });
         }
         tailwind.config = twTheme;
     </script>
