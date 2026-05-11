@@ -1,534 +1,900 @@
 <!DOCTYPE html>
-<html lang="pt-br" class=""> 
+<html lang="pt-br" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Infinity Finance | AI Dashboard</title>
+    <title>Infinity Finance</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script>
         window.IS_PINK_THEME = false;
         try {
             const token = localStorage.getItem('inf_auth_token');
             if (token) {
-                const base64Url = token.split('.')[1];
-                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-                const payload = JSON.parse(jsonPayload);
-                
-                if (payload && payload.email && payload.email.toLowerCase().includes('rebecka.freitas')) {
-                    window.IS_PINK_THEME = true; 
-                }
+                const b = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+                const p = JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+                if (p?.email?.toLowerCase().includes('rebecka.freitas')) window.IS_PINK_THEME = true;
             }
-        } catch(e) { console.error("Falha ao verificar tema:", e); }
-
-        const twTheme = {
-            darkMode: 'class',
-            theme: { extend: { colors: { slate: { 850: '#151e2e' } } } }
-        };
-
-        if (window.IS_PINK_THEME) {
-            // 1. Troca os azuis e roxos dos botões
-            twTheme.theme.extend.colors.indigo = {
-                50: '#fdf2f8', 100: '#fce7f3', 200: '#fbcfe8', 300: '#f9a8d4', 400: '#f472b6', 500: '#ec4899', 600: '#db2777', 700: '#be185d', 800: '#9d174d', 900: '#831843'
-            };
-            twTheme.theme.extend.colors.purple = {
-                50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf', 800: '#86198f', 900: '#701a75'
-            };
-            
-            // 2. O GRANDE TRUQUE: Substitui os fundos e textos cinzas por tons de Rosa e Vinho!
-            twTheme.theme.extend.colors.slate = {
-                50: '#fdf2f8',   // Fundo do App (Light Mode) -> Rosa super clarinho
-                100: '#fce7f3',  // Bordas claras
-                200: '#fbcfe8',  // Texto principal no Dark Mode -> Rosa claro
-                300: '#f9a8d4',  // Tons médios
-                400: '#f472b6',  // Texto secundário (Muted)
-                500: '#db2777',  
-                600: '#be185d',  
-                700: '#9d174d',  // Texto escuro
-                800: '#500724',  // Fundo dos Cards no Dark Mode / Texto Principal no Light Mode -> Vinho elegante
-                900: '#2a0412',  // Fundo do App (Dark Mode) -> Vinho super escuro (quase preto)
-                850: '#3f061b'   // Tons intermediários
-            };
-
-            // 3. Ajusta o Glassmorfismo e a barra de scroll para combinar com o fundo
-            document.addEventListener("DOMContentLoaded", () => {
-                const style = document.createElement('style');
-                style.innerHTML = `
-                    /* Fundo de vidro refinado para o rosa */
-                    .glass { background: rgba(253, 242, 248, 0.8) !important; border-color: rgba(251, 207, 232, 0.6) !important; }
-                    .dark .glass { background: rgba(80, 7, 36, 0.7) !important; border-color: rgba(157, 23, 77, 0.3) !important; }
-                    
-                    /* CORREÇÃO: Tinta os quadros que eram brancos APENAS no Modo Claro. Assim o Modo Escuro volta a funcionar! */
-                    html:not(.dark) .bg-white { background-color: #fffafa !important; }
-                    
-                    /* Barra de scroll rosa */
-                    ::-webkit-scrollbar-thumb { background-color: #f472b6 !important; border-radius: 10px; }
-                    .dark ::-webkit-scrollbar-thumb { background-color: #9d174d !important; }
-                `;
-                document.head.appendChild(style);
-            });
-        }
-        tailwind.config = twTheme;
+        } catch(e) {}
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+        tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ slate:{ 850:'#151e2e' } }, fontFamily:{ sans:['"Plus Jakarta Sans"','sans-serif'] } } } };
     </script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script type="importmap">{ "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } }</script>
+
     <style>
-        .dark ::-webkit-calendar-picker-indicator { filter: invert(1); }
-        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
-        .dark .glass { background: rgba(30, 41, 59, 0.7); border-color: rgba(51, 65, 85, 0.5); }
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        /* ─── Scrollbar ─── */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* MODO PRIVACIDADE (BLUR) */
-        .privacy-mode .blur-target {
-            filter: blur(6px);
-            opacity: 0.6;
-            transition: filter 0.3s ease, opacity 0.3s ease;
-            user-select: none;
-            cursor: pointer;
-        }
+        .dark ::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+        /* ─── Privacy ─── */
+        .privacy-mode .blur-target { filter:blur(7px); opacity:.5; transition:filter .25s,opacity .25s; user-select:none; cursor:pointer; }
         .privacy-mode .blur-target:hover,
-        .privacy-mode input.blur-target:focus {
-            filter: blur(0);
-            opacity: 1;
+        .privacy-mode input.blur-target:focus { filter:blur(0); opacity:1; }
+
+        /* ─── Animations ─── */
+        @keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes scaleIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
+        @keyframes shimmer { from{background-position:-200% center} to{background-position:200% center} }
+        .animate-fade-in  { animation:fadeIn  .25s cubic-bezier(.22,1,.36,1) both; }
+        .animate-scale-in { animation:scaleIn .2s ease-out; }
+
+        /* ─── Skeleton ─── */
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e9eef5 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 6px;
         }
+        .dark .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #263348 50%, #1e293b 75%);
+            background-size: 200% 100%;
+        }
+
+        /* ─── Card ─── */
+        .card { background:white; border-radius:14px; border:1px solid #f1f5f9; box-shadow:0 1px 2px 0 rgb(0 0 0/.05); }
+        .dark .card { background:#1e293b; border-color:rgb(51 65 85/.5); box-shadow:none; }
+        .card-hover { transition: box-shadow .15s, transform .15s; }
+        .card-hover:hover { box-shadow:0 4px 16px 0 rgb(0 0 0/.08); }
+        .dark .card-hover:hover { box-shadow:0 4px 16px 0 rgb(0 0 0/.3); }
+
+        /* ─── KPI accent top line ─── */
+        .kpi-card { position:relative; overflow:hidden; }
+        .kpi-card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+        .kpi-green::after  { background:linear-gradient(90deg,#10b981,#6ee7b7); }
+        .kpi-red::after    { background:linear-gradient(90deg,#ef4444,#fca5a5); }
+        .kpi-indigo::after { background:linear-gradient(90deg,#6366f1,#a5b4fc); }
+        .kpi-amber::after  { background:linear-gradient(90deg,#f59e0b,#fde68a); }
+
+        /* ─── Input ─── */
+        .inp { width:100%; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px 14px; font-size:.875rem; font-weight:500; color:#1e293b; outline:none; transition:border-color .15s,box-shadow .15s; font-family:inherit; }
+        .inp:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgb(99 102 241/.1); background:white; }
+        .dark .inp { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+        .dark .inp:focus { border-color:#818cf8; background:#0f172a; }
+        select.inp { appearance:none; cursor:pointer; }
+
+        /* ─── Label ─── */
+        .lbl { display:block; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; margin-bottom:5px; }
+
+        /* ─── Btn ─── */
+        .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; font-weight:700; border:none; cursor:pointer; border-radius:10px; font-family:inherit; transition:all .15s; }
+        .btn-sm { font-size:.8rem; padding:8px 14px; }
+        .btn-md { font-size:.875rem; padding:10px 18px; }
+        .btn-primary { background:#4f46e5; color:white; box-shadow:0 1px 4px rgb(79 70 229/.3); }
+        .btn-primary:hover { background:#4338ca; box-shadow:0 3px 10px rgb(79 70 229/.35); }
+        .btn-primary:active { transform:scale(.97); }
+        .btn-ghost { background:transparent; color:#64748b; border:1.5px solid #e2e8f0; }
+        .btn-ghost:hover { background:#f8fafc; }
+        .dark .btn-ghost { color:#94a3b8; border-color:#334155; }
+        .dark .btn-ghost:hover { background:#1e293b; }
+        .btn-icon { width:36px; height:36px; padding:0; border-radius:9px; }
+        .btn-icon-sm { width:30px; height:30px; padding:0; border-radius:8px; }
+        .btn-danger-ghost { background:transparent; color:#ef4444; border:none; width:28px; height:28px; padding:0; border-radius:7px; }
+        .btn-danger-ghost:hover { background:#fef2f2; }
+        .dark .btn-danger-ghost:hover { background:rgb(127 29 29/.2); }
+
+        /* ─── Table ─── */
+        .data-table { width:100%; border-collapse:collapse; }
+        .data-table thead th { padding:10px 16px; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; text-align:left; border-bottom:1px solid #f1f5f9; white-space:nowrap; }
+        .dark .data-table thead th { border-bottom-color:rgb(51 65 85/.5); }
+        .data-table tbody td { padding:12px 16px; font-size:.875rem; white-space:nowrap; }
+        .data-table tbody tr { border-bottom:1px solid #f8fafc; transition:background .1s; }
+        .data-table tbody tr:last-child { border-bottom:none; }
+        .dark .data-table tbody tr { border-bottom-color:rgb(51 65 85/.25); }
+        .data-table tbody tr:hover { background:#f8fafc; }
+        .dark .data-table tbody tr:hover { background:rgb(30 41 59/.5); }
+
+        /* ─── Badge ─── */
+        .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:99px; font-size:.7rem; font-weight:700; }
+        .badge-green  { background:#dcfce7; color:#15803d; }
+        .badge-red    { background:#fee2e2; color:#dc2626; }
+        .badge-indigo { background:#e0e7ff; color:#4338ca; }
+        .badge-slate  { background:#f1f5f9; color:#475569; }
+        .dark .badge-green  { background:rgb(20 83 45/.3);  color:#4ade80; }
+        .dark .badge-red    { background:rgb(127 29 29/.3); color:#f87171; }
+        .dark .badge-indigo { background:rgb(49 46 129/.3); color:#a5b4fc; }
+        .dark .badge-slate  { background:rgb(30 41 59/.8);  color:#94a3b8; }
+
+        /* ─── Sidebar ─── */
+        #sidebar { width:220px; flex-shrink:0; }
+
+        /* ─── Progress bar ─── */
+        .progress-track { height:5px; background:#f1f5f9; border-radius:99px; overflow:hidden; }
+        .dark .progress-track { background:#0f172a; }
+        .progress-fill { height:100%; border-radius:99px; transition:width .5s; }
+
+        /* ─── Drawer compat ─── */
+        .glass { background:rgba(255,255,255,.8); backdrop-filter:blur(10px); }
+        .dark .glass { background:rgba(30,41,59,.7); }
     </style>
 </head>
-<body class="text-slate-800 dark:text-slate-200 h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-900 font-sans transition-colors duration-300">
 
-    <nav class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-16 flex-none z-40 shadow-sm transition-colors duration-300 relative">
-        <div class="max-w-7xl mx-auto px-4 h-full flex justify-between items-center">
+<body class="text-slate-800 dark:text-slate-200 h-screen flex overflow-hidden bg-slate-50 dark:bg-slate-900 font-sans transition-colors duration-200">
+
+    <!-- ════════════════════════════════════════════════════
+         SIDEBAR
+    ════════════════════════════════════════════════════ -->
+    <aside id="sidebar" class="hidden sm:flex flex-col h-full bg-white dark:bg-slate-800/95 border-r border-slate-200/80 dark:border-slate-700/50 transition-colors duration-200 overflow-y-auto custom-scrollbar">
+
+        <!-- Logo -->
+        <div class="flex items-center gap-2.5 px-4 h-14 border-b border-slate-100 dark:border-slate-700/50 flex-shrink-0">
+            <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-none flex-shrink-0">
+                <i class="fas fa-chart-line text-white text-xs"></i>
+            </div>
+            <span class="font-bold text-slate-800 dark:text-white text-sm tracking-tight">
+                Infinity <span class="text-indigo-600 dark:text-indigo-400">Pro</span>
+            </span>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 p-3 space-y-0.5">
+            <p class="px-3 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600">Finanças</p>
+
+            <button id="tabHome" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-bold text-sm transition-all text-left">
+                <i class="fas fa-list-ul w-4 text-center flex-shrink-0 text-sm"></i>
+                <span>Lançamentos</span>
+            </button>
+            <button id="tabGoals" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-bullseye w-4 text-center flex-shrink-0 text-sm"></i>
+                <span>Gasto Fixo</span>
+            </button>
+            <button id="tabVA" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-utensils w-4 text-center flex-shrink-0 text-sm"></i>
+                <span>VA / VR</span>
+            </button>
+            <button id="tabDebts" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-hand-holding-usd w-4 text-center flex-shrink-0 text-sm"></i>
+                <span>A Receber</span>
+            </button>
+
+            <p class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600">Planejamento</p>
+
+            <button id="tabObjectives" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-rocket w-4 text-center flex-shrink-0 text-sm"></i>
+                <span>Sonhos</span>
+            </button>
+            <button id="tabCards" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-credit-card w-4 text-center flex-shrink-0 text-sm"></i>
+                <span>Cartões</span>
+            </button>
+
+            <p class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600">Análise</p>
+
+            <button id="tabDash" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-chart-bar w-4 text-center flex-shrink-0 text-sm"></i>
+                <span>Dashboard</span>
+            </button>
+        </nav>
+
+        <!-- Bottom actions -->
+        <div class="p-3 border-t border-slate-100 dark:border-slate-700/50 space-y-0.5 flex-shrink-0">
+            <button id="btnPrivacyToggle" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-eye-slash w-4 text-center text-sm"></i>
+                <span>Privacidade</span>
+            </button>
+            <button id="btnThemeToggle" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-amber-500 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-moon w-4 text-center text-sm dark:hidden"></i>
+                <i class="fas fa-sun w-4 text-center text-sm hidden dark:inline"></i>
+                <span class="dark:hidden">Modo Escuro</span>
+                <span class="hidden dark:inline">Modo Claro</span>
+            </button>
+            <button id="btnSettings" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-indigo-500 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-key w-4 text-center text-sm"></i>
+                <span>API Key</span>
+            </button>
+            <button id="btnLogout" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 font-semibold text-sm transition-all text-left">
+                <i class="fas fa-sign-out-alt w-4 text-center text-sm"></i>
+                <span>Sair</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- ════════════════════════════════════════════════════
+         MAIN AREA
+    ════════════════════════════════════════════════════ -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        <!-- Top bar (mobile hamburger + reset) -->
+        <header class="sm:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-14 flex items-center justify-between px-4 flex-shrink-0 z-30">
             <div class="flex items-center gap-3">
-                <button id="btnHamburger" class="sm:hidden text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-xl w-8 h-8 flex items-center justify-center transition-colors">
+                <button id="btnHamburger" class="text-slate-400 hover:text-indigo-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                     <i class="fas fa-bars"></i>
                 </button>
-
                 <div class="flex items-center gap-2">
-                    <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-indigo-200 dark:shadow-none shadow-md">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h1 class="font-bold text-lg text-slate-800 dark:text-white tracking-tight hidden min-[360px]:block">Infinity <span class="text-indigo-600 dark:text-indigo-400">Pro</span></h1>
+                    <div class="w-6 h-6 bg-indigo-600 rounded-md flex items-center justify-center"><i class="fas fa-chart-line text-white" style="font-size:.6rem"></i></div>
+                    <span class="font-bold text-slate-800 dark:text-white text-sm">Infinity <span class="text-indigo-600">Pro</span></span>
                 </div>
             </div>
-            
-            <div class="flex gap-1 sm:gap-2 items-center">
-                <div class="hidden sm:flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg gap-1 mr-4 transition-colors">
-                    <button id="tabHome" class="px-4 py-1.5 text-xs font-bold rounded-md bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-300 transition">Lançamentos</button>
-                    <button id="tabGoals" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Gasto Fixo</button>
-                    <button id="tabVA" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">VA/VR</button>
-                    <button id="tabDebts" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">A Receber</button>
-                    <button id="tabObjectives" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Sonhos</button>
-                    <button id="tabCards" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Cartões</button>
-                    <button id="tabDash" class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">Dash</button>
-                </div>
+            <button id="btnReset" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition text-sm"><i class="fas fa-sync-alt"></i></button>
+        </header>
 
-                <div class="hidden sm:block h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+        <!-- Desktop top bar (minimal — just reset) -->
+        <header class="hidden sm:flex bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 h-14 items-center justify-end px-6 flex-shrink-0 z-30">
+            <button id="btnReset" class="btn btn-ghost btn-icon-sm text-slate-400"><i class="fas fa-sync-alt text-sm"></i></button>
+        </header>
 
-                <button id="btnPrivacyToggle" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center justify-center" title="Modo Privacidade">
-                    <i class="fas fa-eye-slash"></i>
-                </button>
-                
-                <button id="btnThemeToggle" class="text-slate-400 hover:text-yellow-500 dark:hover:text-yellow-300 w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center justify-center">
-                    <i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:inline"></i>
-                </button>
-                <button id="btnSettings" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 w-8 h-8 rounded-full hover:bg-indigo-50 dark:hover:bg-slate-700 transition flex items-center justify-center"><i class="fas fa-key"></i></button>
-                <button id="btnReset" class="text-slate-400 hover:text-red-500 w-8 h-8 rounded-full hover:bg-red-50 dark:hover:bg-slate-700 transition flex items-center justify-center"><i class="fas fa-sync-alt"></i></button>
-                <button id="btnLogout" class="text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></button>
-            </div>
-        </div>
-    </nav>
+        <!-- Scrollable content -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-900">
+            <div class="max-w-6xl mx-auto p-5 sm:p-7 pb-16">
 
-    <div id="mobileDrawer" class="fixed inset-0 z-50 pointer-events-none">
-        <div id="drawerBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm opacity-0 transition-opacity duration-300"></div>
-        
-        <div id="drawerSidebar" class="absolute top-0 left-0 w-64 h-full bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col border-r border-slate-200 dark:border-slate-800 pointer-events-auto">
-            <div class="p-5 flex justify-between items-center border-b border-slate-100 dark:border-slate-800/50">
-                <div class="flex items-center gap-2">
-                    <div class="bg-indigo-600 text-white p-1.5 rounded-lg shadow-md text-xs"><i class="fas fa-chart-line"></i></div>
-                    <h2 class="font-bold text-slate-800 dark:text-white">Menu</h2>
-                </div>
-                <button id="btnCloseDrawer" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"><i class="fas fa-times"></i></button>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-                <button id="btnMobileHome" class="w-full flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold transition">
-                    <i class="fas fa-list w-5 text-center"></i> Lançamentos
-                </button>
-                <button id="btnMobileGoals" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
-                    <i class="fas fa-bullseye w-5 text-center"></i> Gasto Fixo
-                </button>
-                <button id="btnMobileVA" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
-                    <i class="fas fa-utensils w-5 text-center"></i> VA/VR
-                </button>
-                <button id="btnMobileDebts" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
-                    <i class="fas fa-hand-holding-usd w-5 text-center"></i> A Receber
-                </button>
-                <button id="btnMobileObjectives" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
-                    <i class="fas fa-star w-5 text-center"></i> Sonhos
-                </button>
-                <button id="btnMobileCards" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
-                    <i class="fas fa-credit-card w-5 text-center"></i> Cartões
-                </button>
-                <button id="btnMobileDash" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold transition">
-                    <i class="fas fa-chart-pie w-5 text-center"></i> Dashboard
-                </button>
-            </div>
-            
-            <div class="p-4 border-t border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/50">
-                <p class="text-[10px] text-slate-400 text-center font-bold uppercase tracking-wider">Infinity Finance v2.0</p>
-            </div>
-        </div>
-    </div>
+                <!-- ──────────────────────────────────────
+                     VIEW HOME — LANÇAMENTOS
+                ────────────────────────────────────────── -->
+                <section id="viewHome" class="space-y-6 animate-fade-in">
 
-    <main class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 pb-6 bg-slate-50/50 dark:bg-slate-900/50 transition-colors duration-300 relative z-0">
-        <div class="max-w-7xl mx-auto">
-            
-            <section id="viewHome" class="space-y-4 sm:space-y-6 animate-fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                    <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Saldo Atual</p>
-                        <h2 class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 blur-target" id="kpiBalance">R$ 0,00</h2>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 md:col-span-2 md:grid-cols-2">
-                        <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
-                            <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Investido</p>
-                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 blur-target" id="kpiInvest">R$ 0,00</h2>
+                    <!-- Page header -->
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Lançamentos</h1>
+                            <p class="text-slate-400 text-sm font-medium mt-1">Entradas, saídas e investimentos</p>
                         </div>
-                        <div class="glass p-5 rounded-xl border-l-4 border-red-500 shadow-sm">
-                            <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Gastos</p>
-                            <h2 class="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 blur-target" id="kpiExpense">R$ 0,00</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex flex-col xl:flex-row justify-between items-center gap-3 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm z-30 relative transition-colors">
-                    <button id="btnImport" class="w-full xl:w-auto bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-bold py-3 px-5 rounded-lg sm:rounded-full transition flex items-center justify-center gap-2 shadow-lg shadow-slate-200 dark:shadow-none order-2 xl:order-1">
-                        <i class="fas fa-file-pdf"></i> Importar Extrato
-                    </button>
-                    <div class="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto z-40 order-1 xl:order-2">
-                        <div class="relative w-full sm:w-48">
-                            <select id="filterCategory" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2.5 px-4 rounded-lg outline-none cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm appearance-none"><option value="Todas">📂 Todas Categorias</option></select>
-                            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs"><i class="fas fa-chevron-down"></i></div>
-                        </div>
-                        <div class="relative w-full sm:w-64">
-                            <button id="monthDropdownBtn" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold py-2.5 px-4 rounded-lg outline-none flex justify-between items-center hover:border-indigo-300 dark:hover:border-indigo-500 transition shadow-sm">
-                                <span id="monthBtnText" class="truncate">📅 Carregando...</span><i class="fas fa-chevron-down text-xs text-slate-400"></i>
+                        <div class="flex items-center gap-2">
+                            <button id="btnImport" class="btn btn-ghost btn-sm hidden sm:inline-flex">
+                                <i class="fas fa-file-pdf text-slate-400 text-xs"></i>
+                                <span>Importar PDF</span>
                             </button>
-                            <div id="monthDropdownMenu" class="hidden absolute top-full left-0 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl mt-2 max-h-64 overflow-y-auto custom-scrollbar p-2 animate-fade-in z-[100]"></div>
+                            <button id="btnNewTx" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus text-xs"></i>
+                                <span class="hidden sm:inline">Novo Lançamento</span>
+                                <span class="sm:hidden">Novo</span>
+                            </button>
                         </div>
                     </div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 space-y-4">
-                        <div class="glass p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <form id="transactionForm" class="flex flex-col lg:flex-row flex-wrap gap-3 items-end">
-                                <div class="grid grid-cols-3 gap-2 w-full lg:w-auto lg:flex-[2]">
-                                    <input type="date" id="inputDate" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200 w-full" required>
-                                    <select id="inputType" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm font-medium outline-none focus:border-indigo-500 dark:text-slate-200 w-full">
-                                        <option value="Despesa">🔴 Despesa</option><option value="Receita">🟢 Receita</option><option value="Investimento">🔵 Invest.</option>
-                                    </select>
-                                    <input type="number" step="0.01" id="inputAmount" placeholder="R$ 0,00" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200 w-full" required>
+
+                    <!-- KPI unified bar -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
+                            <!-- Saldo -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Saldo Acumulado</p>
+                                        <p id="kpiBalance" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-wallet text-emerald-500 text-xs"></i>
+                                    </div>
                                 </div>
-                                <div class="w-full lg:flex-[2]"><input type="text" id="inputDesc" placeholder="Descrição (ex: Mercado)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200" required></div>
-                                <div class="flex gap-2 w-full lg:flex-[1.5]"><select id="inputCategory" class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-indigo-500 dark:text-slate-200"></select><button type="submit" class="bg-indigo-600 text-white p-3 rounded-lg px-5 hover:bg-indigo-700 transition shadow-md active:scale-95"><i class="fas fa-plus"></i></button></div>
-                            </form>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Até o período selecionado</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-emerald-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <!-- Investido -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Investido</p>
+                                        <p id="kpiInvest" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-chart-line text-indigo-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">No período selecionado</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-indigo-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <!-- Gastos -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Gastos</p>
+                                        <p id="kpiExpense" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-arrow-down text-red-400 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">No período selecionado</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-red-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
                         </div>
-                        <div class="glass rounded-xl overflow-hidden min-h-[300px] border border-slate-100 dark:border-slate-700 shadow-sm">
+                    </div>
+
+                    <!-- Filter toolbar — floating, no card -->
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                        <div class="relative flex-1 sm:max-w-[220px]">
+                            <i class="fas fa-tag absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                            <select id="filterCategory" class="inp pl-9 pr-8 appearance-none cursor-pointer">
+                                <option value="Todas">Todas as categorias</option>
+                            </select>
+                            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                        <div class="relative z-20 sm:max-w-[220px] flex-1">
+                            <button id="monthDropdownBtn" class="inp flex items-center gap-2 cursor-pointer text-left">
+                                <i class="fas fa-calendar text-slate-400 text-xs flex-shrink-0"></i>
+                                <span id="monthBtnText" class="truncate text-slate-600 dark:text-slate-300 text-sm flex-1">Carregando...</span>
+                                <i class="fas fa-chevron-down text-xs text-slate-400 flex-shrink-0"></i>
+                            </button>
+                            <div id="monthDropdownMenu" class="hidden absolute top-full left-0 w-full min-w-[200px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-xl mt-2 max-h-64 overflow-y-auto custom-scrollbar p-2 animate-fade-in z-50"></div>
+                        </div>
+                        <span class="hidden sm:block text-slate-200 dark:text-slate-700 text-lg font-thin">|</span>
+                        <p class="hidden sm:block text-xs text-slate-400 font-medium">Clique em uma linha para editar</p>
+                    </div>
+
+                    <!-- Main grid: table + chart -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+                        <!-- Table — full-bleed white surface -->
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700/50 shadow-sm">
                             <div class="overflow-x-auto">
-                                <table class="w-full text-sm text-left whitespace-nowrap">
-                                    <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
-                                        <tr><th class="px-4 py-3 font-semibold">Data</th><th class="px-4 py-3 font-semibold">Descrição</th><th class="px-4 py-3 font-semibold">Categ.</th><th class="px-4 py-3 font-semibold text-right">Valor</th><th class="px-4 py-3 text-center w-10"><i class="fas fa-trash"></i></th></tr>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Descrição</th>
+                                            <th class="hidden md:table-cell">Categoria</th>
+                                            <th class="text-right">Valor</th>
+                                            <th class="w-12"></th>
+                                        </tr>
                                     </thead>
-                                    <tbody id="transactionList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
+                                    <tbody id="transactionList" class="bg-white dark:bg-slate-800">
+                                        <tr class="skeleton-row"><td class="px-4 py-4"><div class="skeleton h-3.5 w-16"></div></td><td class="px-4 py-4"><div class="skeleton h-3.5 w-44"></div></td><td class="px-4 py-4 hidden md:table-cell"><div class="skeleton h-3.5 w-24"></div></td><td class="px-4 py-4 text-right"><div class="skeleton h-3.5 w-20 ml-auto"></div></td><td></td></tr>
+                                        <tr class="skeleton-row"><td class="px-4 py-4"><div class="skeleton h-3.5 w-16"></div></td><td class="px-4 py-4"><div class="skeleton h-3.5 w-56"></div></td><td class="px-4 py-4 hidden md:table-cell"><div class="skeleton h-3.5 w-20"></div></td><td class="px-4 py-4 text-right"><div class="skeleton h-3.5 w-16 ml-auto"></div></td><td></td></tr>
+                                        <tr class="skeleton-row"><td class="px-4 py-4"><div class="skeleton h-3.5 w-16"></div></td><td class="px-4 py-4"><div class="skeleton h-3.5 w-36"></div></td><td class="px-4 py-4 hidden md:table-cell"><div class="skeleton h-3.5 w-28"></div></td><td class="px-4 py-4 text-right"><div class="skeleton h-3.5 w-20 ml-auto"></div></td><td></td></tr>
+                                        <tr class="skeleton-row"><td class="px-4 py-4"><div class="skeleton h-3.5 w-16"></div></td><td class="px-4 py-4"><div class="skeleton h-3.5 w-48"></div></td><td class="px-4 py-4 hidden md:table-cell"><div class="skeleton h-3.5 w-20"></div></td><td class="px-4 py-4 text-right"><div class="skeleton h-3.5 w-14 ml-auto"></div></td><td></td></tr>
+                                        <tr class="skeleton-row"><td class="px-4 py-4"><div class="skeleton h-3.5 w-16"></div></td><td class="px-4 py-4"><div class="skeleton h-3.5 w-52"></div></td><td class="px-4 py-4 hidden md:table-cell"><div class="skeleton h-3.5 w-24"></div></td><td class="px-4 py-4 text-right"><div class="skeleton h-3.5 w-20 ml-auto"></div></td><td></td></tr>
+                                        <tr class="skeleton-row"><td class="px-4 py-4"><div class="skeleton h-3.5 w-16"></div></td><td class="px-4 py-4"><div class="skeleton h-3.5 w-40"></div></td><td class="px-4 py-4 hidden md:table-cell"><div class="skeleton h-3.5 w-20"></div></td><td class="px-4 py-4 text-right"><div class="skeleton h-3.5 w-18 ml-auto"></div></td><td></td></tr>
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
-                    </div>
-                    <div class="glass p-5 rounded-xl h-fit border border-slate-100 dark:border-slate-700 shadow-sm sticky top-6">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-pie text-indigo-500"></i> Gastos por Categoria</h3>
-                        <div class="h-64 relative"><canvas id="categoryChart" class="blur-target"></canvas></div>
-                    </div>
-                </div>
-            </section>
 
-            <section id="viewGoals" class="space-y-6 hidden animate-fade-in">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div class="glass p-5 rounded-xl border-l-4 border-emerald-500 shadow-sm">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Receita Real</p>
-                        <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 blur-target" id="goalTotalIncome">R$ 0,00</h2>
-                    </div>
-                    <div class="glass p-5 rounded-xl border-l-4 border-indigo-500 shadow-sm">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Renda Fixa</p>
-                        <div class="flex items-center gap-2">
-                            <span class="text-slate-400 font-bold">R$</span>
-                            <input type="number" id="goalSavingsInput" class="font-bold text-2xl text-indigo-900 dark:text-indigo-300 bg-transparent outline-none w-full border-b border-dashed border-slate-300 dark:border-slate-600 focus:border-indigo-500 transition blur-target" placeholder="0.00">
-                        </div>
-                    </div>
-                    <div class="glass p-5 rounded-xl border-l-4 border-slate-400 shadow-sm" id="goalBudgetCard">
-                        <p class="text-slate-400 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Projeção</p>
-                        <div class="flex justify-between items-end">
-                            <div><span class="text-xs text-slate-500 font-semibold">Vai Sobrar:</span><h2 class="text-xl font-bold text-slate-800 dark:text-slate-200 blur-target" id="goalProjectedSurplus">R$ 0,00</h2></div>
-                            <div class="text-right"><span class="text-xs text-slate-500 font-semibold">Meta:</span><h2 class="text-xl font-bold text-slate-400 blur-target" id="goalTargetDisplay">R$ 0,00</h2></div>
-                        </div>
-                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-2 overflow-hidden"><div id="goalBudgetBar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div>
-                        <p id="goalBudgetMsg" class="text-xs font-bold text-emerald-600 mt-1 text-right">Planejamento Seguro</p>
-                    </div>
-                </div>
-                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
-                    <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-indigo-500"></i> Definir Gasto Fixo Categoria</h3>
-                    <form id="goalsForm" class="flex flex-col sm:flex-row gap-4 items-end">
-                        <div class="w-full sm:w-1/3"><label class="text-xs font-bold text-slate-400 uppercase">Categoria</label><select id="goalCategoryInput" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-3 rounded-lg outline-none focus:border-indigo-500 transition mt-1"></select></div>
-                        <div class="w-full sm:w-1/3"><label class="text-xs font-bold text-slate-400 uppercase">Limite Mensal</label><input type="number" step="0.01" id="goalAmountInput" placeholder="Ex: 500.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold p-3 rounded-lg outline-none focus:border-indigo-500 transition mt-1" required></div>
-                        <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-md h-fit">Salvar</button>
-                    </form>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-4"><h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1">Progresso</h3><div id="goalsList" class="space-y-3"></div></div>
-                    <div><h3 class="font-bold text-slate-700 dark:text-slate-300 ml-1 mb-4">Gráfico</h3><div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm h-80"><canvas id="goalsChart" class="blur-target"></canvas></div></div>
-                </div>
-            </section>
-
-            <section id="viewVA" class="space-y-6 hidden animate-fade-in">
-                <div class="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden flex flex-col items-center text-center">
-                    <div class="relative z-10">
-                        <div class="bg-white/20 p-3 rounded-full w-16 h-16 flex items-center justify-center mb-4 mx-auto backdrop-blur-sm"><i class="fas fa-utensils text-3xl"></i></div>
-                        <p class="text-orange-100 font-bold uppercase tracking-wider text-sm mb-1">Saldo Vale Alimentação</p>
-                        <h2 class="text-5xl font-bold mb-6 blur-target" id="vaBalanceDisplay">R$ 0,00</h2>
-                    </div>
-                    <div class="absolute -top-10 -left-10 w-48 h-48 bg-white opacity-10 rounded-full blur-3xl"></div>
-                    <div class="absolute bottom-0 right-0 w-64 h-64 bg-yellow-400 opacity-20 rounded-full blur-3xl"></div>
-                </div>
-                <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <h3 class="font-bold text-slate-700 dark:text-slate-200 mb-4 text-sm uppercase">Registrar Operação</h3>
-                    <form id="vaForm" class="flex flex-col sm:flex-row gap-3">
-                        <select id="vaType" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm font-bold outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/4">
-                            <option value="debit">🍔 Gastei (Débito)</option><option value="credit">💳 Recarga (Crédito)</option>
-                        </select>
-                        <input type="text" id="vaDesc" placeholder="Onde? (ex: Burger King)" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/3">
-                        <input type="number" step="0.01" id="vaAmount" placeholder="R$ Valor" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm outline-none focus:border-orange-500 dark:text-slate-200 sm:w-1/4" required>
-                        <button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold p-3 rounded-lg flex-1 transition shadow-md">Confirmar</button>
-                    </form>
-                </div>
-
-                <div class="glass rounded-xl overflow-hidden min-h-[250px] border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <div class="p-4 border-b border-slate-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
-                        <h3 class="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
-                            <i class="fas fa-list text-orange-500"></i> Histórico do Período
-                        </h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm text-left whitespace-nowrap">
-                            <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
-                                <tr>
-                                    <th class="px-4 py-3 font-semibold">Data</th>
-                                    <th class="px-4 py-3 font-semibold">Descrição</th>
-                                    <th class="px-4 py-3 font-semibold text-center">Tipo</th>
-                                    <th class="px-4 py-3 font-semibold text-right">Valor</th>
-                                    <th class="px-4 py-3 text-center w-10"><i class="fas fa-trash"></i></th>
-                                </tr>
-                            </thead>
-                            <tbody id="vaTransactionList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <section id="viewDebts" class="space-y-6 hidden animate-fade-in">
-               <div class="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-black rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div><h2 class="text-2xl font-bold mb-1">A Receber / Empréstimos</h2><p class="text-slate-400 text-sm">Controle o dinheiro que deve voltar para o seu bolso.</p></div>
-                        <div class="text-right"><p class="text-slate-400 text-xs font-bold uppercase">Total a Receber</p><h2 class="text-4xl font-bold text-emerald-400 blur-target" id="totalDebtAmount">R$ 0,00</h2></div>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 h-fit">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm">Adicionar</h3>
-                        <form id="debtForm" class="space-y-4">
-                            <div><label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Nome do Devedor</label><input type="text" id="debtName" placeholder="Ex: João" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200" required></div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div><label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Valor Base</label><input type="number" step="0.01" id="debtAmount" placeholder="Ex: 100.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200" required></div>
-                                <div><label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Juros/Retorno (%)</label><input type="number" step="0.1" id="debtInterest" placeholder="Ex: 5" value="0" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200"></div>
+                        <!-- Chart panel -->
+                        <div class="card p-5 h-fit lg:sticky lg:top-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <p class="text-sm font-bold text-slate-700 dark:text-slate-200">Por Categoria</p>
+                                <div class="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                                    <i class="fas fa-chart-pie text-indigo-500" style="font-size:.65rem"></i>
+                                </div>
                             </div>
-                            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition shadow-md">Registrar Cobrança</button>
+                            <div class="h-64 relative">
+                                <canvas id="categoryChart" class="blur-target"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ──────────────────────────────────────
+                     VIEW GOALS — GASTO FIXO
+                ────────────────────────────────────────── -->
+                <section id="viewGoals" class="hidden animate-fade-in space-y-5">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Gasto Fixo</h1>
+                        <p class="text-slate-400 text-sm font-medium mt-1">Defina limites mensais por categoria</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="card kpi-card kpi-green p-5">
+                            <p class="lbl mb-2">Receita Real</p>
+                            <p id="goalTotalIncome" class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none">R$ 0,00</p>
+                        </div>
+                        <div class="card kpi-card kpi-indigo p-5">
+                            <p class="lbl mb-2">Renda Fixa</p>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <span class="text-slate-400 font-bold text-sm">R$</span>
+                                <input type="number" id="goalSavingsInput" class="font-extrabold text-2xl text-indigo-600 dark:text-indigo-400 bg-transparent outline-none w-full border-b-2 border-dashed border-slate-200 dark:border-slate-700 focus:border-indigo-500 transition blur-target tracking-tight" placeholder="0,00">
+                            </div>
+                        </div>
+                        <div class="card kpi-card p-5" id="goalBudgetCard" style="--tw-ring-color:#94a3b8">
+                            <p class="lbl mb-2">Projeção</p>
+                            <div class="flex justify-between items-end mb-2">
+                                <div><p class="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Vai Sobrar</p><p id="goalProjectedSurplus" class="text-xl font-extrabold text-slate-800 dark:text-slate-200 blur-target tracking-tight">R$ 0,00</p></div>
+                                <div class="text-right"><p class="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Meta</p><p id="goalTargetDisplay" class="text-xl font-extrabold text-slate-400 blur-target tracking-tight">R$ 0,00</p></div>
+                            </div>
+                            <div class="progress-track"><div id="goalBudgetBar" class="progress-fill bg-emerald-500" style="width:0%"></div></div>
+                            <p id="goalBudgetMsg" class="text-[11px] font-bold text-emerald-600 mt-1.5 text-right">Planejamento Seguro</p>
+                        </div>
+                    </div>
+                    <div class="card p-5">
+                        <p class="lbl mb-4">Definir Limite por Categoria</p>
+                        <form id="goalsForm" class="flex flex-col sm:flex-row gap-3 items-end">
+                            <div class="w-full sm:w-56"><label class="lbl">Categoria</label><div class="relative"><select id="goalCategoryInput" class="inp appearance-none cursor-pointer pr-7"></select><i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i></div></div>
+                            <div class="w-full sm:w-44"><label class="lbl">Limite Mensal (R$)</label><input type="number" step="0.01" id="goalAmountInput" placeholder="500,00" class="inp" required></div>
+                            <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap"><i class="fas fa-save"></i> Salvar</button>
                         </form>
                     </div>
-                    <div class="md:col-span-2 glass rounded-xl overflow-hidden border border-slate-100 dark:border-slate-700 min-h-[300px]">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left whitespace-nowrap">
-                                <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
-                                    <tr><th class="px-6 py-3 font-semibold">Nome</th><th class="px-6 py-3 font-semibold text-right">Valor</th><th class="px-6 py-3 font-semibold text-center">Status</th><th class="px-6 py-3 font-semibold text-center">Ações</th></tr>
-                                </thead>
-                                <tbody id="debtList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
-                            </table>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div><p class="lbl mb-3">Progresso</p><div id="goalsList" class="space-y-3"></div></div>
+                        <div><p class="lbl mb-3">Distribuição</p><div class="card p-5"><div class="h-72"><canvas id="goalsChart" class="blur-target"></canvas></div></div></div>
+                    </div>
+                </section>
+
+                <!-- ──────────────────────────────────────
+                     VIEW VA
+                ────────────────────────────────────────── -->
+                <section id="viewVA" class="hidden animate-fade-in space-y-5">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Vale Alimentação</h1>
+                        <p class="text-slate-400 text-sm font-medium mt-1">Controle seu VA/VR separadamente</p>
+                    </div>
+                    <div class="card kpi-card p-6 sm:p-8" style="position:relative;overflow:hidden">
+                        <div style="position:absolute;inset:0;height:2px;background:linear-gradient(90deg,#f97316,#fb923c)"></div>
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div>
+                                <p class="lbl mb-2">Saldo Disponível</p>
+                                <p id="vaBalanceDisplay" class="text-5xl font-extrabold tracking-tight text-orange-500 dark:text-orange-400 blur-target leading-none">R$ 0,00</p>
+                            </div>
+                            <div class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
+                                <i class="fas fa-utensils text-orange-500 text-xl"></i>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            <section id="viewObjectives" class="space-y-6 hidden animate-fade-in">
-                <div class="bg-gradient-to-r from-indigo-800 to-purple-800 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-                    <div class="relative z-10">
-                        <h2 class="text-2xl font-bold mb-1"><i class="fas fa-rocket text-indigo-300 mr-2"></i> Meus Sonhos</h2>
-                        <p class="text-indigo-200 text-sm">Defina seus objetivos e acompanhe seu progresso.</p>
-                    </div>
-                    <div class="absolute -right-10 -bottom-10 opacity-20"><i class="fas fa-star text-9xl"></i></div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 h-fit shadow-sm">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-plus-circle text-indigo-500"></i> Novo Objetivo</h3>
-                        <form id="objectiveForm" class="space-y-4">
-                            <div>
-                                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">O que você quer?</label>
-                                <input type="text" id="objTitle" placeholder="Ex: Carro Novo, Viagem..." class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200" required>
+                    <div class="card p-5">
+                        <p class="lbl mb-4">Registrar Operação</p>
+                        <form id="vaForm" class="flex flex-col sm:flex-row gap-2.5">
+                            <div class="relative sm:w-40 flex-shrink-0">
+                                <select id="vaType" class="inp appearance-none cursor-pointer pr-7"><option value="debit">🍔 Gastei</option><option value="credit">💳 Recarga</option></select>
+                                <i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                             </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">Qual o valor total?</label>
-                                <input type="number" step="0.01" id="objTarget" placeholder="Ex: 10000.00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-indigo-500 transition dark:text-slate-200" required>
-                            </div>
-                            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition shadow-md active:scale-95">Criar Sonho</button>
+                            <input type="text" id="vaDesc" placeholder="Onde? (ex: iFood, Padaria)" class="inp flex-1">
+                            <input type="number" step="0.01" id="vaAmount" placeholder="R$ 0,00" class="inp sm:w-32 flex-shrink-0" required>
+                            <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap flex-shrink-0"><i class="fas fa-check"></i> Confirmar</button>
                         </form>
                     </div>
+                    <div class="card overflow-hidden">
+                        <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 flex items-center gap-2"><i class="fas fa-list text-orange-400 text-sm"></i><p class="text-sm font-bold text-slate-700 dark:text-slate-200">Histórico</p></div>
+                        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Data</th><th>Descrição</th><th class="text-center">Tipo</th><th class="text-right">Valor</th><th class="w-12 text-center"></th></tr></thead><tbody id="vaTransactionList" class="bg-white dark:bg-slate-800"></tbody></table></div>
+                    </div>
+                </section>
 
-                    <div class="md:col-span-2 space-y-4" id="objectivesList"></div>
-                </div>
-            </section>
-
-            <section id="viewCards" class="space-y-6 hidden animate-fade-in">
-                <div class="bg-gradient-to-r from-purple-800 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-                    <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-4">
+                <!-- ──────────────────────────────────────
+                     VIEW DEBTS — A RECEBER
+                ────────────────────────────────────────── -->
+                <section id="viewDebts" class="hidden animate-fade-in space-y-5">
+                    <div class="flex items-start justify-between">
                         <div>
-                            <h2 class="text-2xl font-bold mb-1"><i class="fas fa-credit-card text-purple-300 mr-2"></i> Controle de Cartões</h2>
-                            <p class="text-purple-200 text-sm">Gerencie faturas e não perca o controle do limite.</p>
+                            <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">A Receber</h1>
+                            <p class="text-slate-400 text-sm font-medium mt-1">Dinheiro que deve voltar para o seu bolso</p>
+                        </div>
+                        <div>
+                            <p class="lbl text-right">Total Pendente</p>
+                            <p id="totalDebtAmount" class="text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400 blur-target">R$ 0,00</p>
                         </div>
                     </div>
-                    <div class="absolute -right-10 -bottom-10 opacity-20"><i class="fas fa-wallet text-9xl"></i></div>
-                </div>
-
-                <div id="cardsOverview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="space-y-6">
-                        <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm"><i class="fas fa-shopping-bag text-purple-500 mr-1"></i> Passar Cartão</h3>
-                            <form id="cardExpenseForm" class="space-y-4">
-                                <div><label class="text-xs font-bold text-slate-500 uppercase">Qual Cartão?</label><select id="expenseCardId" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200" required></select></div>
-                                <div><label class="text-xs font-bold text-slate-500 uppercase">Descrição</label><input type="text" id="expenseCardDesc" placeholder="Ex: Mercado Livre" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200" required></div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Valor Total</label><input type="number" step="0.01" id="expenseCardAmount" placeholder="R$ 0,00" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200" required></div>
-                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Parcelas</label><input type="number" id="expenseCardInstallments" value="1" min="1" max="48" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-3 rounded-lg text-sm mt-1 outline-none focus:border-purple-500 dark:text-slate-200"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="card p-5">
+                            <p class="lbl mb-4">Adicionar</p>
+                            <form id="debtForm" class="space-y-3">
+                                <div><label class="lbl">Nome do Devedor</label><input type="text" id="debtName" placeholder="Ex: João Silva" class="inp" required></div>
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div><label class="lbl">Valor Base</label><input type="number" step="0.01" id="debtAmount" placeholder="100,00" class="inp" required></div>
+                                    <div><label class="lbl">Juros (%)</label><input type="number" step="0.1" id="debtInterest" placeholder="0" value="0" class="inp"></div>
                                 </div>
-                                <button type="submit" class="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition shadow-md">Registrar Compra</button>
+                                <button type="submit" class="btn btn-primary btn-sm w-full"><i class="fas fa-plus"></i> Registrar</button>
                             </form>
                         </div>
+                        <div class="md:col-span-2 card overflow-hidden">
+                            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Nome</th><th class="text-right">Valor</th><th class="text-center">Status</th><th class="text-center">Ações</th></tr></thead><tbody id="debtList" class="bg-white dark:bg-slate-800"></tbody></table></div>
+                        </div>
+                    </div>
+                </section>
 
-                        <div class="glass p-6 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                            <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm"><i class="fas fa-plus text-slate-400 mr-1"></i> Cadastrar Cartão</h3>
-                            <form id="newCardForm" class="space-y-4">
-                                <div><label class="text-xs font-bold text-slate-500 uppercase">Apelido (Ex: Nubank)</label><input type="text" id="newCardName" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
-                                <div><label class="text-xs font-bold text-slate-500 uppercase">Limite Total</label><input type="number" step="0.01" id="newCardLimit" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Dia Fechamento</label><input type="number" id="newCardClosing" min="1" max="31" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
-                                    <div><label class="text-xs font-bold text-slate-500 uppercase">Dia Vencimento</label><input type="number" id="newCardDue" min="1" max="31" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 p-2.5 rounded-lg text-sm outline-none dark:text-slate-200" required></div>
-                                </div>
-                                <button type="submit" class="w-full bg-slate-800 dark:bg-slate-700 text-white font-bold py-2.5 rounded-lg hover:bg-slate-900 transition shadow-md">Salvar Cartão</button>
+                <!-- ──────────────────────────────────────
+                     VIEW OBJECTIVES — SONHOS
+                ────────────────────────────────────────── -->
+                <section id="viewObjectives" class="hidden animate-fade-in space-y-5">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Meus Sonhos</h1>
+                        <p class="text-slate-400 text-sm font-medium mt-1">Defina objetivos e acompanhe o progresso</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="card p-5">
+                            <p class="lbl mb-4">Novo Objetivo</p>
+                            <form id="objectiveForm" class="space-y-3">
+                                <div><label class="lbl">O que você quer?</label><input type="text" id="objTitle" placeholder="Ex: Viagem, Carro Novo..." class="inp" required></div>
+                                <div><label class="lbl">Valor Total (R$)</label><input type="number" step="0.01" id="objTarget" placeholder="10.000,00" class="inp" required></div>
+                                <button type="submit" class="btn btn-primary btn-sm w-full"><i class="fas fa-rocket"></i> Criar Sonho</button>
                             </form>
                         </div>
+                        <div class="md:col-span-2 space-y-3" id="objectivesList"></div>
                     </div>
+                </section>
 
-                    <div class="md:col-span-2 glass rounded-xl overflow-hidden min-h-[400px] border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col">
-                        <div class="p-4 border-b border-slate-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 flex justify-between items-center">
-                            <h3 class="font-bold text-slate-700 dark:text-slate-200 text-sm"><i class="fas fa-list text-purple-500 mr-2"></i> Fatura do Mês</h3>
-                            <span class="text-xs font-bold text-slate-400" id="cardMonthDisplay">...</span>
+                <!-- ──────────────────────────────────────
+                     VIEW CARDS — CARTÕES
+                ────────────────────────────────────────── -->
+                <section id="viewCards" class="hidden animate-fade-in space-y-5">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Cartões</h1>
+                        <p class="text-slate-400 text-sm font-medium mt-1">Gerencie faturas e limites</p>
+                    </div>
+                    <div id="cardsOverview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="space-y-4">
+                            <div class="card p-5">
+                                <p class="lbl mb-4">Passar no Cartão</p>
+                                <form id="cardExpenseForm" class="space-y-3">
+                                    <div><label class="lbl">Qual Cartão?</label><div class="relative"><select id="expenseCardId" class="inp appearance-none cursor-pointer pr-7" required></select><i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i></div></div>
+                                    <div><label class="lbl">Descrição</label><input type="text" id="expenseCardDesc" placeholder="Ex: Amazon, iFood" class="inp" required></div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div><label class="lbl">Valor</label><input type="number" step="0.01" id="expenseCardAmount" placeholder="0,00" class="inp" required></div>
+                                        <div><label class="lbl">Parcelas</label><input type="number" id="expenseCardInstallments" value="1" min="1" max="48" class="inp"></div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm w-full"><i class="fas fa-plus"></i> Registrar</button>
+                                </form>
+                            </div>
+                            <div class="card p-5">
+                                <p class="lbl mb-4">Cadastrar Cartão</p>
+                                <form id="newCardForm" class="space-y-3">
+                                    <div><label class="lbl">Apelido (Ex: Nubank)</label><input type="text" id="newCardName" class="inp" required></div>
+                                    <div><label class="lbl">Limite Total</label><input type="number" step="0.01" id="newCardLimit" class="inp" required></div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div><label class="lbl">Fechamento</label><input type="number" id="newCardClosing" min="1" max="31" class="inp" required></div>
+                                        <div><label class="lbl">Vencimento</label><input type="number" id="newCardDue" min="1" max="31" class="inp" required></div>
+                                    </div>
+                                    <button type="submit" class="btn btn-ghost btn-sm w-full font-bold"><i class="fas fa-credit-card"></i> Salvar</button>
+                                </form>
+                            </div>
                         </div>
-                        <div class="overflow-x-auto flex-1">
-                            <table class="w-full text-sm text-left whitespace-nowrap">
-                                <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700">
-                                    <tr><th class="px-4 py-3 font-semibold">Cartão</th><th class="px-4 py-3 font-semibold">Descrição</th><th class="px-4 py-3 font-semibold text-center">Parc.</th><th class="px-4 py-3 font-semibold text-right">Valor</th><th class="px-4 py-3 text-center w-10"><i class="fas fa-trash"></i></th></tr>
-                                </thead>
-                                <tbody id="cardTransactionList" class="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800"></tbody>
-                            </table>
+                        <div class="md:col-span-2 card overflow-hidden flex flex-col">
+                            <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between"><div class="flex items-center gap-2"><i class="fas fa-receipt text-purple-400 text-sm"></i><p class="text-sm font-bold text-slate-700 dark:text-slate-200">Fatura do Mês</p></div><span class="text-xs font-bold text-slate-400" id="cardMonthDisplay">...</span></div>
+                            <div class="overflow-x-auto flex-1"><table class="data-table"><thead><tr><th>Cartão</th><th>Descrição</th><th class="text-center">Parc.</th><th class="text-right">Valor</th><th class="w-12"></th></tr></thead><tbody id="cardTransactionList" class="bg-white dark:bg-slate-800"></tbody></table></div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section id="viewDashboard" class="space-y-6 hidden animate-fade-in">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="glass p-4 rounded-xl border-l-4 border-indigo-500 shadow-sm">
-                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Saldo Livre</p>
-                        <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-300 blur-target" id="dashBalance">R$ 0,00</h2>
-                    </div>
-                    <div class="glass p-4 rounded-xl border-l-4 border-emerald-500 shadow-sm">
-                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Receitas (Mês)</p>
-                        <h2 class="text-xl font-bold text-emerald-600 dark:text-emerald-400 blur-target" id="dashIncome">R$ 0,00</h2>
-                    </div>
-                    <div class="glass p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
-                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Despesas (Mês)</p>
-                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400 blur-target" id="dashExpense">R$ 0,00</h2>
-                    </div>
-                    <div class="glass p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
-                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">Investido (Mês)</p>
-                        <h2 class="text-xl font-bold text-red-600 dark:text-red-400 blur-target" id="dashInvest">R$ 0,00</h2>
-                    </div>
-                </div>
+                <!-- ──────────────────────────────────────
+                     VIEW DASHBOARD
+                ────────────────────────────────────────── -->
+                <section id="viewDashboard" class="hidden animate-fade-in space-y-6">
 
-                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-6 text-white relative overflow-hidden shadow-lg mt-4">
-                    <div class="relative z-10">
-                        <h2 class="text-2xl font-bold mb-2">Consultoria IA</h2>
-                        <p class="text-indigo-100 text-sm mb-4 max-w-2xl">Inteligência artificial analisando seus dados e hábitos.</p>
-                        <button id="btnGenerateReport" class="bg-white text-indigo-600 font-bold py-2 px-6 rounded-full text-sm hover:bg-indigo-50 transition shadow-md">Gerar Relatório</button>
-                    </div>
-                </div>
-                <div id="aiResponseArea" class="hidden glass p-6 rounded-xl border-l-4 border-purple-500 animate-fade-in shadow-sm"><div id="aiTextContent" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line prose prose-sm max-w-none"></div></div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm col-span-1 lg:col-span-2">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-area text-indigo-500"></i> Curva de Saldo (Mês Atual)</h3>
-                        <div class="h-64"><canvas id="dailyBalanceChart" class="blur-target"></canvas></div>
+                    <!-- Page header -->
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Dashboard</h1>
+                            <p class="text-slate-400 text-sm font-medium mt-1">Visão geral das suas finanças</p>
+                        </div>
+                        <button id="btnGenerateReport" class="btn btn-primary btn-sm">
+                            <i class="fas fa-sparkles text-xs"></i>
+                            <span class="hidden sm:inline">Analisar com IA</span>
+                            <span class="sm:hidden">IA</span>
+                        </button>
                     </div>
 
-                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-chart-bar text-indigo-500"></i> Evolução Mensal</h3>
-                        <div class="h-64"><canvas id="evolutionChart" class="blur-target"></canvas></div>
+                    <!-- KPI unified bar — 4 cols -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                        <div class="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 divide-x divide-slate-100 dark:divide-slate-700/50" style="grid-auto-rows:1fr">
+                            <!-- Saldo Livre -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Saldo Livre</p>
+                                        <p id="dashBalance" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-wallet text-indigo-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">No período selecionado</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-indigo-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <!-- Receitas -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Receitas</p>
+                                        <p id="dashIncome" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-arrow-up text-emerald-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Entradas do período</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-emerald-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <!-- Despesas -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Despesas</p>
+                                        <p id="dashExpense" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-arrow-down text-red-400 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Saídas do período</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-red-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <!-- Investido -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Investido</p>
+                                        <p id="dashInvest" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-chart-line text-amber-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Aportes do período</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-amber-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-balance-scale text-indigo-500"></i> Regra 50/30/20</h3>
-                        <div class="h-64"><canvas id="rule503020Chart" class="blur-target"></canvas></div>
+                    <!-- AI Response (inline, no left border) -->
+                    <div id="aiResponseArea" class="hidden bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 p-6 shadow-sm animate-fade-in">
+                        <div class="flex items-center gap-2.5 mb-4">
+                            <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                                <i class="fas fa-sparkles text-indigo-500 text-xs"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Análise da IA</p>
+                                <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Powered by Gemini</p>
+                            </div>
+                        </div>
+                        <div id="aiTextContent" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line"></div>
                     </div>
 
-                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-sort-amount-down text-red-500"></i> Ranking de Despesas</h3>
-                        <div class="h-64"><canvas id="rankExpensesChart" class="blur-target"></canvas></div>
+                    <!-- Hero chart — Curva de Saldo, full width -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                        <div class="px-6 pt-5 pb-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                                    <i class="fas fa-chart-area text-indigo-500 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Curva de Saldo</p>
+                                    <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Acumulado dia a dia</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-6 pb-6 pt-2">
+                            <div class="h-72"><canvas id="dailyBalanceChart" class="blur-target"></canvas></div>
+                        </div>
                     </div>
 
-                    <div class="glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 mb-4 text-sm flex items-center gap-2"><i class="fas fa-wallet text-emerald-500"></i> Panorama do Patrimônio</h3>
-                        <div class="h-64"><canvas id="netWorthChart" class="blur-target"></canvas></div>
+                    <!-- Charts row 1: Evolução + 50/30/20 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                            <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+                                    <i class="fas fa-chart-bar text-emerald-500 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Evolução Mensal</p>
+                                    <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Receitas vs. Despesas</p>
+                                </div>
+                            </div>
+                            <div class="px-6 pb-6 pt-2"><div class="h-64"><canvas id="evolutionChart" class="blur-target"></canvas></div></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                            <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                                    <i class="fas fa-balance-scale text-amber-500 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Regra 50/30/20</p>
+                                    <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Necessidades / Desejos / Investido</p>
+                                </div>
+                            </div>
+                            <div class="px-6 pb-6 pt-2"><div class="h-64"><canvas id="rule503020Chart" class="blur-target"></canvas></div></div>
+                        </div>
                     </div>
-                </div>
-            </section>
-        </div>
-    </main>
 
-    <div id="importModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 text-center animate-scale-in relative">
-            <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fas fa-times"></i></button>
-            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-4">Importar PDF</h3>
-            <div id="dropZone" class="border-2 border-dashed border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-8 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition group">
-                <i class="fas fa-cloud-upload-alt text-3xl text-indigo-400 dark:text-indigo-500 group-hover:text-indigo-600 mb-2 transition"></i><p class="text-sm text-indigo-800 dark:text-indigo-300 font-semibold">Clique para selecionar</p><input type="file" id="fileInput" accept=".pdf" class="hidden">
+                    <!-- Charts row 2: Ranking + Patrimônio -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                            <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+                                    <i class="fas fa-sort-amount-down text-red-500 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Top Despesas</p>
+                                    <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Categorias com maior gasto</p>
+                                </div>
+                            </div>
+                            <div class="px-6 pb-6 pt-2"><div class="h-64"><canvas id="rankExpensesChart" class="blur-target"></canvas></div></div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                            <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                                    <i class="fas fa-coins text-indigo-500 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Patrimônio</p>
+                                    <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Sonhos + A Receber</p>
+                                </div>
+                            </div>
+                            <div class="px-6 pb-6 pt-2"><div class="h-64"><canvas id="netWorthChart" class="blur-target"></canvas></div></div>
+                        </div>
+                    </div>
+                </section>
+
             </div>
-            <div id="loadingStatus" class="hidden mt-6"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400 mx-auto"></div><p class="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Lendo extrato...</p></div>
+        </main>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         MOBILE DRAWER
+    ════════════════════════════════════════════════════ -->
+    <div id="mobileDrawer" class="fixed inset-0 z-50 pointer-events-none">
+        <div id="drawerBackdrop" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm opacity-0 transition-opacity duration-300"></div>
+        <div id="drawerSidebar" class="absolute top-0 left-0 w-64 h-full bg-white dark:bg-slate-900 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col border-r border-slate-200 dark:border-slate-800 pointer-events-auto">
+            <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
+                <div class="flex items-center gap-2"><div class="w-6 h-6 bg-indigo-600 rounded-md flex items-center justify-center text-white" style="font-size:.6rem"><i class="fas fa-chart-line"></i></div><span class="font-bold text-slate-800 dark:text-white text-sm">Menu</span></div>
+                <button id="btnCloseDrawer" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition text-sm"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-3 space-y-0.5 custom-scrollbar">
+                <button id="btnMobileHome"       class="w-full flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold text-sm transition"><i class="fas fa-list-ul w-4 text-center"></i> Lançamentos</button>
+                <button id="btnMobileGoals"      class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-bullseye w-4 text-center"></i> Gasto Fixo</button>
+                <button id="btnMobileVA"         class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-utensils w-4 text-center"></i> VA / VR</button>
+                <button id="btnMobileDebts"      class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-hand-holding-usd w-4 text-center"></i> A Receber</button>
+                <button id="btnMobileObjectives" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-rocket w-4 text-center"></i> Sonhos</button>
+                <button id="btnMobileCards"      class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-credit-card w-4 text-center"></i> Cartões</button>
+                <button id="btnMobileDash"       class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-chart-bar w-4 text-center"></i> Dashboard</button>
+                <div class="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 space-y-0.5">
+                    <button id="btnPrivacyToggle" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-eye-slash w-4 text-center"></i> Privacidade</button>
+                    <button id="btnThemeToggle" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-moon w-4 text-center dark:hidden"></i><i class="fas fa-sun w-4 text-center hidden dark:inline"></i> <span class="dark:hidden">Modo Escuro</span><span class="hidden dark:inline">Modo Claro</span></button>
+                    <button id="btnSettings" class="w-full flex items-center gap-3 p-3 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-sm transition"><i class="fas fa-key w-4 text-center"></i> API Key</button>
+                    <button id="btnLogout" class="w-full flex items-center gap-3 p-3 rounded-xl text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-semibold text-sm transition"><i class="fas fa-sign-out-alt w-4 text-center"></i> Sair</button>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- ════════════════════════════════════════════════════
+         IMPORT MODAL
+    ════════════════════════════════════════════════════ -->
+    <div id="importModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 text-center animate-scale-in relative">
+            <button id="btnCloseModal" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition text-sm"><i class="fas fa-times"></i></button>
+            <div class="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4"><i class="fas fa-file-pdf text-indigo-500 text-xl"></i></div>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-1">Importar Extrato PDF</h3>
+            <p class="text-sm text-slate-400 mb-5">Selecione o arquivo PDF do seu banco</p>
+            <div id="dropZone" class="border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-8 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50/30 transition group">
+                <i class="fas fa-cloud-upload-alt text-3xl text-slate-300 group-hover:text-indigo-400 mb-3 transition block"></i>
+                <p class="text-sm text-slate-500 font-semibold">Clique para selecionar</p>
+                <p class="text-xs text-slate-400 mt-1">Formato .PDF</p>
+                <input type="file" id="fileInput" accept=".pdf" class="hidden">
+            </div>
+            <div id="loadingStatus" class="hidden mt-6">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <p class="text-sm text-slate-500 mt-2 font-medium">Lendo extrato com IA...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         TRANSACTION DRAWER
+    ════════════════════════════════════════════════════ -->
+    <!-- Backdrop -->
+    <div id="txBackdrop" class="hidden fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] z-40 transition-opacity"></div>
+
+    <!-- Drawer panel -->
+    <div id="txDrawer" class="fixed top-0 right-0 h-full w-full sm:w-[400px] bg-white dark:bg-slate-800 shadow-2xl z-50 transform translate-x-full transition-transform duration-300 ease-[cubic-bezier(.22,1,.36,1)] flex flex-col border-l border-slate-200 dark:border-slate-700">
+
+        <!-- Drawer header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
+            <div>
+                <h2 class="text-base font-bold text-slate-800 dark:text-white">Novo Lançamento</h2>
+                <p class="text-xs text-slate-400 font-medium mt-0.5">Preencha os dados abaixo</p>
+            </div>
+            <button id="btnCloseTxDrawer" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition text-sm">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Drawer form -->
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            <form id="transactionForm" autocomplete="off" class="space-y-5">
+
+                <!-- Date + Type -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="lbl">Data</label>
+                        <input type="date" id="inputDate" class="inp" required>
+                    </div>
+                    <div>
+                        <label class="lbl">Tipo</label>
+                        <div class="relative">
+                            <select id="inputType" class="inp appearance-none cursor-pointer pr-7">
+                                <option value="Despesa">🔴 Despesa</option>
+                                <option value="Receita">🟢 Receita</option>
+                                <option value="Investimento">🔵 Investimento</option>
+                            </select>
+                            <i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amount -->
+                <div>
+                    <label class="lbl">Valor (R$)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold pointer-events-none">R$</span>
+                        <input type="number" step="0.01" id="inputAmount" placeholder="0,00" class="inp pl-9" required>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="lbl">Descrição</label>
+                    <input type="text" id="inputDesc" placeholder="Ex: Mercado Extra, Salário..." class="inp" required>
+                </div>
+
+                <!-- Category -->
+                <div>
+                    <label class="lbl">Categoria</label>
+                    <div class="relative">
+                        <select id="inputCategory" class="inp appearance-none cursor-pointer pr-7"></select>
+                        <i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-primary btn-md w-full mt-2 shadow-md shadow-indigo-200 dark:shadow-none">
+                    <i class="fas fa-plus text-sm"></i>
+                    Adicionar Lançamento
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Drawer + misc JS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const drawer   = document.getElementById('txDrawer');
+            const backdrop = document.getElementById('txBackdrop');
+            const btnOpen  = document.getElementById('btnNewTx');
+            const btnClose = document.getElementById('btnCloseTxDrawer');
+
+            function openDrawer() {
+                backdrop.classList.remove('hidden');
+                requestAnimationFrame(() => drawer.classList.remove('translate-x-full'));
+                document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+            }
+            function closeDrawer() {
+                drawer.classList.add('translate-x-full');
+                setTimeout(() => backdrop.classList.add('hidden'), 300);
+            }
+
+            if (btnOpen)  btnOpen.addEventListener('click', openDrawer);
+            if (btnClose) btnClose.addEventListener('click', closeDrawer);
+            if (backdrop) backdrop.addEventListener('click', closeDrawer);
+
+            // Close drawer after successful submit (app.js calls form.reset() on success)
+            const form = document.getElementById('transactionForm');
+            if (form) {
+                const orig = form.reset.bind(form);
+                form.reset = function() { orig(); setTimeout(closeDrawer, 350); };
+            }
+
+            // Import PDF mobile alias
+            const mob = document.getElementById('btnImportMobile');
+            if (mob) mob.addEventListener('click', () => document.getElementById('importModal')?.classList.remove('hidden'));
+        });
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="./app.js"></script>
 </body>
 </html>
