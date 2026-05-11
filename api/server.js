@@ -11,7 +11,9 @@ const helmet = require('helmet');
 const app = express();
 
 // --- 2. SEGURANÇA: Headers HTTP ---
-app.use(helmet());
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 
 // --- 3. CORS ---
 const allowedOrigins = process.env.ALLOWED_ORIGINS
