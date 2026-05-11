@@ -1,5 +1,5 @@
 import { store } from './store.js';
-import { getMonthName } from './utils.js';
+import { getMonthName, escapeHTML } from './utils.js';
 
 export const VA = {
     render(selectedMonths = []) {
@@ -84,8 +84,8 @@ export const VA = {
                     tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
                     const isCredit = t.type === 'credit';
                     tr.innerHTML = `
-                        <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${t.transaction_date}</td>
-                        <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${t.description}</td>
+                        <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${escapeHTML(t.transaction_date)}</td>
+                        <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${escapeHTML(t.description)}</td>
                         <td class="px-4 py-3 text-center"><span class="badge ${isCredit ? 'badge-green' : 'badge-red'}">${isCredit ? 'Recarga' : 'Gasto'}</span></td>
                         <td class="px-4 py-3 font-bold text-right ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}"><span class="blur-target">${isCredit ? '+' : '-'} R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
                         <td class="px-4 py-3 text-center"><button onclick="window.removeVATransaction(${t.id})" class="btn-danger-ghost"><i class="fas fa-trash text-xs"></i></button></td>
