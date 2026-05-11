@@ -385,113 +385,292 @@
                 <!-- ──────────────────────────────────────
                      VIEW GOALS — GASTO FIXO
                 ────────────────────────────────────────── -->
-                <section id="viewGoals" class="hidden animate-fade-in space-y-5">
+                <section id="viewGoals" class="hidden animate-fade-in space-y-6">
+
+                    <!-- Page header -->
                     <div>
                         <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Gasto Fixo</h1>
                         <p class="text-slate-400 text-sm font-medium mt-1">Defina limites mensais por categoria</p>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="card kpi-card kpi-green p-5">
-                            <p class="lbl mb-2">Receita Real</p>
-                            <p id="goalTotalIncome" class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none">R$ 0,00</p>
-                        </div>
-                        <div class="card kpi-card kpi-indigo p-5">
-                            <p class="lbl mb-2">Renda Fixa</p>
-                            <div class="flex items-center gap-1.5 mt-1">
-                                <span class="text-slate-400 font-bold text-sm">R$</span>
-                                <input type="number" id="goalSavingsInput" class="font-extrabold text-2xl text-indigo-600 dark:text-indigo-400 bg-transparent outline-none w-full border-b-2 border-dashed border-slate-200 dark:border-slate-700 focus:border-indigo-500 transition blur-target tracking-tight" placeholder="0,00">
+
+                    <!-- KPI unified bar — 3 cols -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
+                            <!-- Receita Real -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Receita Real</p>
+                                        <p id="goalTotalIncome" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-arrow-up text-emerald-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Entradas do período</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-emerald-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <!-- Renda Fixa (input) -->
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="lbl">Renda Fixa (meta)</p>
+                                        <div class="flex items-baseline gap-1.5 mt-2.5">
+                                            <span class="text-slate-400 font-bold text-base leading-none">R$</span>
+                                            <input type="number" id="goalSavingsInput" class="font-extrabold text-3xl text-indigo-600 dark:text-indigo-400 bg-transparent outline-none w-full border-b border-dashed border-slate-200 dark:border-slate-700 focus:border-indigo-500 transition blur-target tracking-tight leading-none pb-1" placeholder="0,00">
+                                        </div>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-piggy-bank text-indigo-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Quanto quer guardar</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-indigo-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <!-- Projeção -->
+                            <div class="p-5 sm:p-6 group" id="goalBudgetCard">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Vai Sobrar</p>
+                                        <p id="goalProjectedSurplus" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-bullseye text-amber-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3 progress-track"><div id="goalBudgetBar" class="progress-fill bg-emerald-500" style="width:0%"></div></div>
+                                <div class="flex items-center justify-between mt-2">
+                                    <p id="goalBudgetMsg" class="text-[11px] font-bold text-emerald-600">Planejamento Seguro</p>
+                                    <p class="text-[11px] text-slate-400 font-medium">Meta: <span id="goalTargetDisplay" class="font-bold text-slate-500 dark:text-slate-400 blur-target">R$ 0,00</span></p>
+                                </div>
                             </div>
                         </div>
-                        <div class="card kpi-card p-5" id="goalBudgetCard" style="--tw-ring-color:#94a3b8">
-                            <p class="lbl mb-2">Projeção</p>
-                            <div class="flex justify-between items-end mb-2">
-                                <div><p class="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Vai Sobrar</p><p id="goalProjectedSurplus" class="text-xl font-extrabold text-slate-800 dark:text-slate-200 blur-target tracking-tight">R$ 0,00</p></div>
-                                <div class="text-right"><p class="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Meta</p><p id="goalTargetDisplay" class="text-xl font-extrabold text-slate-400 blur-target tracking-tight">R$ 0,00</p></div>
+                    </div>
+
+                    <!-- Form toolbar — floating, no card wrapper -->
+                    <form id="goalsForm" class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-end">
+                        <div class="flex-1 sm:max-w-[260px]">
+                            <label class="lbl">Categoria</label>
+                            <div class="relative">
+                                <i class="fas fa-tag absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <select id="goalCategoryInput" class="inp pl-9 pr-8 appearance-none cursor-pointer"></select>
+                                <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                             </div>
-                            <div class="progress-track"><div id="goalBudgetBar" class="progress-fill bg-emerald-500" style="width:0%"></div></div>
-                            <p id="goalBudgetMsg" class="text-[11px] font-bold text-emerald-600 mt-1.5 text-right">Planejamento Seguro</p>
                         </div>
-                    </div>
-                    <div class="card p-5">
-                        <p class="lbl mb-4">Definir Limite por Categoria</p>
-                        <form id="goalsForm" class="flex flex-col sm:flex-row gap-3 items-end">
-                            <div class="w-full sm:w-56"><label class="lbl">Categoria</label><div class="relative"><select id="goalCategoryInput" class="inp appearance-none cursor-pointer pr-7"></select><i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i></div></div>
-                            <div class="w-full sm:w-44"><label class="lbl">Limite Mensal (R$)</label><input type="number" step="0.01" id="goalAmountInput" placeholder="500,00" class="inp" required></div>
-                            <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap"><i class="fas fa-save"></i> Salvar</button>
-                        </form>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <div><p class="lbl mb-3">Progresso</p><div id="goalsList" class="space-y-3"></div></div>
-                        <div><p class="lbl mb-3">Distribuição</p><div class="card p-5"><div class="h-72"><canvas id="goalsChart" class="blur-target"></canvas></div></div></div>
+                        <div class="flex-1 sm:max-w-[200px]">
+                            <label class="lbl">Limite Mensal (R$)</label>
+                            <input type="number" step="0.01" id="goalAmountInput" placeholder="500,00" class="inp" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap sm:self-end">
+                            <i class="fas fa-plus text-xs"></i> Definir Limite
+                        </button>
+                    </form>
+
+                    <!-- Progress list + Chart -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                        <!-- List -->
+                        <div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                            <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                                    <i class="fas fa-list-check text-indigo-500 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Progresso</p>
+                                    <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Gasto vs. limite por categoria</p>
+                                </div>
+                            </div>
+                            <div id="goalsList" class="px-4 pb-4 pt-2 space-y-2"></div>
+                        </div>
+                        <!-- Chart -->
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden h-fit lg:sticky lg:top-6">
+                            <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+                                    <i class="fas fa-chart-column text-amber-500 text-xs"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Distribuição</p>
+                                    <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Comparativo visual</p>
+                                </div>
+                            </div>
+                            <div class="px-6 pb-6 pt-2"><div class="h-72"><canvas id="goalsChart" class="blur-target"></canvas></div></div>
+                        </div>
                     </div>
                 </section>
 
                 <!-- ──────────────────────────────────────
                      VIEW VA
                 ────────────────────────────────────────── -->
-                <section id="viewVA" class="hidden animate-fade-in space-y-5">
+                <section id="viewVA" class="hidden animate-fade-in space-y-6">
                     <div>
                         <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Vale Alimentação</h1>
                         <p class="text-slate-400 text-sm font-medium mt-1">Controle seu VA/VR separadamente</p>
                     </div>
-                    <div class="card kpi-card p-6 sm:p-8" style="position:relative;overflow:hidden">
-                        <div style="position:absolute;inset:0;height:2px;background:linear-gradient(90deg,#f97316,#fb923c)"></div>
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div>
-                                <p class="lbl mb-2">Saldo Disponível</p>
-                                <p id="vaBalanceDisplay" class="text-5xl font-extrabold tracking-tight text-orange-500 dark:text-orange-400 blur-target leading-none">R$ 0,00</p>
+
+                    <!-- KPI unified bar — 3 cols -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Saldo Disponível</p>
+                                        <p id="vaBalanceDisplay" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-utensils text-orange-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Saldo atual do cartão</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-orange-400 mt-3 transition-all duration-500 rounded-full"></div>
                             </div>
-                            <div class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
-                                <i class="fas fa-utensils text-orange-500 text-xl"></i>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Gastos no Período</p>
+                                        <p id="vaSpentDisplay" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-arrow-down text-red-400 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Total consumido</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-red-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Recargas no Período</p>
+                                        <p id="vaCreditDisplay" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-arrow-up text-emerald-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Total creditado</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-emerald-400 mt-3 transition-all duration-500 rounded-full"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="card p-5">
-                        <p class="lbl mb-4">Registrar Operação</p>
-                        <form id="vaForm" class="flex flex-col sm:flex-row gap-2.5">
-                            <div class="relative sm:w-40 flex-shrink-0">
-                                <select id="vaType" class="inp appearance-none cursor-pointer pr-7"><option value="debit">🍔 Gastei</option><option value="credit">💳 Recarga</option></select>
-                                <i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+
+                    <!-- Form toolbar — floating, no card -->
+                    <form id="vaForm" class="flex flex-col sm:flex-row gap-2.5">
+                        <div class="relative sm:w-44 flex-shrink-0">
+                            <i id="vaTypeIcon" class="fas fa-arrow-down absolute left-3 top-1/2 -translate-y-1/2 text-red-400 text-xs pointer-events-none"></i>
+                            <select id="vaType" class="inp pl-9 pr-8 appearance-none cursor-pointer">
+                                <option value="debit">Gastei</option>
+                                <option value="credit">Recarga</option>
+                            </select>
+                            <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                        <input type="text" id="vaDesc" placeholder="Onde? (ex: iFood, Padaria)" class="inp flex-1">
+                        <input type="number" step="0.01" id="vaAmount" placeholder="R$ 0,00" class="inp sm:w-36 flex-shrink-0" required>
+                        <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap flex-shrink-0">
+                            <i class="fas fa-check text-xs"></i> Registrar
+                        </button>
+                    </form>
+
+                    <!-- History table — full bleed -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                        <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center">
+                                <i class="fas fa-list text-orange-500 text-xs"></i>
                             </div>
-                            <input type="text" id="vaDesc" placeholder="Onde? (ex: iFood, Padaria)" class="inp flex-1">
-                            <input type="number" step="0.01" id="vaAmount" placeholder="R$ 0,00" class="inp sm:w-32 flex-shrink-0" required>
-                            <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap flex-shrink-0"><i class="fas fa-check"></i> Confirmar</button>
-                        </form>
-                    </div>
-                    <div class="card overflow-hidden">
-                        <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 flex items-center gap-2"><i class="fas fa-list text-orange-400 text-sm"></i><p class="text-sm font-bold text-slate-700 dark:text-slate-200">Histórico</p></div>
-                        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Data</th><th>Descrição</th><th class="text-center">Tipo</th><th class="text-right">Valor</th><th class="w-12 text-center"></th></tr></thead><tbody id="vaTransactionList" class="bg-white dark:bg-slate-800"></tbody></table></div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Histórico</p>
+                                <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Operações no período</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead><tr><th>Data</th><th>Descrição</th><th class="text-center">Tipo</th><th class="text-right">Valor</th><th class="w-12"></th></tr></thead>
+                                <tbody id="vaTransactionList"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
 
                 <!-- ──────────────────────────────────────
                      VIEW DEBTS — A RECEBER
                 ────────────────────────────────────────── -->
-                <section id="viewDebts" class="hidden animate-fade-in space-y-5">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">A Receber</h1>
-                            <p class="text-slate-400 text-sm font-medium mt-1">Dinheiro que deve voltar para o seu bolso</p>
-                        </div>
-                        <div>
-                            <p class="lbl text-right">Total Pendente</p>
-                            <p id="totalDebtAmount" class="text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400 blur-target">R$ 0,00</p>
+                <section id="viewDebts" class="hidden animate-fade-in space-y-6">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">A Receber</h1>
+                        <p class="text-slate-400 text-sm font-medium mt-1">Dinheiro que deve voltar para o seu bolso</p>
+                    </div>
+
+                    <!-- KPI unified bar — 3 cols -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Total Pendente</p>
+                                        <p id="totalDebtAmount" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-clock text-amber-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Aguardando retorno</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-amber-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Já Recebido</p>
+                                        <p id="totalDebtPaid" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-check text-emerald-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Dívidas quitadas</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-emerald-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Devedores Ativos</p>
+                                        <p id="totalDebtCount" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-none mt-2.5 truncate">0</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-users text-indigo-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Pessoas com pendência</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-indigo-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div class="card p-5">
-                            <p class="lbl mb-4">Adicionar</p>
-                            <form id="debtForm" class="space-y-3">
-                                <div><label class="lbl">Nome do Devedor</label><input type="text" id="debtName" placeholder="Ex: João Silva" class="inp" required></div>
-                                <div class="grid grid-cols-2 gap-2.5">
-                                    <div><label class="lbl">Valor Base</label><input type="number" step="0.01" id="debtAmount" placeholder="100,00" class="inp" required></div>
-                                    <div><label class="lbl">Juros (%)</label><input type="number" step="0.1" id="debtInterest" placeholder="0" value="0" class="inp"></div>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-sm w-full"><i class="fas fa-plus"></i> Registrar</button>
-                            </form>
+
+                    <!-- Form toolbar — floating -->
+                    <form id="debtForm" class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-end">
+                        <div class="flex-1 sm:max-w-[280px]">
+                            <label class="lbl">Nome do Devedor</label>
+                            <div class="relative">
+                                <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <input type="text" id="debtName" placeholder="Ex: João Silva" class="inp pl-9" required>
+                            </div>
                         </div>
-                        <div class="md:col-span-2 card overflow-hidden">
-                            <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Nome</th><th class="text-right">Valor</th><th class="text-center">Status</th><th class="text-center">Ações</th></tr></thead><tbody id="debtList" class="bg-white dark:bg-slate-800"></tbody></table></div>
+                        <div class="sm:w-40">
+                            <label class="lbl">Valor Base</label>
+                            <input type="number" step="0.01" id="debtAmount" placeholder="100,00" class="inp" required>
+                        </div>
+                        <div class="sm:w-28">
+                            <label class="lbl">Juros (%)</label>
+                            <input type="number" step="0.1" id="debtInterest" placeholder="0" value="0" class="inp">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap sm:self-end">
+                            <i class="fas fa-plus text-xs"></i> Registrar
+                        </button>
+                    </form>
+
+                    <!-- Table — full bleed -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead><tr><th>Nome</th><th class="text-right">Valor</th><th class="text-center">Status</th><th class="w-24 text-center">Ações</th></tr></thead>
+                                <tbody id="debtList"></tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
@@ -499,65 +678,205 @@
                 <!-- ──────────────────────────────────────
                      VIEW OBJECTIVES — SONHOS
                 ────────────────────────────────────────── -->
-                <section id="viewObjectives" class="hidden animate-fade-in space-y-5">
+                <section id="viewObjectives" class="hidden animate-fade-in space-y-6">
                     <div>
                         <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Meus Sonhos</h1>
                         <p class="text-slate-400 text-sm font-medium mt-1">Defina objetivos e acompanhe o progresso</p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div class="card p-5">
-                            <p class="lbl mb-4">Novo Objetivo</p>
-                            <form id="objectiveForm" class="space-y-3">
-                                <div><label class="lbl">O que você quer?</label><input type="text" id="objTitle" placeholder="Ex: Viagem, Carro Novo..." class="inp" required></div>
-                                <div><label class="lbl">Valor Total (R$)</label><input type="number" step="0.01" id="objTarget" placeholder="10.000,00" class="inp" required></div>
-                                <button type="submit" class="btn btn-primary btn-sm w-full"><i class="fas fa-rocket"></i> Criar Sonho</button>
-                            </form>
+
+                    <!-- KPI unified bar — 3 cols -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Total Sonhado</p>
+                                        <p id="objTotalTarget" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-rocket text-indigo-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Soma das metas</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-indigo-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Já Guardado</p>
+                                        <p id="objTotalSaved" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-piggy-bank text-emerald-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Reservado para sonhos</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-emerald-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Progresso Geral</p>
+                                        <p id="objTotalPct" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-none mt-2.5 truncate">0%</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-chart-pie text-amber-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3 progress-track"><div id="objTotalBar" class="progress-fill bg-indigo-500" style="width:0%"></div></div>
+                            </div>
                         </div>
-                        <div class="md:col-span-2 space-y-3" id="objectivesList"></div>
                     </div>
+
+                    <!-- Form toolbar -->
+                    <form id="objectiveForm" class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-end">
+                        <div class="flex-1">
+                            <label class="lbl">O que você quer?</label>
+                            <div class="relative">
+                                <i class="fas fa-star absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                                <input type="text" id="objTitle" placeholder="Ex: Viagem, Carro Novo..." class="inp pl-9" required>
+                            </div>
+                        </div>
+                        <div class="sm:w-48">
+                            <label class="lbl">Valor Total (R$)</label>
+                            <input type="number" step="0.01" id="objTarget" placeholder="10.000,00" class="inp" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm whitespace-nowrap sm:self-end">
+                            <i class="fas fa-rocket text-xs"></i> Criar Sonho
+                        </button>
+                    </form>
+
+                    <!-- Cards grid -->
+                    <div id="objectivesList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
                 </section>
 
                 <!-- ──────────────────────────────────────
                      VIEW CARDS — CARTÕES
                 ────────────────────────────────────────── -->
-                <section id="viewCards" class="hidden animate-fade-in space-y-5">
-                    <div>
-                        <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Cartões</h1>
-                        <p class="text-slate-400 text-sm font-medium mt-1">Gerencie faturas e limites</p>
+                <section id="viewCards" class="hidden animate-fade-in space-y-6">
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none">Cartões</h1>
+                            <p class="text-slate-400 text-sm font-medium mt-1">Gerencie faturas e limites</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btnNewCard" class="btn btn-ghost btn-sm hidden sm:inline-flex"><i class="fas fa-credit-card text-slate-400 text-xs"></i> <span>Cadastrar Cartão</span></button>
+                            <button id="btnNewCardExpense" class="btn btn-primary btn-sm"><i class="fas fa-plus text-xs"></i> <span class="hidden sm:inline">Passar no Cartão</span><span class="sm:hidden">Novo</span></button>
+                        </div>
                     </div>
+
+                    <!-- KPI unified bar — 3 cols -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Fatura Aberta</p>
+                                        <p id="cardsTotalInvoice" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-receipt text-purple-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3"><span id="cardMonthDisplay">...</span></p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-purple-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Limite Usado</p>
+                                        <p id="cardsLimitUsed" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-none mt-2.5 truncate">0%</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-gauge text-amber-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3 progress-track"><div id="cardsLimitBar" class="progress-fill bg-indigo-500" style="width:0%"></div></div>
+                            </div>
+                            <div class="p-5 sm:p-6 group">
+                                <div class="flex items-start justify-between">
+                                    <div class="min-w-0">
+                                        <p class="lbl">Disponível</p>
+                                        <p id="cardsAvailable" class="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-2.5 truncate">R$ 0,00</p>
+                                    </div>
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0 ml-3 mt-0.5">
+                                        <i class="fas fa-wallet text-emerald-500 text-xs"></i>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-400 font-medium mt-3">Crédito ainda livre</p>
+                                <div class="h-0.5 w-0 group-hover:w-full bg-emerald-400 mt-3 transition-all duration-500 rounded-full"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cards overview — horizontal scroll -->
                     <div id="cardsOverview" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div class="space-y-4">
-                            <div class="card p-5">
-                                <p class="lbl mb-4">Passar no Cartão</p>
-                                <form id="cardExpenseForm" class="space-y-3">
-                                    <div><label class="lbl">Qual Cartão?</label><div class="relative"><select id="expenseCardId" class="inp appearance-none cursor-pointer pr-7" required></select><i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i></div></div>
-                                    <div><label class="lbl">Descrição</label><input type="text" id="expenseCardDesc" placeholder="Ex: Amazon, iFood" class="inp" required></div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div><label class="lbl">Valor</label><input type="number" step="0.01" id="expenseCardAmount" placeholder="0,00" class="inp" required></div>
-                                        <div><label class="lbl">Parcelas</label><input type="number" id="expenseCardInstallments" value="1" min="1" max="48" class="inp"></div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary btn-sm w-full"><i class="fas fa-plus"></i> Registrar</button>
-                                </form>
+
+                    <!-- Forms (hidden by default, shown via header buttons) -->
+                    <div id="cardFormsArea" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center"><i class="fas fa-plus text-indigo-500 text-xs"></i></div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200">Passar no Cartão</p>
+                                </div>
+                                <button data-close-form="expense" class="btn btn-ghost btn-icon-sm text-slate-400"><i class="fas fa-times text-xs"></i></button>
                             </div>
-                            <div class="card p-5">
-                                <p class="lbl mb-4">Cadastrar Cartão</p>
-                                <form id="newCardForm" class="space-y-3">
-                                    <div><label class="lbl">Apelido (Ex: Nubank)</label><input type="text" id="newCardName" class="inp" required></div>
-                                    <div><label class="lbl">Limite Total</label><input type="number" step="0.01" id="newCardLimit" class="inp" required></div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div><label class="lbl">Fechamento</label><input type="number" id="newCardClosing" min="1" max="31" class="inp" required></div>
-                                        <div><label class="lbl">Vencimento</label><input type="number" id="newCardDue" min="1" max="31" class="inp" required></div>
-                                    </div>
-                                    <button type="submit" class="btn btn-ghost btn-sm w-full font-bold"><i class="fas fa-credit-card"></i> Salvar</button>
-                                </form>
-                            </div>
+                            <form id="cardExpenseForm" class="space-y-3">
+                                <div><label class="lbl">Qual Cartão?</label><div class="relative"><select id="expenseCardId" class="inp appearance-none cursor-pointer pr-7" required></select><i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i></div></div>
+                                <div><label class="lbl">Descrição</label><input type="text" id="expenseCardDesc" placeholder="Ex: Amazon, iFood" class="inp" required></div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="lbl">Valor</label><input type="number" step="0.01" id="expenseCardAmount" placeholder="0,00" class="inp" required></div>
+                                    <div><label class="lbl">Parcelas</label><input type="number" id="expenseCardInstallments" value="1" min="1" max="48" class="inp"></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm w-full"><i class="fas fa-check text-xs"></i> Registrar Compra</button>
+                            </form>
                         </div>
-                        <div class="md:col-span-2 card overflow-hidden flex flex-col">
-                            <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between"><div class="flex items-center gap-2"><i class="fas fa-receipt text-purple-400 text-sm"></i><p class="text-sm font-bold text-slate-700 dark:text-slate-200">Fatura do Mês</p></div><span class="text-xs font-bold text-slate-400" id="cardMonthDisplay">...</span></div>
-                            <div class="overflow-x-auto flex-1"><table class="data-table"><thead><tr><th>Cartão</th><th>Descrição</th><th class="text-center">Parc.</th><th class="text-right">Valor</th><th class="w-12"></th></tr></thead><tbody id="cardTransactionList" class="bg-white dark:bg-slate-800"></tbody></table></div>
+                        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-700/40 flex items-center justify-center"><i class="fas fa-credit-card text-slate-500 text-xs"></i></div>
+                                    <p class="text-sm font-bold text-slate-700 dark:text-slate-200">Cadastrar Cartão</p>
+                                </div>
+                                <button data-close-form="new" class="btn btn-ghost btn-icon-sm text-slate-400"><i class="fas fa-times text-xs"></i></button>
+                            </div>
+                            <form id="newCardForm" class="space-y-3">
+                                <div><label class="lbl">Apelido (Ex: Nubank)</label><input type="text" id="newCardName" class="inp" required></div>
+                                <div><label class="lbl">Limite Total</label><input type="number" step="0.01" id="newCardLimit" class="inp" required></div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label class="lbl">Fechamento</label><input type="number" id="newCardClosing" min="1" max="31" class="inp" required></div>
+                                    <div><label class="lbl">Vencimento</label><input type="number" id="newCardDue" min="1" max="31" class="inp" required></div>
+                                </div>
+                                <button type="submit" class="btn btn-ghost btn-sm w-full font-bold"><i class="fas fa-save text-xs"></i> Salvar Cartão</button>
+                            </form>
                         </div>
                     </div>
+
+                    <!-- Fatura table — full bleed -->
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                        <div class="px-6 pt-5 pb-3 flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center"><i class="fas fa-receipt text-purple-500 text-xs"></i></div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">Fatura do Mês</p>
+                                <p class="text-[11px] text-slate-400 font-medium mt-1 leading-none">Compras e parcelas no período</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Cartão</th><th>Descrição</th><th class="text-center">Parc.</th><th class="text-right">Valor</th><th class="w-12"></th></tr></thead><tbody id="cardTransactionList"></tbody></table></div>
+                    </div>
+
+                    <script>
+                        (function(){
+                            const toggle = (show) => {
+                                const a = document.getElementById('cardFormsArea');
+                                if (a) a.classList.toggle('hidden', !show);
+                            };
+                            document.addEventListener('click', (e) => {
+                                if (e.target.closest('#btnNewCard')) toggle(true);
+                                if (e.target.closest('#btnNewCardExpense')) toggle(true);
+                                if (e.target.closest('[data-close-form]')) toggle(false);
+                            });
+                        })();
+                    </script>
                 </section>
 
                 <!-- ──────────────────────────────────────

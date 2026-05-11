@@ -12,6 +12,36 @@ export const VA = {
             balanceEl.innerText = `R$ ${store.vaBalance.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
         }
 
+        // 1b. KPIs do período (Gastos / Recargas)
+        let periodSpent = 0, periodCredit = 0;
+        let scoped = store.vaTransactions || [];
+        if (selectedMonths.length > 0) scoped = scoped.filter(t => selectedMonths.includes(t.month));
+        scoped.forEach(t => {
+            const v = parseFloat(t.amount || 0);
+            if (t.type === 'credit') periodCredit += v;
+            else periodSpent += v;
+        });
+        const spentEl = document.getElementById('vaSpentDisplay');
+        if (spentEl) spentEl.innerText = `R$ ${periodSpent.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        const creditEl = document.getElementById('vaCreditDisplay');
+        if (creditEl) creditEl.innerText = `R$ ${periodCredit.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
+        // 1c. Ícone dinâmico do tipo
+        const typeSel = document.getElementById('vaType');
+        const typeIcon = document.getElementById('vaTypeIcon');
+        if (typeSel && typeIcon && typeSel.dataset.iconListener !== 'true') {
+            typeSel.dataset.iconListener = 'true';
+            const sync = () => {
+                if (typeSel.value === 'credit') {
+                    typeIcon.className = 'fas fa-arrow-up absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 text-xs pointer-events-none';
+                } else {
+                    typeIcon.className = 'fas fa-arrow-down absolute left-3 top-1/2 -translate-y-1/2 text-red-400 text-xs pointer-events-none';
+                }
+            };
+            typeSel.addEventListener('change', sync);
+            sync();
+        }
+
         // 2. Setup do Formulário
         const form = document.getElementById('vaForm');
         if (form && form.dataset.listener !== 'true') {
@@ -56,9 +86,9 @@ export const VA = {
                     tr.innerHTML = `
                         <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${t.transaction_date}</td>
                         <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${t.description}</td>
-                        <td class="px-4 py-3 text-center"><span class="${isCredit ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'} px-2 py-1 rounded text-[10px] font-bold uppercase">${isCredit ? 'Recarga' : 'Gasto'}</span></td>
+                        <td class="px-4 py-3 text-center"><span class="badge ${isCredit ? 'badge-green' : 'badge-red'}">${isCredit ? 'Recarga' : 'Gasto'}</span></td>
                         <td class="px-4 py-3 font-bold text-right ${isCredit ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}"><span class="blur-target">${isCredit ? '+' : '-'} R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
-                        <td class="px-4 py-3 text-center"><button onclick="window.removeVATransaction(${t.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button></td>
+                        <td class="px-4 py-3 text-center"><button onclick="window.removeVATransaction(${t.id})" class="btn-danger-ghost"><i class="fas fa-trash text-xs"></i></button></td>
                     `;
                     list.appendChild(tr);
                 });

@@ -39,7 +39,13 @@ export const Dashboard = {
         if (elBal) {
             const bal = income - expense - invest;
             elBal.innerText = `R$ ${bal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            elBal.className = `text-xl font-bold blur-target ${bal >= 0 ? 'text-indigo-900 dark:text-indigo-300' : 'text-red-500'}`;
+            // Preserva tipografia da KPI bar; só troca a cor conforme sinal
+            elBal.classList.remove('text-slate-900', 'dark:text-white', 'text-red-500');
+            if (bal >= 0) {
+                elBal.classList.add('text-slate-900', 'dark:text-white');
+            } else {
+                elBal.classList.add('text-red-500');
+            }
         }
 
         // 2. Renderizar Gráficos
