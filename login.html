@@ -4,76 +4,399 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Infinity Finance</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230f172a'/%3E%3Cpath d='M352 160c-38.5 0-71.6 21.3-96 53.3-24.4-32-57.5-53.3-96-53.3-61.9 0-112 50.1-112 112s50.1 112 112 112c38.5 0 71.6-21.3 96-53.3 24.4 32 57.5 53.3 96 53.3 61.9 0 112-50.1 112-112s-50.1-112-112-112zm0 176c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64zm-192 0c-35.3 0-64-28.7-64-64s28.7-64 64-64 64 28.7 64 64-28.7 64-64 64z' fill='%236366f1'/%3E%3C/svg%3E" type="image/svg+xml">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
-</head>
-<body class="bg-slate-900 h-screen flex items-center justify-center">
+    <script>
+        if (localStorage.getItem('inf_auth_token')) window.location.href = 'index.html';
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+        tailwind.config = { darkMode: 'class' };
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+        /* ── Animations ── */
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes fadeLeft { from { opacity:0; transform:translateX(-20px) } to { opacity:1; transform:translateX(0) } }
+        @keyframes pulse    { 0%,100% { opacity:.6 } 50% { opacity:1 } }
+        @keyframes spin     { to { transform:rotate(360deg) } }
+        @keyframes shimmer  { from { background-position: -200% center } to { background-position: 200% center } }
+
+        .anim-up   { animation: fadeUp   0.45s cubic-bezier(.22,1,.36,1) both; }
+        .anim-left { animation: fadeLeft 0.5s  cubic-bezier(.22,1,.36,1) both; }
+        .delay-1 { animation-delay: .08s }
+        .delay-2 { animation-delay: .15s }
+        .delay-3 { animation-delay: .22s }
+        .delay-4 { animation-delay: .29s }
+        .delay-5 { animation-delay: .36s }
+
+        /* ── Input ── */
+        .field-wrap { position: relative; }
+        .field-icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: #94a3b8; font-size: .85rem; pointer-events: none;
+            transition: color .2s;
+        }
+        .field-input {
+            width: 100%;
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px 12px 40px;
+            font-size: .9rem; font-weight: 500; color: #1e293b;
+            outline: none; transition: border-color .2s, box-shadow .2s, background .2s;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .field-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3.5px rgb(99 102 241 / .12);
+            background: #fff;
+        }
+        .field-input:focus + .field-focus-line { transform: scaleX(1); }
+        .field-wrap:focus-within .field-icon { color: #6366f1; }
+
+        .dark .field-input { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+        .dark .field-input:focus { background: #1e2a3a; border-color: #818cf8; box-shadow: 0 0 0 3.5px rgb(129 140 248 / .15); }
+        .dark .field-wrap:focus-within .field-icon { color: #818cf8; }
+
+        /* eye button */
+        .eye-btn {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            color: #94a3b8; font-size: .85rem; padding: 4px;
+            transition: color .2s;
+        }
+        .eye-btn:hover { color: #6366f1; }
+
+        /* ── Submit button ── */
+        .btn-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white; font-weight: 700; font-size: .95rem;
+            border: none; border-radius: 12px; padding: 13px;
+            cursor: pointer; transition: opacity .2s, transform .15s, box-shadow .2s;
+            box-shadow: 0 4px 12px rgb(99 102 241 / .35);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-submit:hover  { opacity: .92; box-shadow: 0 6px 20px rgb(99 102 241 / .4); }
+        .btn-submit:active { transform: scale(.98); }
+        .btn-submit:disabled { opacity: .65; cursor: not-allowed; }
+
+        /* loading spinner */
+        .spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.35); border-top-color:white; border-radius:50%; animation: spin .65s linear infinite; }
+
+        /* ── Password strength ── */
+        .strength-bar { height: 3px; border-radius: 99px; transition: width .3s, background .3s; }
+
+        /* ── Feature card ── */
+        .feature-item {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 14px 16px; border-radius: 14px;
+            background: rgba(255,255,255,.07);
+            border: 1px solid rgba(255,255,255,.1);
+            transition: background .2s;
+        }
+        .feature-item:hover { background: rgba(255,255,255,.12); }
+        .feature-icon {
+            width: 38px; height: 38px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: .9rem;
+        }
+
+        /* ── Error/Success alert ── */
+        .alert {
+            border-radius: 10px; padding: 10px 14px;
+            font-size: .8rem; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .alert-error   { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .dark .alert-error   { background: rgb(127 29 29 / .25); color: #f87171; border-color: rgb(185 28 28 / .3); }
+        .dark .alert-success { background: rgb(20 83 45 / .25); color: #4ade80; border-color: rgb(22 101 52 / .3); }
+
+        /* ── Left panel chart decoration ── */
+        .chart-bar { border-radius: 4px 4px 0 0; animation: pulse 2s ease-in-out infinite; }
+
+        /* ── Divider ── */
+        .divider { display:flex; align-items:center; gap:12px; color:#94a3b8; font-size:.75rem; font-weight:600; }
+        .divider::before, .divider::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+        .dark .divider::before, .dark .divider::after { background:#334155; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-300">
+
+    <!-- ════════════════════════════════════════
+         LEFT PANEL — Brand & Features
+    ════════════════════════════════════════ -->
+    <div class="hidden lg:flex lg:w-[52%] xl:w-[55%] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden flex-col justify-between p-10 xl:p-14">
+
+        <!-- Background noise texture overlay -->
+        <div class="absolute inset-0 opacity-[.03]" style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22/></filter><rect width=%22200%22 height=%22200%22 filter=%22url(%23n)%22 opacity=%221%22/></svg>');background-size:200px"></div>
+
+        <!-- Glow orbs -->
+        <div class="absolute top-1/4 -left-20 w-80 h-80 bg-indigo-600 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+        <div class="absolute bottom-1/4 right-0 w-64 h-64 bg-violet-600 rounded-full blur-[100px] opacity-15 pointer-events-none"></div>
+
+        <!-- Top: Logo -->
+        <div class="relative z-10 anim-left">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <span class="text-white font-bold text-lg tracking-tight">Infinity <span class="text-indigo-400">Finance</span></span>
             </div>
-            <h2 class="text-2xl font-bold text-slate-800">Bem-vindo de volta</h2>
-            <p class="text-slate-500 text-sm">Acesse suas finanças</p>
         </div>
 
-        <form id="authForm" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <input type="email" id="email" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="seu@email.com" required>
+        <!-- Middle: Headline + chart mockup -->
+        <div class="relative z-10 space-y-10">
+            <div class="anim-left delay-1">
+                <p class="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-3">Controle financeiro inteligente</p>
+                <h2 class="text-white text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight">
+                    Suas finanças,<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">organizadas.</span>
+                </h2>
+                <p class="text-slate-400 text-base mt-4 leading-relaxed max-w-sm">
+                    Acompanhe gastos, planeje objetivos e tome decisões inteligentes com ajuda de IA.
+                </p>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
-                <input type="password" id="password" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="••••••••" required>
+
+            <!-- Mini chart illustration -->
+            <div class="anim-left delay-2 bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm max-w-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Saldo do mês</p>
+                        <p class="text-white text-2xl font-extrabold mt-0.5">R$ 4.280<span class="text-indigo-400">,00</span></p>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-emerald-500/20 text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-full">
+                        <i class="fas fa-arrow-up text-[10px]"></i> +12%
+                    </div>
+                </div>
+                <!-- Bar chart -->
+                <div class="flex items-end gap-2 h-16">
+                    <div class="flex-1 chart-bar bg-indigo-500/40" style="height:45%;animation-delay:.0s"></div>
+                    <div class="flex-1 chart-bar bg-indigo-500/40" style="height:65%;animation-delay:.2s"></div>
+                    <div class="flex-1 chart-bar bg-indigo-500/40" style="height:40%;animation-delay:.4s"></div>
+                    <div class="flex-1 chart-bar bg-indigo-500/40" style="height:80%;animation-delay:.6s"></div>
+                    <div class="flex-1 chart-bar bg-indigo-500/40" style="height:55%;animation-delay:.8s"></div>
+                    <div class="flex-1 chart-bar bg-indigo-400" style="height:100%;animation-delay:1s;opacity:.9"></div>
+                    <div class="flex-1 chart-bar bg-indigo-300/30" style="height:70%;animation-delay:1.2s"></div>
+                </div>
+                <div class="flex justify-between mt-2">
+                    <span class="text-slate-500 text-[10px] font-semibold">Jan</span>
+                    <span class="text-slate-500 text-[10px] font-semibold">Fev</span>
+                    <span class="text-slate-500 text-[10px] font-semibold">Mar</span>
+                    <span class="text-slate-500 text-[10px] font-semibold">Abr</span>
+                    <span class="text-slate-500 text-[10px] font-semibold">Mai</span>
+                    <span class="text-indigo-400 text-[10px] font-bold">Jun</span>
+                    <span class="text-slate-500 text-[10px] font-semibold">Jul</span>
+                </div>
             </div>
-            
-            <div class="text-xs text-red-500 hidden text-center font-bold" id="errorMsg"></div>
 
-            <button type="submit" id="btnSubmit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-indigo-200">
-                Entrar
-            </button>
-        </form>
+            <!-- Features -->
+            <div class="space-y-3 anim-left delay-3">
+                <div class="feature-item">
+                    <div class="feature-icon bg-indigo-500/20">
+                        <i class="fas fa-brain text-indigo-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-white text-sm font-bold">Consultoria com IA</p>
+                        <p class="text-slate-400 text-xs mt-0.5">Relatórios e insights gerados pelo Gemini</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon bg-emerald-500/20">
+                        <i class="fas fa-shield-alt text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-white text-sm font-bold">Modo privacidade</p>
+                        <p class="text-slate-400 text-xs mt-0.5">Oculte valores sensíveis com um clique</p>
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon bg-violet-500/20">
+                        <i class="fas fa-file-import text-violet-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-white text-sm font-bold">Importação de extrato</p>
+                        <p class="text-slate-400 text-xs mt-0.5">Leitura automática de PDFs bancários</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <div class="mt-6 text-center">
-            <p class="text-sm text-slate-500">Não tem conta? <a href="#" id="toggleMode" class="text-indigo-600 font-bold hover:underline">Criar conta</a></p>
+        <!-- Bottom: tagline -->
+        <div class="relative z-10 anim-left delay-4">
+            <p class="text-slate-600 text-xs font-semibold">© 2025 Infinity Finance · Todos os direitos reservados</p>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         RIGHT PANEL — Form
+    ════════════════════════════════════════ -->
+    <div class="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 relative">
+
+        <!-- Theme toggle -->
+        <button id="btnTheme" class="absolute top-5 right-5 w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center transition text-sm">
+            <i class="fas fa-moon dark:hidden"></i>
+            <i class="fas fa-sun hidden dark:inline"></i>
+        </button>
+
+        <div class="w-full max-w-[380px]">
+
+            <!-- Mobile logo -->
+            <div class="lg:hidden text-center mb-8 anim-up">
+                <div class="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50 mb-3">
+                    <i class="fas fa-chart-line text-white"></i>
+                </div>
+                <h1 class="text-xl font-extrabold text-slate-800 dark:text-white">Infinity <span class="text-indigo-600 dark:text-indigo-400">Finance</span></h1>
+            </div>
+
+            <!-- Heading -->
+            <div class="mb-8 anim-up">
+                <h2 id="formTitle" class="text-2xl font-extrabold text-slate-800 dark:text-white tracking-tight">Bem-vindo de volta</h2>
+                <p id="formSubtitle" class="text-slate-400 dark:text-slate-500 text-sm mt-1 font-medium">Acesse sua conta para continuar</p>
+            </div>
+
+            <!-- Form -->
+            <form id="authForm" class="space-y-4" novalidate>
+
+                <!-- Email -->
+                <div class="anim-up delay-1">
+                    <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Email</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-envelope field-icon"></i>
+                        <input type="email" id="email" class="field-input" placeholder="seu@email.com" required autocomplete="email">
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="anim-up delay-2">
+                    <label class="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Senha</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-lock field-icon"></i>
+                        <input type="password" id="password" class="field-input pr-10" placeholder="••••••••" required autocomplete="current-password" oninput="checkStrength(this.value)">
+                        <button type="button" class="eye-btn" onclick="togglePwd()"><i id="eyeIcon" class="fas fa-eye"></i></button>
+                    </div>
+                    <!-- Strength bars (visible on register only) -->
+                    <div id="strengthWrap" class="hidden mt-2">
+                        <div class="flex gap-1 mb-1">
+                            <div id="s1" class="strength-bar flex-1 bg-slate-200 dark:bg-slate-700" style="height:3px;border-radius:99px;transition:background .3s"></div>
+                            <div id="s2" class="strength-bar flex-1 bg-slate-200 dark:bg-slate-700" style="height:3px;border-radius:99px;transition:background .3s"></div>
+                            <div id="s3" class="strength-bar flex-1 bg-slate-200 dark:bg-slate-700" style="height:3px;border-radius:99px;transition:background .3s"></div>
+                            <div id="s4" class="strength-bar flex-1 bg-slate-200 dark:bg-slate-700" style="height:3px;border-radius:99px;transition:background .3s"></div>
+                        </div>
+                        <p id="strengthLabel" class="text-[11px] font-semibold text-slate-400"></p>
+                    </div>
+                </div>
+
+                <!-- Alert message -->
+                <div id="alertMsg" class="hidden anim-up"></div>
+
+                <!-- Submit -->
+                <div class="anim-up delay-3 pt-1">
+                    <button type="submit" id="btnSubmit" class="btn-submit">
+                        <span id="btnContent">
+                            <span id="btnText">Entrar</span>
+                        </span>
+                        <div id="btnSpinner" class="spinner hidden"></div>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Toggle mode -->
+            <p class="text-center text-sm text-slate-400 dark:text-slate-500 mt-5 anim-up delay-4">
+                <span id="toggleLabel">Não tem conta?</span>
+                <a href="#" id="toggleMode" class="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-1 transition">Criar conta grátis</a>
+            </p>
+
+            <!-- Back to app (after success) -->
+            <div id="successState" class="hidden text-center mt-6 anim-up">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl mb-3">
+                    <i class="fas fa-check text-emerald-500 text-xl"></i>
+                </div>
+                <p class="text-slate-700 dark:text-slate-300 font-bold">Conta criada!</p>
+                <p class="text-slate-400 text-sm mt-1">Agora faça login para acessar.</p>
+            </div>
+
         </div>
     </div>
 
     <script>
-        const form = document.getElementById('authForm');
-        const toggleLink = document.getElementById('toggleMode');
-        const btnSubmit = document.getElementById('btnSubmit');
-        const errorMsg = document.getElementById('errorMsg');
+        const API_URL = 'https://financeiro-app-okjm.onrender.com';
         let isLogin = true;
 
-        // Se já estiver logado, vai direto pro app
-        if(localStorage.getItem('inf_auth_token')) {
-            window.location.href = 'index.html';
-        }
-
-        toggleLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            isLogin = !isLogin;
-            btnSubmit.innerText = isLogin ? 'Entrar' : 'Criar Conta';
-            toggleLink.innerText = isLogin ? 'Criar conta' : 'Já tenho conta';
-            errorMsg.classList.add('hidden');
+        // Theme toggle
+        document.getElementById('btnTheme').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
         });
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const API_URL = 'https://financeiro-app-okjm.onrender.com';
-            const endpoint = isLogin ? `${API_URL}/login` : `${API_URL}/register`;
+        // Password visibility
+        function togglePwd() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') { pwd.type = 'text'; icon.className = 'fas fa-eye-slash'; }
+            else { pwd.type = 'password'; icon.className = 'fas fa-eye'; }
+        }
 
-            btnSubmit.disabled = true;
-            btnSubmit.innerText = 'Processando...';
+        // Password strength
+        function checkStrength(val) {
+            if (!document.getElementById('strengthWrap').classList.contains('hidden') === false) return;
+            const bars = [s1, s2, s3, s4];
+            const label = document.getElementById('strengthLabel');
+            let score = 0;
+            if (val.length >= 6) score++;
+            if (val.length >= 10) score++;
+            if (/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+
+            const colors = ['#ef4444','#f97316','#eab308','#22c55e'];
+            const labels = ['Muito fraca','Fraca','Média','Forte'];
+            bars.forEach((b, i) => { b.style.background = i < score ? colors[score - 1] : ''; });
+            label.textContent = val.length > 0 ? labels[Math.min(score, 3)] : '';
+            label.style.color = score > 0 ? colors[score - 1] : '';
+        }
+
+        // Toggle login/register
+        document.getElementById('toggleMode').addEventListener('click', (e) => {
+            e.preventDefault();
+            isLogin = !isLogin;
+            document.getElementById('formTitle').textContent    = isLogin ? 'Bem-vindo de volta' : 'Crie sua conta';
+            document.getElementById('formSubtitle').textContent = isLogin ? 'Acesse sua conta para continuar' : 'Grátis para sempre · Sem cartão';
+            document.getElementById('btnText').textContent      = isLogin ? 'Entrar' : 'Criar Conta';
+            document.getElementById('toggleLabel').textContent  = isLogin ? 'Não tem conta?' : 'Já tem conta?';
+            document.getElementById('toggleMode').textContent   = isLogin ? 'Criar conta grátis' : 'Fazer login';
+            document.getElementById('strengthWrap').classList.toggle('hidden', isLogin);
+            document.getElementById('alertMsg').classList.add('hidden');
+            document.getElementById('password').value = '';
+        });
+
+        function showAlert(msg, type = 'error') {
+            const el = document.getElementById('alertMsg');
+            el.className = `alert alert-${type} anim-up`;
+            el.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'check-circle'}"></i><span>${msg}</span>`;
+            el.classList.remove('hidden');
+        }
+
+        // Submit
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email    = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const btn      = document.getElementById('btnSubmit');
+            const btnText  = document.getElementById('btnText');
+            const spinner  = document.getElementById('btnSpinner');
+
+            btn.disabled = true;
+            btnText.textContent = isLogin ? 'Entrando...' : 'Criando conta...';
+            spinner.classList.remove('hidden');
+            document.getElementById('alertMsg').classList.add('hidden');
 
             try {
-                const res = await fetch(endpoint, {
+                const endpoint = isLogin ? `${API_URL}/login` : `${API_URL}/register`;
+                const res  = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -82,23 +405,35 @@
 
                 if (data.success) {
                     if (isLogin) {
-                        // Salva o "Sessão" no navegador
                         localStorage.setItem('inf_auth_token', data.token);
                         localStorage.setItem('inf_user_email', data.email);
-                        window.location.href = 'index.html';
+                        btnText.textContent = 'Acessando...';
+                        setTimeout(() => { window.location.href = 'index.html'; }, 300);
                     } else {
-                        alert('Conta criada! Agora faça login.');
-                        location.reload();
+                        document.getElementById('authForm').classList.add('hidden');
+                        document.getElementById('successState').classList.remove('hidden');
+                        setTimeout(() => {
+                            document.getElementById('authForm').classList.remove('hidden');
+                            document.getElementById('successState').classList.add('hidden');
+                            isLogin = true;
+                            document.getElementById('formTitle').textContent    = 'Bem-vindo de volta';
+                            document.getElementById('formSubtitle').textContent = 'Acesse sua conta para continuar';
+                            document.getElementById('btnText').textContent      = 'Entrar';
+                            document.getElementById('toggleLabel').textContent  = 'Não tem conta?';
+                            document.getElementById('toggleMode').textContent   = 'Criar conta grátis';
+                            document.getElementById('strengthWrap').classList.add('hidden');
+                            document.getElementById('password').value = '';
+                        }, 2500);
                     }
                 } else {
-                    throw new Error(data.message || data.error);
+                    throw new Error(data.message || data.error || 'Erro ao processar requisição');
                 }
             } catch (err) {
-                errorMsg.innerText = err.message;
-                errorMsg.classList.remove('hidden');
+                showAlert(err.message);
             } finally {
-                btnSubmit.disabled = false;
-                btnSubmit.innerText = isLogin ? 'Entrar' : 'Criar Conta';
+                btn.disabled = false;
+                btnText.textContent = isLogin ? 'Entrar' : 'Criar Conta';
+                spinner.classList.add('hidden');
             }
         });
     </script>
