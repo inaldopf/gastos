@@ -1,4 +1,5 @@
 import { store } from './store.js';
+import { escapeHTML } from './utils.js';
 
 export const Objectives = {
     render() {
@@ -76,7 +77,7 @@ export const Objectives = {
                             <i class="${isCompleted ? 'fas fa-check text-emerald-500' : 'fas fa-star text-indigo-500'} text-xs"></i>
                         </div>
                         <div class="min-w-0">
-                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base leading-tight truncate">${obj.title}</h3>
+                            <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base leading-tight truncate">${escapeHTML(obj.title)}</h3>
                             <p class="text-[11px] text-slate-400 font-medium mt-0.5">Meta <span class="blur-target font-bold text-slate-500 dark:text-slate-400">R$ ${target.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></p>
                         </div>
                     </div>

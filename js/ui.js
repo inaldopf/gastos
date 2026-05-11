@@ -1,4 +1,5 @@
 import { store } from './store.js';
+import { escapeHTML } from './utils.js';
 
 let chartInstance = null;
 
@@ -137,9 +138,9 @@ export const UI = {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
             tr.innerHTML = `
-                <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${t.date}</td>
-                <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${t.desc}</td>
-                <td class="px-4 py-3"><span class="${catData.color} text-xs font-bold uppercase"><i class="fas ${catData.icon}"></i> ${t.category}</span></td>
+                <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${escapeHTML(t.date)}</td>
+                <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${escapeHTML(t.desc)}</td>
+                <td class="px-4 py-3"><span class="${catData.color} text-xs font-bold uppercase"><i class="fas ${catData.icon}"></i> ${escapeHTML(t.category)}</span></td>
                 <td class="px-4 py-3 font-semibold text-right ${t.type === 'Receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">
                     <span class="blur-target">${t.type === 'Receita' ? '+' : '-'} R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </td>

@@ -1,5 +1,5 @@
 import { store } from './store.js';
-import { getMonthName } from './utils.js';
+import { getMonthName, escapeHTML } from './utils.js';
 
 export const Cards = {
     render(selectedMonths = []) {
@@ -146,7 +146,7 @@ export const Cards = {
                 <div class="flex items-center gap-2.5 mb-4">
                     <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0"><i class="far fa-credit-card text-purple-500 text-xs"></i></div>
                     <div class="min-w-0">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight truncate">${card.name}</h3>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight truncate">${escapeHTML(card.name)}</h3>
                         <p class="text-[11px] text-slate-400 font-medium mt-0.5">Vence dia ${card.due_day}</p>
                     </div>
                 </div>
@@ -185,8 +185,8 @@ export const Cards = {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
             tr.innerHTML = `
-                <td><span class="badge badge-indigo">${cardName}</span></td>
-                <td class="font-bold text-slate-700 dark:text-slate-200">${t.description}</td>
+                <td><span class="badge badge-indigo">${escapeHTML(cardName)}</span></td>
+                <td class="font-bold text-slate-700 dark:text-slate-200">${escapeHTML(t.description)}</td>
                 <td class="text-center text-xs text-slate-500">${t.installments > 1 ? `${t.current_installment}/${t.installments}` : '—'}</td>
                 <td class="text-right font-bold text-red-500"><span class="blur-target">R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
                 <td class="text-center"><button onclick="window.deleteCardTransaction(${t.id})" class="btn-danger-ghost"><i class="fas fa-trash text-xs"></i></button></td>

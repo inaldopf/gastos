@@ -3,6 +3,7 @@ import { UI } from './ui.js';
 import { Dashboard } from './dashboard.js';
 import { Goals } from './goals.js';
 import { VA } from './va.js';
+import { escapeHTML } from './utils.js';
 import { Objectives } from './objectives.js';
 import { Cards } from './cards.js';
 import { getMonthName } from './utils.js';
@@ -162,7 +163,7 @@ function renderDebts() {
         const tr = document.createElement('tr');
         tr.className = d.paid ? 'opacity-50' : '';
         tr.innerHTML = `
-            <td class="font-bold text-slate-700 dark:text-slate-200">${d.name}</td>
+            <td class="font-bold text-slate-700 dark:text-slate-200">${escapeHTML(d.name)}</td>
             <td class="text-right font-bold text-slate-700 dark:text-slate-200"><span class="blur-target">R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
             <td class="text-center">${d.paid ? '<span class="badge badge-green">Pago</span>' : '<span class="badge" style="background:#fef3c7;color:#92400e">Pendente</span>'}</td>
             <td class="text-center"><div class="flex justify-center gap-1">
@@ -427,7 +428,7 @@ function setupEvents() {
         });
     }
     
-    const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); window.location.href = 'login.html'; }});
+    const btnLogout = document.getElementById('btnLogout'); if (btnLogout) btnLogout.addEventListener('click', () => { if(confirm("Sair?")) { localStorage.removeItem('inf_auth_token'); localStorage.removeItem('finance_data_cache'); window.location.href = 'login.html'; }});
     const btnSettings = document.getElementById('btnSettings'); if(btnSettings) btnSettings.addEventListener('click', () => { const key = prompt("API Key Gemini:", localStorage.getItem('gemini_api_key') || ''); if (key) localStorage.setItem('gemini_api_key', key); });
     const btnReset = document.getElementById('btnReset'); if(btnReset) btnReset.addEventListener('click', () => location.reload());
     
