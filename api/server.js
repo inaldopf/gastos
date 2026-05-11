@@ -20,8 +20,9 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
     origin: (origin, callback) => {
+        // Permite requisições sem origin (ex: apps mobile, Postman) e origens da lista
         if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-        callback(new Error('Origem não permitida pelo CORS'));
+        callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
