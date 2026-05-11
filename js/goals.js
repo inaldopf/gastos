@@ -32,18 +32,26 @@ export const Goals = {
         
         const surplusEl = document.getElementById('goalProjectedSurplus');
         surplusEl.innerText = `R$ ${surplus.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        surplusEl.className = `text-xl font-bold blur-target ${surplus >= meta ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`;
+        surplusEl.classList.remove('text-slate-900', 'dark:text-white', 'text-emerald-600', 'dark:text-emerald-400', 'text-red-500');
+        if (surplus >= meta) {
+            surplusEl.classList.add('text-emerald-600', 'dark:text-emerald-400');
+        } else {
+            surplusEl.classList.add('text-red-500');
+        }
 
         const progress = income > 0 ? ((income - fixedExpenses) / income) * 100 : 0;
         const bar = document.getElementById('goalBudgetBar');
         bar.style.width = `${Math.min(Math.max(progress, 0), 100)}%`;
-        bar.className = `h-1.5 rounded-full transition-all duration-500 ${surplus >= meta ? 'bg-emerald-500' : 'bg-red-500'}`;
+        bar.classList.remove('bg-emerald-500', 'bg-red-500');
+        bar.classList.add(surplus >= meta ? 'bg-emerald-500' : 'bg-red-500');
 
         const msg = document.getElementById('goalBudgetMsg');
         if (surplus >= meta) {
-            msg.innerText = "Planejamento Seguro"; msg.className = "text-xs font-bold text-emerald-600 mt-1 text-right";
+            msg.innerText = "Planejamento Seguro";
+            msg.className = "text-[11px] font-bold text-emerald-600";
         } else {
-            msg.innerText = "Alerta: Meta Comprometida"; msg.className = "text-xs font-bold text-red-500 mt-1 text-right";
+            msg.innerText = "Alerta: Meta Comprometida";
+            msg.className = "text-[11px] font-bold text-red-500";
         }
 
         this.renderGoalsList(selectedMonths);
@@ -126,18 +134,20 @@ export const Goals = {
             chartBudget.push(budget);
 
             const div = document.createElement('div');
-            div.className = "bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 relative group overflow-hidden";
+            div.className = "p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/40 relative group transition";
             div.innerHTML = `
-                <div class="flex justify-between text-sm mb-2 relative z-10">
+                <div class="flex justify-between items-baseline text-sm mb-2 relative z-10">
                     <span class="font-bold text-slate-700 dark:text-slate-300">${g.category}</span>
-                    <span class="font-semibold text-slate-500 dark:text-slate-400 blur-target">
-                        <span class="${pct > 100 ? 'text-red-500' : ''}">R$ ${spent.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span> / R$ ${budget.toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                    <span class="font-semibold text-xs text-slate-400 dark:text-slate-500 blur-target">
+                        <span class="${pct > 100 ? 'text-red-500 font-bold' : 'text-slate-700 dark:text-slate-300'}">R$ ${spent.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>
+                        <span class="mx-1">/</span>
+                        R$ ${budget.toLocaleString('pt-BR', {minimumFractionDigits:2})}
                     </span>
                 </div>
-                <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2 relative z-10 overflow-hidden">
-                    <div class="${barColor} h-2 rounded-full transition-all duration-500" style="width: ${Math.min(pct, 100)}%"></div>
+                <div class="progress-track relative z-10">
+                    <div class="${barColor} progress-fill" style="width: ${Math.min(pct, 100)}%"></div>
                 </div>
-                <button onclick="window.removeGoal('${g.category}')" class="absolute top-0 right-0 h-full px-4 bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center translate-x-full group-hover:translate-x-0 duration-300 z-20">
+                <button onclick="window.removeGoal('${g.category}')" class="absolute top-1/2 -translate-y-1/2 right-2 w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 opacity-0 group-hover:opacity-100 transition flex items-center justify-center z-20 text-xs" title="Remover">
                     <i class="fas fa-trash"></i>
                 </button>
             `;

@@ -12,6 +12,27 @@ export const Cards = {
 
         document.getElementById('cardMonthDisplay').innerText = `Referência: ${targetMonth}`;
 
+        // KPIs agregados
+        const cards = store.cards || [];
+        const txs = store.cardTransactions || [];
+        const monthInvoice = txs.filter(t => t.month === targetMonth).reduce((a, t) => a + parseFloat(t.amount), 0);
+        const totalLimit = cards.reduce((a, c) => a + parseFloat(c.limit_amount || 0), 0);
+        const totalUsed = txs.reduce((a, t) => a + parseFloat(t.amount), 0);
+        const pctUsed = totalLimit > 0 ? Math.min((totalUsed / totalLimit) * 100, 100) : 0;
+        const available = Math.max(totalLimit - totalUsed, 0);
+        const elI = document.getElementById('cardsTotalInvoice');
+        if (elI) elI.innerText = `R$ ${monthInvoice.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        const elL = document.getElementById('cardsLimitUsed');
+        if (elL) elL.innerText = `${pctUsed.toFixed(0)}%`;
+        const elB = document.getElementById('cardsLimitBar');
+        if (elB) {
+            elB.style.width = `${pctUsed}%`;
+            elB.classList.remove('bg-indigo-500','bg-amber-500','bg-red-500');
+            elB.classList.add(pctUsed > 80 ? 'bg-red-500' : pctUsed > 50 ? 'bg-amber-500' : 'bg-indigo-500');
+        }
+        const elA = document.getElementById('cardsAvailable');
+        if (elA) elA.innerText = `R$ ${available.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+
         this.setupForms();
         this.renderCardsOverview(targetMonth);
         this.renderTransactionsTable(targetMonth);
@@ -119,33 +140,27 @@ export const Cards = {
             const barColor = percentUsed > 80 ? 'bg-red-500' : percentUsed > 50 ? 'bg-yellow-500' : 'bg-purple-500';
 
             const div = document.createElement('div');
-            div.className = "glass p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group";
+            div.className = "bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm p-5 relative group";
             div.innerHTML = `
-                <button onclick="window.deleteCard(${card.id})" class="absolute top-4 right-4 text-slate-300 hover:text-red-500 transition opacity-0 group-hover:opacity-100"><i class="fas fa-trash"></i></button>
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="font-bold text-slate-800 dark:text-slate-200 text-lg flex items-center gap-2"><i class="far fa-credit-card text-slate-400"></i> ${card.name}</h3>
-                        <p class="text-[10px] font-bold text-slate-400 mt-1 uppercase">Venc: Dia ${card.due_day}</p>
+                <button onclick="window.deleteCard(${card.id})" class="absolute top-3 right-3 btn-danger-ghost opacity-0 group-hover:opacity-100 transition"><i class="fas fa-trash text-xs"></i></button>
+                <div class="flex items-center gap-2.5 mb-4">
+                    <div class="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0"><i class="far fa-credit-card text-purple-500 text-xs"></i></div>
+                    <div class="min-w-0">
+                        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm leading-tight truncate">${card.name}</h3>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Vence dia ${card.due_day}</p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase">Fatura Atual</p>
-                        <p class="text-xl font-bold text-slate-800 dark:text-slate-200 blur-target">R$ ${invoiceTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
-                    </div>
-                </div>
-                
-                <div class="mb-2 flex justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    <span>Limite Usado: ${percentUsed.toFixed(1)}%</span>
-                    <span class="blur-target">Disp: R$ ${available.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                </div>
-                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                    <div class="${barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${Math.min(percentUsed, 100)}%"></div>
                 </div>
 
-                <div class="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 flex gap-2">
-                    <button onclick="window.payInvoice(${card.id}, '${card.name}', ${invoiceTotal}, '${targetMonth}')" class="flex-1 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 font-bold py-2 rounded-lg text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition border border-emerald-100 dark:border-emerald-800">
-                        <i class="fas fa-check-double mr-1"></i> Pagar Fatura
-                    </button>
+                <p class="lbl">Fatura Atual</p>
+                <p class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white blur-target leading-none mt-1">R$ ${invoiceTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+
+                <div class="mt-4 mb-2 flex justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span>Limite ${percentUsed.toFixed(0)}%</span>
+                    <span class="blur-target">Disp R$ ${available.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
+                <div class="progress-track"><div class="${barColor} progress-fill" style="width: ${Math.min(percentUsed, 100)}%"></div></div>
+
+                <button onclick="window.payInvoice(${card.id}, '${card.name}', ${invoiceTotal}, '${targetMonth}')" class="mt-4 w-full btn btn-ghost btn-sm font-bold"><i class="fas fa-check-double text-xs"></i> Pagar Fatura</button>
             `;
             container.appendChild(div);
         });
@@ -170,13 +185,11 @@ export const Cards = {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
             tr.innerHTML = `
-                <td class="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300"><span class="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-2 py-1 rounded text-[10px] uppercase">${cardName}</span></td>
-                <td class="px-4 py-3 text-slate-800 dark:text-slate-200">${t.description}</td>
-                <td class="px-4 py-3 text-center text-xs text-slate-500">${t.installments > 1 ? `${t.current_installment}/${t.installments}` : 'A pronto'}</td>
-                <td class="px-4 py-3 text-right font-bold text-red-500"><span class="blur-target">R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
-                <td class="px-4 py-3 text-center">
-                    <button onclick="window.deleteCardTransaction(${t.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                </td>
+                <td><span class="badge badge-indigo">${cardName}</span></td>
+                <td class="font-bold text-slate-700 dark:text-slate-200">${t.description}</td>
+                <td class="text-center text-xs text-slate-500">${t.installments > 1 ? `${t.current_installment}/${t.installments}` : '—'}</td>
+                <td class="text-right font-bold text-red-500"><span class="blur-target">R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
+                <td class="text-center"><button onclick="window.deleteCardTransaction(${t.id})" class="btn-danger-ghost"><i class="fas fa-trash text-xs"></i></button></td>
             `;
             list.appendChild(tr);
         });

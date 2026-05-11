@@ -151,24 +151,32 @@ window.updateAllViews = updateAllViews;
 function renderDebts() {
     const list = document.getElementById('debtList');
     const totalEl = document.getElementById('totalDebtAmount');
+    const paidEl = document.getElementById('totalDebtPaid');
+    const countEl = document.getElementById('totalDebtCount');
     if(!list) return;
     list.innerHTML = '';
-    let total = 0;
+    let total = 0, paidTotal = 0, activeCount = 0;
     (store.debtors||[]).forEach(d => {
-        if(!d.paid) total += parseFloat(d.amount||0);
+        const v = parseFloat(d.amount||0);
+        if(!d.paid) { total += v; activeCount++; } else { paidTotal += v; }
         const tr = document.createElement('tr');
-        tr.className = `hover:bg-slate-50 dark:hover:bg-slate-700 transition ${d.paid?'opacity-50':''} border-b border-slate-50 dark:border-slate-700`;
+        tr.className = d.paid ? 'opacity-50' : '';
         tr.innerHTML = `
-            <td class="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">${d.name}</td>
-            <td class="px-6 py-4 text-right font-bold text-slate-600 dark:text-slate-300"><span class="blur-target">R$ ${parseFloat(d.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
-            <td class="px-6 py-4 text-center">${d.paid ? '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">PAGO</span>' : '<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">PENDENTE</span>'}</td>
-            <td class="px-6 py-4 text-center flex justify-center gap-2">
-                <button onclick="window.toggleDebt(${d.id})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400"><i class="fas fa-check-circle"></i></button>
-                <button onclick="window.deleteDebt(${d.id})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-            </td>`;
+            <td class="font-bold text-slate-700 dark:text-slate-200">${d.name}</td>
+            <td class="text-right font-bold text-slate-700 dark:text-slate-200"><span class="blur-target">R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></td>
+            <td class="text-center">${d.paid ? '<span class="badge badge-green">Pago</span>' : '<span class="badge" style="background:#fef3c7;color:#92400e">Pendente</span>'}</td>
+            <td class="text-center"><div class="flex justify-center gap-1">
+                <button onclick="window.toggleDebt(${d.id})" class="btn btn-ghost btn-icon-sm text-emerald-500" title="${d.paid ? 'Reabrir' : 'Marcar como pago'}"><i class="fas fa-check text-xs"></i></button>
+                <button onclick="window.deleteDebt(${d.id})" class="btn-danger-ghost"><i class="fas fa-trash text-xs"></i></button>
+            </div></td>`;
         list.appendChild(tr);
     });
+    if ((store.debtors||[]).length === 0) {
+        list.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">Ninguém te deve nada por enquanto.</td></tr>';
+    }
     if(totalEl) totalEl.innerText = `R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    if(paidEl) paidEl.innerText = `R$ ${paidTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    if(countEl) countEl.innerText = activeCount.toString();
 }
 
 // 5. Globals
