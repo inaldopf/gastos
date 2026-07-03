@@ -10,6 +10,9 @@ const helmet = require('helmet');
 
 const app = express();
 
+// Atrás do proxy reverso do Render: necessário para o rate limit enxergar o IP real do cliente
+app.set('trust proxy', 1);
+
 // --- 2. SEGURANÇA: Headers HTTP ---
 app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' }
@@ -42,9 +45,16 @@ if (!JWT_SECRET) {
 }
 
 // --- 5. BANCO DE DADOS ---
+// DATABASE_CA (opcional): certificado CA em PEM para validar o servidor Postgres
+const sslConfig = process.env.DATABASE_SSL === 'false'
+    ? false
+    : process.env.DATABASE_CA
+        ? { rejectUnauthorized: true, ca: process.env.DATABASE_CA }
+        : { rejectUnauthorized: false };
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false }
+    ssl: sslConfig
 });
 
 if (!process.env.DATABASE_URL) {
@@ -84,6 +94,16 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Limite geral para todas as rotas (por IP), contra abuso mesmo com token válido
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 400,
+    message: { error: 'Muitas requisições. Tente novamente em alguns minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use(apiLimiter);
+
 // --- 7. MIDDLEWARE DE AUTENTICAÇÃO ---
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -100,7 +120,8 @@ function authenticateToken(req, res, next) {
 // --- 8. HELPERS DE VALIDAÇÃO ---
 function isValidAmount(val) {
     const n = parseFloat(val);
-    return !isNaN(n) && isFinite(n) && n >= 0;
+    // Teto do NUMERIC(10,2): evita 500 por overflow na coluna
+    return !isNaN(n) && isFinite(n) && n >= 0 && n <= 99999999.99;
 }
 
 function isValidDay(val) {
@@ -114,9 +135,16 @@ function isValidString(val, maxLen = 255) {
 
 // --- 9. ROTAS DE LOGIN/REGISTRO ---
 app.post('/register', loginLimiter, async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, inviteCode } = req.body;
     if (!isValidString(email, 255) || !isValidString(password, 255)) {
         return res.status(400).json({ success: false, error: 'Dados inválidos.' });
+    }
+    if (password.length < 8) {
+        return res.status(400).json({ success: false, error: 'A senha deve ter no mínimo 8 caracteres.' });
+    }
+    // Se REGISTER_SECRET estiver definido no ambiente, o cadastro exige o código de convite
+    if (process.env.REGISTER_SECRET && inviteCode !== process.env.REGISTER_SECRET) {
+        return res.status(403).json({ success: false, error: 'Cadastro restrito: código de convite inválido.' });
     }
     try {
         const hash = await bcrypt.hash(password, 10);
@@ -134,14 +162,15 @@ app.post('/login', loginLimiter, async (req, res) => {
     }
     try {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.trim()]);
-        if (result.rows.length === 0) return res.status(401).json({ success: false, message: 'Usuário não encontrado.' });
+        // Mensagem única para usuário inexistente e senha errada: evita enumeração de e-mails
+        if (result.rows.length === 0) return res.status(401).json({ success: false, message: 'E-mail ou senha incorretos.' });
 
         const user = result.rows[0];
         if (await bcrypt.compare(password, user.password)) {
             const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
             res.json({ success: true, token, email: user.email, meta: user.meta_sobra });
         } else {
-            res.status(401).json({ success: false, message: 'Senha incorreta.' });
+            res.status(401).json({ success: false, message: 'E-mail ou senha incorretos.' });
         }
     } catch (err) {
         console.error('Erro no login:', err);
@@ -539,6 +568,9 @@ app.post('/card-transactions', authenticateToken, async (req, res) => {
         return res.status(400).json({ error: 'Dados inválidos.' });
     }
     try {
+        // O cartão precisa pertencer ao usuário autenticado (anti-IDOR)
+        const ownCard = await pool.query('SELECT 1 FROM credit_cards WHERE id = $1 AND user_id = $2', [parseInt(card_id), req.user.id]);
+        if (ownCard.rows.length === 0) return res.status(403).json({ error: 'Cartão inválido.' });
         const result = await pool.query(
             'INSERT INTO card_transactions (user_id, card_id, description, amount, transaction_date, month, installments, current_installment) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
             [req.user.id, card_id, description, parseFloat(amount), date || null, month, parseInt(installments) || 1, parseInt(current_installment) || 1]

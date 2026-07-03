@@ -1,5 +1,6 @@
 import { store } from './store.js';
 import { UI } from './ui.js';
+import { escapeHTML } from './utils.js';
 
 let goalsChart = null;
 
@@ -137,7 +138,7 @@ export const Goals = {
             div.className = "p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900/40 relative group transition";
             div.innerHTML = `
                 <div class="flex justify-between items-baseline text-sm mb-2 relative z-10">
-                    <span class="font-bold text-slate-700 dark:text-slate-300">${g.category}</span>
+                    <span class="font-bold text-slate-700 dark:text-slate-300">${escapeHTML(g.category)}</span>
                     <span class="font-semibold text-xs text-slate-400 dark:text-slate-500 blur-target">
                         <span class="${pct > 100 ? 'text-red-500 font-bold' : 'text-slate-700 dark:text-slate-300'}">R$ ${spent.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>
                         <span class="mx-1">/</span>
@@ -147,10 +148,14 @@ export const Goals = {
                 <div class="progress-track relative z-10">
                     <div class="${barColor} progress-fill" style="width: ${Math.min(pct, 100)}%"></div>
                 </div>
-                <button onclick="window.removeGoal('${g.category}')" class="absolute top-1/2 -translate-y-1/2 right-2 w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 opacity-0 group-hover:opacity-100 transition flex items-center justify-center z-20 text-xs" title="Remover">
+                <button class="absolute top-1/2 -translate-y-1/2 right-2 w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-500 opacity-0 group-hover:opacity-100 transition flex items-center justify-center z-20 text-xs" title="Remover">
                     <i class="fas fa-trash"></i>
                 </button>
             `;
+            // Listener em vez de onclick inline: a categoria nunca vira código
+            div.querySelector('button[title="Remover"]').addEventListener('click', function() {
+                window.removeGoal(g.category, this);
+            });
             list.appendChild(div);
         });
 
@@ -195,11 +200,10 @@ export const Goals = {
     }
 };
 
-window.removeGoal = async (cat) => {
+window.removeGoal = async (cat, btnEl) => {
     if(confirm(`Remover limite de ${cat}?`)) {
-        const btnText = document.querySelector(`button[onclick="window.removeGoal('${cat}')"]`);
-        if(btnText) btnText.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        await store.setCategoryGoal(cat, 0); 
+        if(btnEl) btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        await store.setCategoryGoal(cat, 0);
         window.updateAllViews();
     }
 };

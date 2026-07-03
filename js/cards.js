@@ -160,7 +160,7 @@ export const Cards = {
                 </div>
                 <div class="progress-track"><div class="${barColor} progress-fill" style="width: ${Math.min(percentUsed, 100)}%"></div></div>
 
-                <button onclick="window.payInvoice(${card.id}, '${card.name}', ${invoiceTotal}, '${targetMonth}')" class="mt-4 w-full btn btn-ghost btn-sm font-bold"><i class="fas fa-check-double text-xs"></i> Pagar Fatura</button>
+                <button onclick="window.payInvoice(${card.id}, ${invoiceTotal}, '${targetMonth}')" class="mt-4 w-full btn btn-ghost btn-sm font-bold"><i class="fas fa-check-double text-xs"></i> Pagar Fatura</button>
             `;
             container.appendChild(div);
         });
@@ -210,7 +210,9 @@ window.deleteCardTransaction = async (id) => {
     }
 };
 
-window.payInvoice = async (cardId, cardName, invoiceTotal, month) => {
+window.payInvoice = async (cardId, invoiceTotal, month) => {
+    const cardObj = (store.cards || []).find(c => c.id === cardId);
+    const cardName = cardObj ? cardObj.name : 'Cartão';
     if (invoiceTotal <= 0) return alert("A fatura deste mês está a zero!");
     if (confirm(`Pagar a fatura de R$ ${invoiceTotal.toLocaleString('pt-BR')} do cartão ${cardName} e descontar do saldo principal?`)) {
         await store.addTransaction({
