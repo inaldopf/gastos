@@ -140,7 +140,7 @@ export const Cards = {
             const barColor = percentUsed > 80 ? 'bg-red-500' : percentUsed > 50 ? 'bg-yellow-500' : 'bg-purple-500';
 
             const div = document.createElement('div');
-            div.className = "bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm p-5 relative group";
+            div.className = "bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 p-5 relative group";
             div.innerHTML = `
                 <button onclick="window.deleteCard(${card.id})" class="absolute top-3 right-3 btn-danger-ghost opacity-0 group-hover:opacity-100 transition"><i class="fas fa-trash text-xs"></i></button>
                 <div class="flex items-center gap-2.5 mb-4">

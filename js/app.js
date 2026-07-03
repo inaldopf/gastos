@@ -153,8 +153,8 @@ function renderBankBar() {
     const bar = document.getElementById('bankBar');
     if (!bar) return;
 
-    const activeCls = "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border-2 border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 transition text-left";
-    const inactiveCls = "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border-2 border-slate-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-800 transition text-left";
+    const activeCls = "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 transition text-left";
+    const inactiveCls = "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-white dark:bg-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800 transition text-left";
 
     bar.innerHTML = '';
 

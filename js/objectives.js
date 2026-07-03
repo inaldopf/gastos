@@ -57,7 +57,7 @@ export const Objectives = {
         if (bEl) bEl.style.width = `${pct}%`;
 
         if (objectives.length === 0) {
-            list.innerHTML = '<div class="md:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 p-10 text-center text-slate-400 text-sm">Você ainda não definiu nenhum sonho.</div>';
+            list.innerHTML = '<div class="md:col-span-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 p-10 text-center text-slate-400 text-sm">Você ainda não definiu nenhum sonho.</div>';
             return;
         }
 
@@ -68,7 +68,7 @@ export const Objectives = {
             const isCompleted = current >= target;
 
             const div = document.createElement('div');
-            div.className = "bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm p-5 relative group";
+            div.className = "bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 p-5 relative group";
             
             div.innerHTML = `
                 <div class="flex items-start justify-between mb-4">
