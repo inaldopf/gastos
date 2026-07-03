@@ -16,17 +16,32 @@
             }
         } catch(e) {}
         if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
-        tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{ slate:{ 850:'#151e2e' } }, fontFamily:{ sans:['"Plus Jakarta Sans"','sans-serif'] } } } };
+        // Escala "indigo" remapeada para o verde-petróleo da marca: rebatiza todo o app
+        // (HTML e classes montadas no JS) sem tocar em nenhum seletor.
+        tailwind.config = { darkMode:'class', theme:{ extend:{ colors:{
+            slate:{ 50:'#f4f7f6', 850:'#151e2e' },
+            indigo:{ 50:'#ecfaf4', 100:'#d2f3e5', 200:'#a8e6cd', 300:'#72d3af', 400:'#3cba8f', 500:'#17a377', 600:'#0b8a62', 700:'#086f50', 800:'#0a5941', 900:'#0a4936', 950:'#052e22' }
+        }, fontFamily:{ sans:['Sora','sans-serif'], mono:['"IBM Plex Mono"','ui-monospace','monospace'] } } } };
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha384-iw3OoTErCYJJB9mCa8LNS2hbsQ7M3C0EpIsO/H5+EGAkPGc6rk+V8i04oW/K5xq0" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
     <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
     <script type="importmap">{ "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } }</script>
 
     <style>
         *, *::before, *::after { box-sizing: border-box; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+        body { font-family: 'Sora', sans-serif; }
+
+        /* ─── Assinatura: valores monetários em mono tabular (leitura de ledger) ─── */
+        .blur-target { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-feature-settings: 'tnum' 1; letter-spacing: -.02em; }
+
+        /* ─── Acessibilidade ─── */
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #17a377; outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+        }
 
         /* ─── Scrollbar ─── */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -72,14 +87,14 @@
         .kpi-card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
         .kpi-green::after  { background:linear-gradient(90deg,#10b981,#6ee7b7); }
         .kpi-red::after    { background:linear-gradient(90deg,#ef4444,#fca5a5); }
-        .kpi-indigo::after { background:linear-gradient(90deg,#6366f1,#a5b4fc); }
+        .kpi-indigo::after { background:linear-gradient(90deg,#17a377,#72d3af); }
         .kpi-amber::after  { background:linear-gradient(90deg,#f59e0b,#fde68a); }
 
         /* ─── Input ─── */
         .inp { width:100%; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px 14px; font-size:.875rem; font-weight:500; color:#1e293b; outline:none; transition:border-color .15s,box-shadow .15s; font-family:inherit; }
-        .inp:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgb(99 102 241/.1); background:white; }
+        .inp:focus { border-color:#17a377; box-shadow:0 0 0 3px rgb(23 163 119/.1); background:white; }
         .dark .inp { background:#0f172a; border-color:#334155; color:#e2e8f0; }
-        .dark .inp:focus { border-color:#818cf8; background:#0f172a; }
+        .dark .inp:focus { border-color:#3cba8f; background:#0f172a; }
         select.inp { appearance:none; cursor:pointer; }
 
         /* ─── Label ─── */
@@ -89,8 +104,8 @@
         .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; font-weight:700; border:none; cursor:pointer; border-radius:10px; font-family:inherit; transition:all .15s; }
         .btn-sm { font-size:.8rem; padding:8px 14px; }
         .btn-md { font-size:.875rem; padding:10px 18px; }
-        .btn-primary { background:#4f46e5; color:white; box-shadow:0 1px 4px rgb(79 70 229/.3); }
-        .btn-primary:hover { background:#4338ca; box-shadow:0 3px 10px rgb(79 70 229/.35); }
+        .btn-primary { background:#0b8a62; color:white; box-shadow:0 1px 4px rgb(11 138 98/.3); }
+        .btn-primary:hover { background:#086f50; box-shadow:0 3px 10px rgb(11 138 98/.35); }
         .btn-primary:active { transform:scale(.97); }
         .btn-ghost { background:transparent; color:#64748b; border:1.5px solid #e2e8f0; }
         .btn-ghost:hover { background:#f8fafc; }
@@ -117,11 +132,11 @@
         .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:99px; font-size:.7rem; font-weight:700; }
         .badge-green  { background:#dcfce7; color:#15803d; }
         .badge-red    { background:#fee2e2; color:#dc2626; }
-        .badge-indigo { background:#e0e7ff; color:#4338ca; }
+        .badge-indigo { background:#d2f3e5; color:#086f50; }
         .badge-slate  { background:#f1f5f9; color:#475569; }
         .dark .badge-green  { background:rgb(20 83 45/.3);  color:#4ade80; }
         .dark .badge-red    { background:rgb(127 29 29/.3); color:#f87171; }
-        .dark .badge-indigo { background:rgb(49 46 129/.3); color:#a5b4fc; }
+        .dark .badge-indigo { background:rgb(10 73 54/.3); color:#72d3af; }
         .dark .badge-slate  { background:rgb(30 41 59/.8);  color:#94a3b8; }
 
         /* ─── Sidebar ─── */

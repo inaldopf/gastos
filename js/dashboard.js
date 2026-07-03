@@ -117,7 +117,7 @@ export const Dashboard = {
                 datasets: [{
                     label: 'Saldo Acumulado',
                     data: data,
-                    borderColor: window.IS_PINK_THEME ? '#ec4899' : '#6366f1',
+                    borderColor: window.IS_PINK_THEME ? '#ec4899' : '#17a377',
                     backgroundColor: window.IS_PINK_THEME ? 'rgba(236, 72, 153, 0.1)' : 'rgba(99, 102, 241, 0.1)',
                     borderWidth: 2,
                     fill: true,
@@ -183,7 +183,7 @@ export const Dashboard = {
                 labels: ['Necessidades (Alvo 50%)', 'Desejos (Alvo 30%)', 'Investimentos (Alvo 20%)'],
                 datasets: [{
                     data: [expense * 0.6, expense * 0.4, invest], // Estimativa simplificada (60/40 das despesas)
-                    backgroundColor: [window.IS_PINK_THEME ? '#ec4899' : '#6366f1', '#f59e0b', '#10b981'],
+                    backgroundColor: [window.IS_PINK_THEME ? '#ec4899' : '#17a377', '#f59e0b', '#10b981'],
                     borderColor: isDark ? '#1e293b' : '#ffffff',
                     borderWidth: 2
                 }]
