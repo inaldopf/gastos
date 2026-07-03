@@ -11,8 +11,68 @@ export const store = {
     vaTransactions: [],
     cards: [],
     cardTransactions: [],
+    banks: [],
 
     getToken() { return localStorage.getItem('inf_auth_token'); },
+
+    // --- BANCOS ---
+    getBankName(id) {
+        const b = this.banks.find(x => x.id === id);
+        return b ? b.name : '—';
+    },
+
+    async addBank(name) {
+        const token = this.getToken();
+        try {
+            const res = await fetch(`${API_URL}/banks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ name })
+            });
+            if (!res.ok) throw new Error();
+            const dbItem = await res.json();
+            this.banks.push(dbItem);
+            this.saveToCache();
+            return dbItem;
+        } catch (e) { alert("Erro ao criar banco."); return null; }
+    },
+
+    async renameBank(id, name) {
+        const token = this.getToken();
+        const idx = this.banks.findIndex(b => b.id === id);
+        if (idx === -1) return;
+        const oldName = this.banks[idx].name;
+        this.banks[idx].name = name;
+        this.saveToCache();
+        try {
+            const res = await fetch(`${API_URL}/banks/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ name })
+            });
+            if (!res.ok) throw new Error();
+        } catch (e) {
+            this.banks[idx].name = oldName;
+            this.saveToCache();
+            alert("Erro ao renomear banco.");
+        }
+    },
+
+    async removeBank(id) {
+        const token = this.getToken();
+        try {
+            const res = await fetch(`${API_URL}/banks/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.status === 409) {
+                const d = await res.json();
+                alert(d.error);
+                return false;
+            }
+            if (!res.ok) throw new Error();
+            this.banks = this.banks.filter(b => b.id !== id);
+            this.saveToCache();
+            return true;
+        } catch (e) { alert("Erro ao excluir banco."); return false; }
+    },
 
     saveToCache() {
         const data = {
@@ -25,6 +85,7 @@ export const store = {
             vaTransactions: this.vaTransactions,
             cards: this.cards,
             cardTransactions: this.cardTransactions,
+            banks: this.banks,
             timestamp: new Date().getTime()
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -44,6 +105,7 @@ export const store = {
                 this.vaTransactions = data.vaTransactions || [];
                 this.cards = data.cards || [];
                 this.cardTransactions = data.cardTransactions || [];
+                this.banks = data.banks || [];
                 return true;
             } catch (e) { return false; }
         }
@@ -56,7 +118,7 @@ export const store = {
         this.loadFromCache();
 
         try {
-            const [resTrans, resDebt, resMeta, resGoals, resVA, resObj, resCards, resCardTrans] = await Promise.all([
+            const [resTrans, resDebt, resMeta, resGoals, resVA, resObj, resCards, resCardTrans, resBanks] = await Promise.all([
                 fetch(`${API_URL}/transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/debtors`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/meta`, { headers: { 'Authorization': `Bearer ${token}` } }),
@@ -64,7 +126,8 @@ export const store = {
                 fetch(`${API_URL}/va`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/objectives`, { headers: { 'Authorization': `Bearer ${token}` } }),
                 fetch(`${API_URL}/cards`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${API_URL}/card-transactions`, { headers: { 'Authorization': `Bearer ${token}` } })
+                fetch(`${API_URL}/card-transactions`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${API_URL}/banks`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
 
             if (resTrans.ok) {
@@ -81,8 +144,9 @@ export const store = {
                         amount: parseFloat(dbItem.amount),
                         type: dbItem.type,
                         category: dbItem.category,
-                        date: dateStr, 
-                        month: dbItem.month
+                        date: dateStr,
+                        month: dbItem.month,
+                        bank_id: dbItem.bank_id || null
                     };
                 });
             }
@@ -102,6 +166,7 @@ export const store = {
             }
             if (resCards && resCards.ok) this.cards = await resCards.json();
             if (resCardTrans && resCardTrans.ok) this.cardTransactions = await resCardTrans.json();
+            if (resBanks && resBanks.ok) this.banks = await resBanks.json();
             
             this.saveToCache();
         } catch (error) { 
@@ -115,6 +180,7 @@ export const store = {
 
     async addTransaction(data) {
         const token = this.getToken();
+        if (!data.bank_id && this.banks.length > 0) data.bank_id = this.banks[0].id;
         const tempId = Date.now();
         const newItem = { ...data, id: tempId, isTemp: true };
         this.transactions.unshift(newItem);
@@ -136,6 +202,38 @@ export const store = {
             this.transactions = this.transactions.filter(t => t.id !== tempId);
             this.saveToCache();
             alert("Erro ao salvar.");
+        }
+    },
+
+    async transferBetweenBanks(amount, fromBankId, toBankId, date, month) {
+        const token = this.getToken();
+        const val = parseFloat(amount);
+        const tempOutId = Date.now();
+        const tempInId = tempOutId + 1;
+
+        this.transactions.unshift(
+            { id: tempInId, desc: `Transferência de ${this.getBankName(fromBankId)}`, amount: val, type: 'Receita', category: 'Transferência', date, month, bank_id: toBankId, isTemp: true },
+            { id: tempOutId, desc: `Transferência para ${this.getBankName(toBankId)}`, amount: val, type: 'Despesa', category: 'Transferência', date, month, bank_id: fromBankId, isTemp: true }
+        );
+        this.saveToCache();
+
+        try {
+            const res = await fetch(`${API_URL}/transfer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ amount: val, fromBankId, toBankId, date, month })
+            });
+            if (!res.ok) throw new Error('Falha na transferência');
+            const d = await res.json();
+            const outIdx = this.transactions.findIndex(t => t.id === tempOutId);
+            if (outIdx !== -1) { this.transactions[outIdx].id = d.outTransaction.id; delete this.transactions[outIdx].isTemp; }
+            const inIdx = this.transactions.findIndex(t => t.id === tempInId);
+            if (inIdx !== -1) { this.transactions[inIdx].id = d.inTransaction.id; delete this.transactions[inIdx].isTemp; }
+            this.saveToCache();
+        } catch (e) {
+            this.transactions = this.transactions.filter(t => t.id !== tempOutId && t.id !== tempInId);
+            this.saveToCache();
+            alert("Erro ao transferir entre bancos.");
         }
     },
 

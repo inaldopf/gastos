@@ -46,7 +46,9 @@ export const UI = {
         { id: 'Objetivo', icon: 'fa-star', color: 'text-indigo-500', hex: '#6366F1', type: 'Receita', hidden: true },
         { id: 'Cartão de Crédito', icon: 'fa-credit-card', color: 'text-purple-600', hex: '#9333EA', type: 'Despesa', hidden: true },
         { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-orange-500', hex: '#F97316', type: 'Despesa' },
-        { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-emerald-500', hex: '#10B981', type: 'Receita' }
+        { id: 'Dívida', icon: 'fa-hand-holding-usd', color: 'text-emerald-500', hex: '#10B981', type: 'Receita' },
+        { id: 'Transferência', icon: 'fa-exchange-alt', color: 'text-sky-500', hex: '#0EA5E9', type: 'Despesa', hidden: true },
+        { id: 'Transferência', icon: 'fa-exchange-alt', color: 'text-sky-500', hex: '#0EA5E9', type: 'Receita', hidden: true }
     ],
 
     populateCategories(filterType = 'Despesa') {
@@ -83,7 +85,7 @@ export const UI = {
         this.populateCategories('Despesa');
     },
 
-    renderApp(selectedMonths = [], selectedCategory = 'Todas') {
+    renderApp(selectedMonths = [], selectedCategory = 'Todas', selectedBank = 'all') {
         const list = document.getElementById('transactionList');
         if (!list) return;
 
@@ -98,29 +100,36 @@ export const UI = {
         });
 
         let accumulatedBalance = 0;
+        const bankBalances = {};
+        (store.banks || []).forEach(b => { bankBalances[b.id] = 0; });
         transactions.forEach(t => {
             const tMonthIndex = allMonths.indexOf(t.month);
             if (tMonthIndex <= maxMonthIndex && tMonthIndex !== -1) {
                  const val = parseFloat(t.amount) || 0;
-                 if (t.type === 'Receita') accumulatedBalance += val;
-                 else if (t.type === 'Despesa') accumulatedBalance -= val;
-                 else if (t.type === 'Investimento') accumulatedBalance -= val;
+                 const signed = t.type === 'Receita' ? val : -val;
+                 if (bankBalances[t.bank_id] !== undefined) bankBalances[t.bank_id] += signed;
+                 if (selectedBank === 'all' || t.bank_id === selectedBank) accumulatedBalance += signed;
             }
         });
+        this.updateBankBalances(bankBalances);
 
         let filtered = [];
         if (selectedMonths.length > 0) {
             filtered = transactions.filter(t => selectedMonths.includes(t.month));
         }
+        if (selectedBank && selectedBank !== 'all') {
+            filtered = filtered.filter(t => t.bank_id === selectedBank);
+        }
 
         let totalRec = 0, totalInv = 0, totalDesp = 0;
-        
+
         let tableFiltered = [...filtered];
         if (selectedCategory && selectedCategory !== 'Todas') {
             tableFiltered = tableFiltered.filter(t => t.category === selectedCategory);
         }
 
         tableFiltered.forEach(t => {
+            if (t.category === 'Transferência') return; // transferências não são receita/gasto reais
             if (t.type === 'Receita') totalRec += parseFloat(t.amount || 0);
             else if (t.type === 'Investimento') totalInv += parseFloat(t.amount || 0);
             else totalDesp += parseFloat(t.amount || 0);
@@ -135,11 +144,13 @@ export const UI = {
 
         tableFiltered.forEach(t => {
             const catData = this.categories.find(c => c.id === t.category) || { icon: 'fa-tag', color: 'text-slate-400' };
+            const bankName = store.getBankName(t.bank_id);
+            const bankBadge = t.bank_id ? `<span class="block text-[10px] font-semibold text-slate-400 dark:text-slate-500 mt-0.5"><i class="fas fa-university mr-1"></i>${escapeHTML(bankName)}</span>` : '';
             const tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700 transition border-b border-slate-50 dark:border-slate-700";
             tr.innerHTML = `
                 <td class="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">${escapeHTML(t.date)}</td>
-                <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${escapeHTML(t.desc)}</td>
+                <td class="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">${escapeHTML(t.desc)}${bankBadge}</td>
                 <td class="px-4 py-3"><span class="${catData.color} text-xs font-bold uppercase"><i class="fas ${catData.icon}"></i> ${escapeHTML(t.category)}</span></td>
                 <td class="px-4 py-3 font-semibold text-right ${t.type === 'Receita' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}">
                     <span class="blur-target">${t.type === 'Receita' ? '+' : '-'} R$ ${parseFloat(t.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
@@ -151,6 +162,16 @@ export const UI = {
 
         this.updateKPIs(accumulatedBalance, totalRec, totalDesp, totalInv);
         this.updateChart(filtered); 
+    },
+
+    updateBankBalances(bankBalances) {
+        Object.entries(bankBalances).forEach(([id, v]) => {
+            const el = document.getElementById(`bank-balance-${id}`);
+            if (el) {
+                el.innerText = `R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+                el.className = `text-sm font-extrabold blur-target ${v >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`;
+            }
+        });
     },
 
     updateKPIs(accumulatedBalance, rec, desp, inv) {
@@ -174,7 +195,7 @@ export const UI = {
         const ctx = document.getElementById('categoryChart');
         if (!ctx) return;
 
-        const expenses = transactions.filter(t => t.type === 'Despesa');
+        const expenses = transactions.filter(t => t.type === 'Despesa' && t.category !== 'Transferência');
         const totals = {};
         expenses.forEach(t => totals[t.category] = (totals[t.category] || 0) + parseFloat(t.amount || 0));
 

@@ -12,6 +12,7 @@ console.log("🚀 app.js carregado!");
 
 let selectedMonths = [];
 let selectedCategory = 'Todas';
+let selectedBank = 'all';
 
 // 1. Auth Logic
 const isLoginPage = window.location.pathname.includes('login.html');
@@ -129,6 +130,153 @@ function setupMonthSelector() {
     document.addEventListener('click', (e) => { if (!btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden'); });
 }
 
+// 3.5 Bancos (quantos o usuário quiser + transferência)
+function refreshBankSelects() {
+    ['inputBank', 'transferFrom', 'transferTo'].forEach((id, i) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const previous = sel.value;
+        sel.innerHTML = '';
+        (store.banks || []).forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.textContent = b.name;
+            sel.appendChild(opt);
+        });
+        if (previous && [...sel.options].some(o => o.value === previous)) sel.value = previous;
+        // "Para" da transferência começa apontando para o segundo banco
+        else if (id === 'transferTo' && sel.options.length > 1) sel.selectedIndex = 1;
+    });
+}
+
+function renderBankBar() {
+    const bar = document.getElementById('bankBar');
+    if (!bar) return;
+
+    const activeCls = "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border-2 border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40 transition text-left";
+    const inactiveCls = "flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border-2 border-slate-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-800 transition text-left";
+
+    bar.innerHTML = '';
+
+    const btnAll = document.createElement('button');
+    btnAll.className = selectedBank === 'all' ? activeCls : inactiveCls;
+    btnAll.innerHTML = `<span class="text-sm font-bold text-slate-700 dark:text-slate-200"><i class="fas fa-layer-group text-indigo-500 mr-1.5"></i>Todos os bancos</span>`;
+    btnAll.addEventListener('click', () => { selectedBank = 'all'; updateAllViews(); });
+    bar.appendChild(btnAll);
+
+    (store.banks || []).forEach(b => {
+        const btn = document.createElement('button');
+        btn.className = b.id === selectedBank ? activeCls : inactiveCls;
+        btn.innerHTML = `
+            <span class="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
+                <i class="fas fa-university text-slate-400 mr-1.5"></i><span>${escapeHTML(b.name)}</span>
+                <i data-action="rename" class="fas fa-pencil-alt text-[10px] text-slate-300 hover:text-indigo-500 ml-1 cursor-pointer" title="Renomear banco"></i>
+                <i data-action="delete" class="fas fa-trash text-[10px] text-slate-300 hover:text-red-500 ml-1 cursor-pointer" title="Excluir banco"></i>
+            </span>
+            <span id="bank-balance-${b.id}" class="text-sm font-extrabold blur-target text-emerald-600 dark:text-emerald-400">R$ 0,00</span>`;
+
+        btn.addEventListener('click', async (e) => {
+            const action = e.target.dataset && e.target.dataset.action;
+            if (action === 'rename') {
+                e.stopPropagation();
+                const name = prompt("Nome do banco:", b.name);
+                if (name && name.trim()) {
+                    await store.renameBank(b.id, name.trim().slice(0, 50));
+                    updateAllViews();
+                }
+                return;
+            }
+            if (action === 'delete') {
+                e.stopPropagation();
+                if (confirm(`Excluir o banco '${b.name}'?`)) {
+                    const ok = await store.removeBank(b.id);
+                    if (ok && selectedBank === b.id) selectedBank = 'all';
+                    updateAllViews();
+                }
+                return;
+            }
+            selectedBank = b.id;
+            updateAllViews();
+        });
+        bar.appendChild(btn);
+    });
+
+    const btnAdd = document.createElement('button');
+    btnAdd.className = "flex items-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 hover:text-indigo-500 hover:border-indigo-300 dark:hover:border-indigo-700 transition text-sm font-bold";
+    btnAdd.innerHTML = `<i class="fas fa-plus text-xs"></i> Banco`;
+    btnAdd.addEventListener('click', async () => {
+        const name = prompt("Nome do novo banco:");
+        if (name && name.trim()) {
+            const created = await store.addBank(name.trim().slice(0, 50));
+            if (created) updateAllViews();
+        }
+    });
+    bar.appendChild(btnAdd);
+
+    if ((store.banks || []).length >= 2) {
+        const btnTransfer = document.createElement('button');
+        btnTransfer.className = "btn btn-primary btn-sm rounded-2xl px-4";
+        btnTransfer.innerHTML = `<i class="fas fa-exchange-alt text-xs"></i> <span>Transferir</span>`;
+        btnTransfer.addEventListener('click', () => {
+            const modal = document.getElementById('transferModal');
+            if (!modal) return;
+            refreshBankSelects();
+            const dateEl = document.getElementById('transferDate');
+            if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+            modal.classList.remove('hidden');
+        });
+        bar.appendChild(btnTransfer);
+    }
+
+    refreshBankSelects();
+}
+
+function setupBankSelector() {
+    // Modal de transferência
+    const modal = document.getElementById('transferModal');
+    const closeModal = () => modal && modal.classList.add('hidden');
+
+    const btnClose = document.getElementById('btnCloseTransfer');
+    if (btnClose) btnClose.addEventListener('click', closeModal);
+    const backdrop = document.getElementById('transferBackdrop');
+    if (backdrop) backdrop.addEventListener('click', closeModal);
+
+    const transferForm = document.getElementById('transferForm');
+    if (transferForm) {
+        transferForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fromBankId = parseInt(document.getElementById('transferFrom').value);
+            const toBankId = parseInt(document.getElementById('transferTo').value);
+            const amount = parseFloat(document.getElementById('transferAmount').value);
+            const rawDate = document.getElementById('transferDate').value;
+
+            if (!fromBankId || !toBankId) return alert("Selecione os bancos.");
+            if (fromBankId === toBankId) return alert("Escolha bancos diferentes para transferir.");
+            if (!amount || amount <= 0 || !rawDate) return alert("Preencha corretamente.");
+
+            const [y, m, d] = rawDate.split('-');
+            const formattedDate = `${d}/${m}/${y}`;
+            let targetMonth = selectedMonths[selectedMonths.length - 1];
+            if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
+
+            const btnSubmit = transferForm.querySelector('button[type="submit"]');
+            const oldText = btnSubmit.innerHTML;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnSubmit.disabled = true;
+
+            try {
+                await store.transferBetweenBanks(amount, fromBankId, toBankId, formattedDate, targetMonth);
+                updateAllViews();
+                transferForm.reset();
+                closeModal();
+            } finally {
+                btnSubmit.innerHTML = oldText;
+                btnSubmit.disabled = false;
+            }
+        });
+    }
+}
+
 // 4. Update
 function updateAllViews() {
     if (!Array.isArray(selectedMonths)) {
@@ -137,7 +285,8 @@ function updateAllViews() {
     window.currentSelectedMonths = selectedMonths;
 
     try {
-        if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory);
+        renderBankBar();
+        if (UI && typeof UI.renderApp === 'function') UI.renderApp(selectedMonths, selectedCategory, selectedBank);
         if (Dashboard && typeof Dashboard.render === 'function') Dashboard.render(selectedMonths);
         if (Goals && typeof Goals.render === 'function') Goals.render(selectedMonths);
         if (VA && typeof VA.render === 'function') VA.render(selectedMonths);
@@ -299,7 +448,7 @@ function setupEvents() {
         if(viewId === 'viewHome') {
             if(tabs.home) tabs.home.className = activeDesktop;
             if(mobileTabs.home) mobileTabs.home.className = activeMobile;
-            UI.renderApp(selectedMonths, selectedCategory); 
+            UI.renderApp(selectedMonths, selectedCategory, selectedBank);
         }
         if(viewId === 'viewDebts') {
             if(tabs.debts) tabs.debts.className = activeDesktop;
@@ -372,6 +521,8 @@ function setupEvents() {
             const type = document.getElementById('inputType').value;
             const category = document.getElementById('inputCategory').value;
             const rawDate = document.getElementById('inputDate').value;
+            const bankSelect = document.getElementById('inputBank');
+            const bank_id = bankSelect && bankSelect.value ? parseInt(bankSelect.value) : null;
             
             const btn = transForm.querySelector('button[type="submit"]');
             if (!desc || isNaN(amount) || !rawDate) return alert("Preencha corretamente.");
@@ -384,7 +535,7 @@ function setupEvents() {
                 let targetMonth = selectedMonths[selectedMonths.length - 1];
                 if (!targetMonth) targetMonth = getMonthName(new Date().getMonth() + 1);
                 
-                await store.addTransaction({ desc, amount, type, category, date: formattedDate, month: targetMonth });
+                await store.addTransaction({ desc, amount, type, category, date: formattedDate, month: targetMonth, bank_id });
                 
                 updateAllViews();
                 transForm.reset();
@@ -536,7 +687,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         if(UI && UI.initCategories) UI.initCategories();
         setupMonthSelector();
-        setupCategoryFilter(); 
+        setupCategoryFilter();
+        setupBankSelector();
         setupEvents();
         const hasCache = store.loadFromCache();
         if(!hasCache) document.getElementById('transactionList').innerHTML = '<tr><td colspan="5" class="text-center py-10"><i class="fas fa-spinner fa-spin text-indigo-600 text-3xl"></i></td></tr>';

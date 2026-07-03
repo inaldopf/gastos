@@ -59,6 +59,8 @@ const initDB = async () => {
             CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE, password VARCHAR(255), meta_sobra NUMERIC(10,2) DEFAULT 0);
             CREATE TABLE IF NOT EXISTS transactions (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), description VARCHAR(255), amount NUMERIC(10,2), type VARCHAR(50), category VARCHAR(100), transaction_date VARCHAR(20), month VARCHAR(20));
             ALTER TABLE transactions ADD COLUMN IF NOT EXISTS is_recurring BOOLEAN DEFAULT FALSE;
+            CREATE TABLE IF NOT EXISTS banks (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id) ON DELETE CASCADE, name VARCHAR(50) NOT NULL);
+            ALTER TABLE transactions ADD COLUMN IF NOT EXISTS bank_id INTEGER REFERENCES banks(id) ON DELETE SET NULL;
             CREATE TABLE IF NOT EXISTS debtors (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), name VARCHAR(255), amount NUMERIC(10,2), paid BOOLEAN DEFAULT FALSE);
             CREATE TABLE IF NOT EXISTS goals (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), category VARCHAR(100), amount NUMERIC(10,2), UNIQUE(user_id, category));
             CREATE TABLE IF NOT EXISTS va_transactions (id SERIAL PRIMARY KEY, user_id INTEGER REFERENCES users(id), description VARCHAR(255), amount NUMERIC(10,2), type VARCHAR(20), transaction_date VARCHAR(20), month VARCHAR(20));
@@ -159,19 +161,119 @@ app.get('/transactions', authenticateToken, async (req, res) => {
 });
 
 app.post('/transactions', authenticateToken, async (req, res) => {
-    const { desc, amount, type, category, date, month, isRecurring } = req.body;
+    const { desc, amount, type, category, date, month, isRecurring, bank_id } = req.body;
     if (!isValidString(desc) || !isValidAmount(amount) || !isValidString(type) || !isValidString(category) || !isValidString(month)) {
         return res.status(400).json({ error: 'Dados inválidos.' });
     }
     try {
+        let bankId = null;
+        if (bank_id) {
+            const chk = await pool.query('SELECT id FROM banks WHERE id = $1 AND user_id = $2', [parseInt(bank_id), req.user.id]);
+            if (chk.rows.length > 0) bankId = chk.rows[0].id;
+        }
         const result = await pool.query(
-            'INSERT INTO transactions (user_id, description, amount, type, category, transaction_date, month, is_recurring) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-            [req.user.id, desc, parseFloat(amount), type, category, date || null, month, !!isRecurring]
+            'INSERT INTO transactions (user_id, description, amount, type, category, transaction_date, month, is_recurring, bank_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+            [req.user.id, desc, parseFloat(amount), type, category, date || null, month, !!isRecurring, bankId]
         );
         res.json(result.rows[0]);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
+// --- ROTAS DE BANCOS ---
+app.get('/banks', authenticateToken, async (req, res) => {
+    try {
+        let result = await pool.query('SELECT * FROM banks WHERE user_id = $1 ORDER BY id ASC', [req.user.id]);
+        if (result.rows.length === 0) {
+            // Usuário sem bancos: cria um padrão para as transações terem onde morar
+            result = await pool.query('INSERT INTO banks (user_id, name) VALUES ($1, $2) RETURNING *', [req.user.id, 'Banco Principal']);
+        }
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
+app.post('/banks', authenticateToken, async (req, res) => {
+    const { name } = req.body;
+    if (!isValidString(name, 50)) return res.status(400).json({ error: 'Dados inválidos.' });
+    try {
+        const result = await pool.query('INSERT INTO banks (user_id, name) VALUES ($1, $2) RETURNING *', [req.user.id, name.trim()]);
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
+app.put('/banks/:id', authenticateToken, async (req, res) => {
+    const { name } = req.body;
+    if (!isValidString(name, 50)) return res.status(400).json({ error: 'Dados inválidos.' });
+    try {
+        const result = await pool.query('UPDATE banks SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING *', [name.trim(), req.params.id, req.user.id]);
+        if (result.rows.length === 0) return res.sendStatus(404);
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
+app.delete('/banks/:id', authenticateToken, async (req, res) => {
+    try {
+        const inUse = await pool.query('SELECT 1 FROM transactions WHERE bank_id = $1 AND user_id = $2 LIMIT 1', [req.params.id, req.user.id]);
+        if (inUse.rows.length > 0) {
+            return res.status(409).json({ error: 'Este banco possui lançamentos. Apague ou transfira os lançamentos antes de excluí-lo.' });
+        }
+        await pool.query('DELETE FROM banks WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
+// Transferência entre bancos: cria as duas pernas (saída e entrada) atomicamente
+app.post('/transfer', authenticateToken, async (req, res) => {
+    const { amount, fromBankId, toBankId, date, month } = req.body;
+    const val = parseFloat(amount);
+    const fromId = parseInt(fromBankId), toId = parseInt(toBankId);
+    if (!isValidAmount(amount) || val <= 0 || !fromId || !toId || fromId === toId || !isValidString(month)) {
+        return res.status(400).json({ error: 'Dados inválidos.' });
+    }
+    let fromName, toName;
+    try {
+        const banks = await pool.query('SELECT id, name FROM banks WHERE id = ANY($1) AND user_id = $2', [[fromId, toId], req.user.id]);
+        if (banks.rows.length !== 2) return res.status(400).json({ error: 'Banco inválido.' });
+        fromName = banks.rows.find(b => b.id === fromId).name;
+        toName = banks.rows.find(b => b.id === toId).name;
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const out = await client.query(
+            'INSERT INTO transactions (user_id, description, amount, type, category, transaction_date, month, bank_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [req.user.id, `Transferência para ${toName}`, val, 'Despesa', 'Transferência', date || null, month, fromId]
+        );
+        const inn = await client.query(
+            'INSERT INTO transactions (user_id, description, amount, type, category, transaction_date, month, bank_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [req.user.id, `Transferência de ${fromName}`, val, 'Receita', 'Transferência', date || null, month, toId]
+        );
+        await client.query('COMMIT');
+        res.json({ outTransaction: out.rows[0], inTransaction: inn.rows[0] });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    } finally {
+        client.release();
     }
 });
 

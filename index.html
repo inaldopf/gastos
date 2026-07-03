@@ -270,6 +270,9 @@
                         </div>
                     </div>
 
+                    <!-- Bancos (renderizado dinamicamente pelo app.js) -->
+                    <div id="bankBar" class="flex flex-wrap items-stretch gap-2.5"></div>
+
                     <!-- KPI unified bar -->
                     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 overflow-hidden shadow-sm">
                         <div class="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 dark:divide-slate-700/50">
@@ -1169,10 +1172,65 @@
                     </div>
                 </div>
 
+                <!-- Banco -->
+                <div>
+                    <label class="lbl">Banco</label>
+                    <div class="relative">
+                        <select id="inputBank" class="inp appearance-none cursor-pointer pr-7"></select>
+                        <i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                    </div>
+                </div>
+
                 <!-- Submit -->
                 <button type="submit" class="btn btn-primary btn-md w-full mt-2 shadow-md shadow-indigo-200 dark:shadow-none">
                     <i class="fas fa-plus text-sm"></i>
                     Adicionar Lançamento
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Transferência entre Bancos -->
+    <div id="transferModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div id="transferBackdrop" class="absolute inset-0 bg-black/50"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl animate-fade-in">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-extrabold text-slate-800 dark:text-white"><i class="fas fa-exchange-alt text-indigo-500 mr-2"></i>Transferir entre bancos</h3>
+                <button id="btnCloseTransfer" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition text-sm">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="transferForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="lbl">De</label>
+                        <div class="relative">
+                            <select id="transferFrom" class="inp appearance-none cursor-pointer pr-7"></select>
+                            <i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="lbl">Para</label>
+                        <div class="relative">
+                            <select id="transferTo" class="inp appearance-none cursor-pointer pr-7"></select>
+                            <i class="fas fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="lbl">Valor (R$)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-semibold pointer-events-none">R$</span>
+                        <input type="number" step="0.01" min="0.01" id="transferAmount" placeholder="0,00" class="inp pl-9" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="lbl">Data</label>
+                    <input type="date" id="transferDate" class="inp" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-md w-full mt-2 shadow-md shadow-indigo-200 dark:shadow-none">
+                    <i class="fas fa-exchange-alt text-sm"></i>
+                    Transferir
                 </button>
             </form>
         </div>
